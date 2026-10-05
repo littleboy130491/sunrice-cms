@@ -8,11 +8,30 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
+use Sunrice\Database\Factories\AssetFactory;
 
+/**
+ * @property int $id
+ * @property int|null $folder_id
+ * @property string $disk
+ * @property string $path
+ * @property string $filename
+ * @property string|null $mime_type
+ * @property int|null $size
+ * @property array<string,mixed> $meta
+ * @property int $version
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @use HasFactory<AssetFactory>
+ */
 class Asset extends Model
 {
-    use HasFactory, SoftDeletes;
+    /** @use HasFactory<AssetFactory> */
+    use HasFactory, SoftDeletes, \Sunrice\References\HasReferences;
 
     protected $table = 'sunrice_assets';
 
@@ -26,9 +45,9 @@ class Asset extends Model
         'version' => 'integer',
     ];
 
-    protected static function newFactory(): \Sunrice\Database\Factories\AssetFactory
+    protected static function newFactory(): AssetFactory
     {
-        return \Sunrice\Database\Factories\AssetFactory::new();
+        return AssetFactory::new();
     }
 
     /** @return BelongsTo<AssetFolder, $this> */
@@ -62,13 +81,18 @@ class Asset extends Model
      * Records (entries, globals, terms...) that use this asset, via the
      * references table.
      *
-     * @return \Illuminate\Support\Collection<int, array{source_type: string, source_id: int, field_path: ?string}>
+     * @return Collection<int, array{source_type: string, source_id: int, field_path: ?string}>
      */
-    public function usages(): \Illuminate\Support\Collection
+    public function usages(): Collection
     {
         return Reference::query()
             ->where('target_type', 'asset')
             ->where('target_id', $this->id)
-            ->get(['source_type', 'source_id', 'field_path']);
+            ->get(['source_type', 'source_id', 'field_path'])
+            ->map(fn (Reference $r) => [
+                'source_type' => $r->source_type,
+                'source_id' => $r->source_id,
+                'field_path' => $r->field_path,
+            ]);
     }
 }

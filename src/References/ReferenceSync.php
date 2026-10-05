@@ -6,7 +6,10 @@ namespace Sunrice\References;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Sunrice\Models\EntryTranslation;
+use Sunrice\Models\GlobalValue;
 use Sunrice\Models\Reference;
+use Sunrice\Models\TermTranslation;
 
 /**
  * Rebuilds a record's sunrice_references rows on every save, from its
@@ -48,9 +51,9 @@ class ReferenceSync
     public static function sourceType(Model $model): string
     {
         return match (true) {
-            $model instanceof \Sunrice\Models\EntryTranslation => 'entry',
-            $model instanceof \Sunrice\Models\TermTranslation => 'term',
-            $model instanceof \Sunrice\Models\GlobalValue => 'global',
+            $model instanceof EntryTranslation => 'entry',
+            $model instanceof TermTranslation => 'term',
+            $model instanceof GlobalValue => 'global',
             default => strtolower(class_basename($model)),
         };
     }

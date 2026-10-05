@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Sunrice\Actions\Structure;
 
-use DomainException;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Collection;
+use Sunrice\Permissions\SyncPermissions;
 
 class DeleteCollection
 {
@@ -20,7 +20,7 @@ class DeleteCollection
     {
         $collection->delete();
 
-        app(\Sunrice\Permissions\SyncPermissions::class)->handle();
+        app(SyncPermissions::class)->handle();
         ContentChanged::dispatch('collection_deleted');
     }
 }

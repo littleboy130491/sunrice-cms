@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Fields;
 
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 use Sunrice\Models\Fieldset;
 
@@ -15,6 +16,7 @@ use Sunrice\Models\Fieldset;
  */
 class BlueprintSchema
 {
+    /** @var array<int, array<string, mixed>> */
     /** @var array<int, array<string, mixed>> */
     protected array $fields;
 
@@ -29,9 +31,9 @@ class BlueprintSchema
     /**
      * @param  array<int, array<string, mixed>>  $fields
      */
-    public static function make(array $fields): static
+    public static function make(array $fields): self
     {
-        return new static(static::expandFieldsets($fields));
+        return new self(static::expandFieldsets($fields));
     }
 
     /**
@@ -94,10 +96,13 @@ class BlueprintSchema
     /**
      * Find a field by handle, walking into group/repeater children via
      * dot paths (e.g. 'hero.image').
+     *
+     * @return array<string, mixed>|null
      */
     public function field(string $handle): ?array
     {
         $segments = explode('.', $handle);
+        /** @var array<int, array<string, mixed>> $fields */
         $fields = $this->fields;
 
         foreach ($segments as $i => $segment) {
@@ -108,12 +113,13 @@ class BlueprintSchema
             if ($i === count($segments) - 1) {
                 return $found;
             }
-            $fields = $found['config']['fields'] ?? [];
+            $fields = (array) ($found['config']['fields'] ?? []);
         }
 
         return null;
     }
 
+    /** @param array<string, mixed> $field */
     public function fieldType(array $field): FieldType
     {
         return app(FieldRegistry::class)->get($field['type'] ?? 'text');
@@ -164,7 +170,7 @@ class BlueprintSchema
             if (($field['type'] ?? null) === 'flexible') {
                 $allowed = array_values($field['config']['fieldsets'] ?? []);
                 $rules[$key.'.*.id'] = ['string'];
-                $rules[$key.'.*.type'] = $allowed === [] ? ['string'] : ['string', \Illuminate\Validation\Rule::in($allowed)];
+                $rules[$key.'.*.type'] = $allowed === [] ? ['string'] : ['string', Rule::in($allowed)];
                 $rules[$key.'.*.values'] = ['array'];
             }
         }
@@ -259,6 +265,7 @@ class BlueprintSchema
                 continue;
             }
             foreach ($this->fieldType($field)->references($data[$handle], $field) as $ref) {
+                /** @var array{target_type: string, target_id: int, field_path?: string} $ref */
                 $ref['field_path'] = $prefix.$handle.(isset($ref['field_path']) ? '.'.$ref['field_path'] : '');
                 $refs[] = $ref;
             }

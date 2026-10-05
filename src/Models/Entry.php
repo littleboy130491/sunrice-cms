@@ -11,15 +11,31 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+use Sunrice\Database\Factories\EntryFactory;
 use Sunrice\Fields\HydrationContext;
+use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Support\Locales;
 
 /**
- * @property-read EntryTranslation $resolved
+ * @property-read EntryTranslation|null $resolved
+ * @property int $id
+ * @property int $collection_id
+ * @property int|null $blueprint_id
+ * @property int|null $author_id
+ * @property string $status
+ * @property Carbon|null $published_at
+ * @property int $sort_order
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ *
+ * @use HasFactory<EntryFactory>
  */
 class Entry extends Model
 {
-    use HasFactory, SoftDeletes;
+    /** @use HasFactory<EntryFactory> */
+    use HasFactory, SoftDeletes, \Sunrice\References\HasReferences;
 
     protected $table = 'sunrice_entries';
 
@@ -43,9 +59,9 @@ class Entry extends Model
      */
     public ?HydrationContext $hydrationContext = null;
 
-    protected static function newFactory(): \Sunrice\Database\Factories\EntryFactory
+    protected static function newFactory(): EntryFactory
     {
-        return \Sunrice\Database\Factories\EntryFactory::new();
+        return EntryFactory::new();
     }
 
     /** @return BelongsTo<Collection, $this> */
@@ -75,7 +91,10 @@ class Entry extends Model
     /** @return BelongsTo<Model, $this> */
     public function author(): BelongsTo
     {
-        return $this->belongsTo(config('sunrice.auth.user_model'), 'author_id');
+        /** @var class-string<Model> $model */
+        $model = config('sunrice.auth.user_model');
+
+        return $this->belongsTo($model, 'author_id');
     }
 
     /**
@@ -149,19 +168,25 @@ class Entry extends Model
         return $this->renderedTranslation()?->slug;
     }
 
+    /** @return array<string, mixed> */
     public function getDataAttribute(): array
     {
-        return $this->renderedTranslation()?->data ?? [];
+        return $this->renderedTranslation() instanceof EntryTranslation
+            ? $this->renderedTranslation()->data
+            : [];
     }
 
+    /** @return array<string, mixed> */
     public function getSeoAttribute(): array
     {
-        return $this->renderedTranslation()?->seo ?? [];
+        return $this->renderedTranslation() instanceof EntryTranslation
+            ? $this->renderedTranslation()->seo
+            : [];
     }
 
     public function getUrlAttribute(): ?string
     {
-        return app(\Sunrice\Frontend\UrlGenerator::class)->entry($this, $this->resolvedLocale);
+        return app(UrlGenerator::class)->entry($this, $this->resolvedLocale);
     }
 
     public function getLocaleAttribute(): ?string
@@ -186,19 +211,28 @@ class Entry extends Model
 
     // ---- Scopes -----------------------------------------------------------
 
-    /** @param Builder<Entry> $query */
+    /**
+     * @param  Builder<Entry>  $query
+     * @return Builder<Entry>
+     */
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', 'published')->where('published_at', '<=', now());
     }
 
-    /** @param Builder<Entry> $query */
+    /**
+     * @param  Builder<Entry>  $query
+     * @return Builder<Entry>
+     */
     public function scopeInCollection(Builder $query, string $handle): Builder
     {
         return $query->whereHas('collection', fn (Builder $q) => $q->where('handle', $handle));
     }
 
-    /** @param Builder<Entry> $query */
+    /**
+     * @param  Builder<Entry>  $query
+     * @return Builder<Entry>
+     */
     public function scopeScheduled(Builder $query): Builder
     {
         return $query->where('status', 'published')->where('published_at', '>', now());

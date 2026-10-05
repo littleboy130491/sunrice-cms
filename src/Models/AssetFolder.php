@@ -7,7 +7,16 @@ namespace Sunrice\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int|null $parent_id
+ * @property string $name
+ * @property string $path
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class AssetFolder extends Model
 {
     protected $table = 'sunrice_asset_folders';

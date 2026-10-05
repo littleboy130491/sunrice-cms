@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Sunrice;
 
+use Illuminate\Support\Collection;
 use Sunrice\Fields\FieldRegistry;
 use Sunrice\Frontend\GlobalsRepository;
 use Sunrice\Frontend\MenuBuilder;
+use Sunrice\Frontend\MenuNode;
 use Sunrice\Query\EntryQuery;
 
 /**
@@ -47,7 +49,7 @@ class Sunrice
     /**
      * Register an existing Eloquent model for CMS management.
      *
-     * @param  class-string<\Sunrice\Resources\Resource>  $class
+     * @param  class-string<Resources\Resource>  $class
      */
     public function registerResource(string $class): void
     {
@@ -63,7 +65,7 @@ class Sunrice
     }
 
     /**
-     * @param  class-string|null  $class
+     * @param  class-string|null  $key
      * @return class-string|null
      */
     public function resource(?string $key): ?string
@@ -100,9 +102,9 @@ class Sunrice
     /**
      * Build a navigation menu for the active (or given) locale.
      *
-     * @return \Illuminate\Support\Collection<int, \Sunrice\Frontend\MenuNode>
+     * @return Collection<int, MenuNode>
      */
-    public function menu(string $handle, ?string $locale = null): \Illuminate\Support\Collection
+    public function menu(string $handle, ?string $locale = null): Collection
     {
         return app(MenuBuilder::class)->build($handle, $locale);
     }

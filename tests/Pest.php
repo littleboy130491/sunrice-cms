@@ -2,7 +2,14 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role;
+use Sunrice\Models\Blueprint;
+use Sunrice\Models\Collection;
+use Sunrice\Models\Entry;
+use Sunrice\Support\Locales;
 use Sunrice\Tests\TestCase;
+use Workbench\App\Models\User;
 
 uses(TestCase::class)->in('Feature', 'Unit');
 
@@ -15,14 +22,14 @@ uses(TestCase::class)->in('Feature', 'Unit');
 /**
  * Log in as a user carrying the Super Admin role (Gate::before bypass).
  */
-function actingAsSuperAdmin(): \Workbench\App\Models\User
+function actingAsSuperAdmin(): User
 {
-    $user = \Workbench\App\Models\User::query()->create([
+    $user = User::query()->create([
         'name' => 'Admin',
         'email' => 'admin@example.com',
         'password' => bcrypt('password'),
     ]);
-    $role = \Spatie\Permission\Models\Role::findOrCreate(
+    $role = Role::findOrCreate(
         config('sunrice.super_admin_role'),
         config('sunrice.auth.guard', 'web'),
     );
@@ -38,9 +45,9 @@ function actingAsSuperAdmin(): \Workbench\App\Models\User
  *
  * @param  array<string, mixed>  $settings
  */
-function createCollection(string $handle = 'pages', array $settings = [], ?\Sunrice\Models\Blueprint $blueprint = null): \Sunrice\Models\Collection
+function createCollection(string $handle = 'pages', array $settings = [], ?Blueprint $blueprint = null): Collection
 {
-    $blueprint ??= \Sunrice\Models\Blueprint::create([
+    $blueprint ??= Blueprint::create([
         'handle' => $handle,
         'title' => ucfirst($handle),
         'fields' => [
@@ -48,7 +55,7 @@ function createCollection(string $handle = 'pages', array $settings = [], ?\Sunr
         ],
     ]);
 
-    return \Sunrice\Models\Collection::create([
+    return Collection::create([
         'handle' => $handle,
         'title' => ucfirst($handle),
         'blueprint_id' => $blueprint->id,
@@ -68,10 +75,10 @@ function createCollection(string $handle = 'pages', array $settings = [], ?\Sunr
  *
  * @param  array<string, mixed>  $data
  */
-function createEntry(\Sunrice\Models\Collection $collection, string $title = 'Hello', array $data = [], ?string $status = 'published'): \Sunrice\Models\Entry
+function createEntry(Collection $collection, string $title = 'Hello', array $data = [], ?string $status = 'published'): Entry
 {
-    $locale = \Sunrice\Support\Locales::main();
-    $entry = \Sunrice\Models\Entry::create([
+    $locale = Locales::main();
+    $entry = Entry::create([
         'collection_id' => $collection->id,
         'status' => $status,
         'published_at' => $status === 'published' ? now() : null,
@@ -81,7 +88,7 @@ function createEntry(\Sunrice\Models\Collection $collection, string $title = 'He
         'collection_id' => $collection->id,
         'locale' => $locale,
         'title' => $title,
-        'slug' => \Illuminate\Support\Str::slug($title),
+        'slug' => Str::slug($title),
         'data' => $data,
         'is_ready' => true,
         'content_published_at' => now(),

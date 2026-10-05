@@ -7,6 +7,7 @@ namespace Sunrice\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Sunrice\Models\Form;
 
+/** @extends Factory<Form> */
 class FormFactory extends Factory
 {
     protected $model = Form::class;

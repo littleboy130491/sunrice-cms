@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Sunrice\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Traits\HasRoles;
 use Sunrice\Permissions\SyncPermissions;
 
 /**
@@ -31,6 +33,7 @@ class InstallCommand extends Command
         $this->components->twoColumnDetail('Permissions', "{$result['created']} created");
 
         $guard = config('sunrice.auth.guard', 'web');
+        /** @var Role $role */
         $role = Role::findOrCreate(config('sunrice.super_admin_role', 'Super Admin'), $guard);
         $this->components->twoColumnDetail('Super admin role', $role->name);
 
@@ -53,7 +56,7 @@ class InstallCommand extends Command
             return;
         }
 
-        if (! in_array(\Spatie\Permission\Traits\HasRoles::class, class_uses_recursive($model), true)) {
+        if (! in_array(HasRoles::class, class_uses_recursive($model), true)) {
             $this->components->warn("Add `use \\Spatie\\Permission\\Traits\\HasRoles;` to {$model} to use roles and permissions.");
         }
     }
@@ -78,7 +81,7 @@ class InstallCommand extends Command
 
         $user = $model::query()->firstOrCreate(
             ['email' => $email],
-            ['name' => $name, 'password' => \Illuminate\Support\Facades\Hash::make($password)],
+            ['name' => $name, 'password' => Hash::make($password)],
         );
 
         if (method_exists($user, 'assignRole')) {

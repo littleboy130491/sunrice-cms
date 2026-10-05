@@ -7,6 +7,7 @@ namespace Sunrice\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Sunrice\Models\Asset;
 
+/** @extends Factory<Asset> */
 class AssetFactory extends Factory
 {
     protected $model = Asset::class;

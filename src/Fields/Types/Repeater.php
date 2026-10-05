@@ -70,7 +70,7 @@ class Repeater extends FieldType
 
         foreach ($value as $i => $row) {
             foreach ($schema->references(is_array($row) ? $row : []) as $ref) {
-                $ref['field_path'] = $i.'.'.($ref['field_path'] ?? '');
+                $ref['field_path'] = $i.'.'.($ref['field_path']);
                 $refs[] = $ref;
             }
         }

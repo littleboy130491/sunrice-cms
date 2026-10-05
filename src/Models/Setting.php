@@ -5,7 +5,15 @@ declare(strict_types=1);
 namespace Sunrice\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property string $key
+ * @property mixed $value
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class Setting extends Model
 {
     protected $table = 'sunrice_settings';
@@ -18,7 +26,7 @@ class Setting extends Model
     {
         $row = static::query()->where('key', $key)->first();
 
-        return $row?->value ?? $default;
+        return $row === null ? $default : $row->value;
     }
 
     public static function set(string $key, mixed $value): void

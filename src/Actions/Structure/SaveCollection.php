@@ -8,12 +8,14 @@ use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Collection;
+use Sunrice\Permissions\SyncPermissions;
 
 class SaveCollection
 {
     /**
      * @param  array{handle?: string, title: string, blueprint_id?: int, settings?: array, taxonomy_ids?: array}  $attributes
      */
+    /** @param array<string, mixed> $attributes */
     public function handle(array $attributes, ?Collection $collection = null): Collection
     {
         $validated = validator($attributes, [
@@ -49,7 +51,7 @@ class SaveCollection
             $collection->taxonomies()->sync($validated['taxonomy_ids']);
         }
 
-        app(\Sunrice\Permissions\SyncPermissions::class)->handle();
+        app(SyncPermissions::class)->handle();
         ContentChanged::dispatch('collection_saved');
 
         return $collection->refresh();

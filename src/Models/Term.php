@@ -4,18 +4,33 @@ declare(strict_types=1);
 
 namespace Sunrice\Models;
 
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Sunrice\Database\Factories\TermFactory;
+use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Support\Locales;
 
+/**
+ * @property int $id
+ * @property int $taxonomy_id
+ * @property int|null $parent_id
+ * @property int $sort_order
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
+ *
+ * @use HasFactory<TermFactory>
+ */
 class Term extends Model
 {
-    use HasFactory, SoftDeletes;
+    /** @use HasFactory<TermFactory> */
+    use HasFactory, SoftDeletes, \Sunrice\References\HasReferences;
 
     protected $table = 'sunrice_terms';
 
@@ -28,9 +43,9 @@ class Term extends Model
 
     public bool $isFallback = false;
 
-    protected static function newFactory(): \Sunrice\Database\Factories\TermFactory
+    protected static function newFactory(): TermFactory
     {
-        return \Sunrice\Database\Factories\TermFactory::new();
+        return TermFactory::new();
     }
 
     /** @return BelongsTo<Taxonomy, $this> */
@@ -105,39 +120,46 @@ class Term extends Model
 
     public function getNameAttribute(): ?string
     {
-        return $this->resolved?->name ?? $this->mainTranslation()?->name;
+        $t = $this->resolved ?? $this->mainTranslation();
+
+        return $t === null ? null : $t->name;
     }
 
     public function getSlugAttribute(): ?string
     {
-        return $this->resolved?->slug ?? $this->mainTranslation()?->slug;
+        $t = $this->resolved ?? $this->mainTranslation();
+
+        return $t === null ? null : $t->slug;
     }
 
     public function getUrlAttribute(): ?string
     {
-        return app(\Sunrice\Frontend\UrlGenerator::class)->term($this, $this->resolvedLocale);
+        return app(UrlGenerator::class)->term($this, $this->resolvedLocale);
     }
 
     /**
      * Nested tree of terms for a taxonomy, ordered by sort_order.
      *
-     * @return \Illuminate\Support\Collection<int, Term>
+     * @return Collection<int, Term>
      */
-    public static function tree(int $taxonomyId): \Illuminate\Support\Collection
+    public static function tree(int $taxonomyId): Collection
     {
         $terms = static::query()
             ->where('taxonomy_id', $taxonomyId)
             ->orderBy('sort_order')
             ->get();
 
-        return static::buildTree($terms);
+        /** @var Collection<int, Term> $list */
+        $list = $terms->values()->toBase();
+
+        return static::buildTree($list);
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Term>  $terms
-     * @return \Illuminate\Support\Collection<int, Term>
+     * @param  Collection<int, Term>  $terms
+     * @return Collection<int, Term>
      */
-    public static function buildTree(\Illuminate\Support\Collection $terms, ?int $parentId = null): \Illuminate\Support\Collection
+    public static function buildTree(Collection $terms, ?int $parentId = null): Collection
     {
         return $terms
             ->where('parent_id', $parentId)

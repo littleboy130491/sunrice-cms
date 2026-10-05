@@ -7,4 +7,8 @@ parameters:
         - src/
         - config/
         - database/
-    ignoreErrors: []
+    ignoreErrors:
+        - identifier: larastan.noEnvCallsOutsideOfConfig
+          path: config/sunrice.php
+        - message: '#Class App\\Models\\User not found#'
+          path: config/sunrice.php

@@ -7,6 +7,7 @@ namespace Sunrice\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Sunrice\Models\Blueprint;
 
+/** @extends Factory<Blueprint> */
 class BlueprintFactory extends Factory
 {
     protected $model = Blueprint::class;

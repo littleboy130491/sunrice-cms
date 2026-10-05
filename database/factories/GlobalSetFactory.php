@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\GlobalSet;
 
+/** @extends Factory<GlobalSet> */
 class GlobalSetFactory extends Factory
 {
     protected $model = GlobalSet::class;

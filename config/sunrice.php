@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Models\User;
 
 return [
 
@@ -32,7 +33,7 @@ return [
     */
     'auth' => [
         'guard' => 'web',
-        'user_model' => \App\Models\User::class,
+        'user_model' => User::class,
     ],
 
     /*

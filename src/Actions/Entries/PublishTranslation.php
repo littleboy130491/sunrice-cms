@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Actions\Entries;
 
+use Illuminate\Support\Carbon;
 use Sunrice\Events\EntryPublished;
 use Sunrice\Frontend\RedirectRecorder;
 use Sunrice\Frontend\UrlGenerator;
@@ -55,7 +56,7 @@ class PublishTranslation
             $translation->is_ready = true;
             $entry->status = 'published';
             $entry->published_at = $publishedAt !== null
-                ? \Illuminate\Support\Carbon::parse($publishedAt)
+                ? Carbon::parse($publishedAt)
                 : ($entry->published_at ?? now());
             $entry->save();
         } else {
@@ -91,15 +92,17 @@ class PublishTranslation
     {
         $keep = (int) config('sunrice.revisions.keep', 50);
 
-        $ids = $translation->revisions()
+        $keepIds = $translation->revisions()
             ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->pluck('id')
-            ->slice($keep);
+            ->limit($keep)
+            ->pluck('id');
 
-        if ($ids->isNotEmpty()) {
-            Revision::query()->whereIn('id', $ids)->delete();
+        $prunable = $translation->revisions();
+        if ($keepIds->isNotEmpty()) {
+            $prunable->whereNotIn('id', $keepIds);
         }
+        $prunable->delete();
     }
 
     protected function syncReferences(Entry $entry): void

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Illuminate\Support\Facades\Event;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Sunrice\Actions\Entries\CreateEntry;
 use Sunrice\Actions\Entries\DuplicateEntry;
 use Sunrice\Actions\Entries\PublishTranslation;
 use Sunrice\Actions\Entries\RestoreRevision;
@@ -12,19 +13,22 @@ use Sunrice\Actions\Entries\ReturnTranslationToDraft;
 use Sunrice\Actions\Entries\SaveDraft;
 use Sunrice\Actions\Entries\TrashEntry;
 use Sunrice\Actions\Entries\UnpublishEntry;
+use Sunrice\Actions\Structure\DeleteCollection;
 use Sunrice\Actions\Structure\SaveCollection;
 use Sunrice\Events\EntryPublished;
-use Sunrice\Models\Entry;
+use Sunrice\Models\Blueprint;
 use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\Revision;
 use Sunrice\Permissions\PermissionRegistry;
-use Sunrice\Permissions\SyncPermissions;
+use Sunrice\Query\EntryQuery;
 use Sunrice\Support\Locales;
+use Sunrice\Support\SlugValidator;
+use Workbench\App\Models\User;
 
 it('creates a draft entry with a populated draft column', function () {
     $collection = createCollection('articles');
 
-    $entry = app(\Sunrice\Actions\Entries\CreateEntry::class)->handle($collection, [
+    $entry = app(CreateEntry::class)->handle($collection, [
         'title' => 'Hello World',
         'data' => ['body' => '<p>Hi</p>'],
     ]);
@@ -143,7 +147,7 @@ it('trashed entries keep occupying their slug', function () {
     $entry = createEntry($collection, 'Gone');
     app(TrashEntry::class)->handle($entry);
 
-    expect(\Sunrice\Support\SlugValidator::isUniqueForEntry('gone', $collection->id, Locales::main()))->toBeFalse();
+    expect(SlugValidator::isUniqueForEntry('gone', $collection->id, Locales::main()))->toBeFalse();
 });
 
 it('schedules publication via the command', function () {
@@ -167,7 +171,7 @@ it('syncs permissions for collections', function () {
         ->map(fn ($a) => "sunrice.entries.{$collection->id}.{$a}");
     expect(Permission::query()->whereIn('name', $expected)->count())->toBe(7);
 
-    app(\Sunrice\Actions\Structure\DeleteCollection::class)->handle($collection);
+    app(DeleteCollection::class)->handle($collection);
     expect(Permission::query()->whereIn('name', $expected)->count())->toBe(0);
 });
 
@@ -181,7 +185,7 @@ it('enforces edit-own vs edit for entry policies', function () {
     $collection = app(SaveCollection::class)->handle(['handle' => 'articles', 'title' => 'Articles']);
     $entry = createEntry($collection);
 
-    $author = \Workbench\App\Models\User::create(['name' => 'A', 'email' => 'a@x.com', 'password' => 'x']);
+    $author = User::create(['name' => 'A', 'email' => 'a@x.com', 'password' => 'x']);
     $entry->author_id = $author->id;
     $entry->save();
 
@@ -191,7 +195,7 @@ it('enforces edit-own vs edit for entry policies', function () {
 
     expect($author->can('update', $entry))->toBeTrue();
 
-    $other = \Workbench\App\Models\User::create(['name' => 'B', 'email' => 'b@x.com', 'password' => 'x']);
+    $other = User::create(['name' => 'B', 'email' => 'b@x.com', 'password' => 'x']);
     $other->assignRole($role);
     expect($other->can('update', $entry))->toBeFalse();
 
@@ -202,7 +206,7 @@ it('enforces edit-own vs edit for entry policies', function () {
 });
 
 it('queries published entries with field filters, terms and ordering', function () {
-    $blueprint = \Sunrice\Models\Blueprint::create([
+    $blueprint = Blueprint::create([
         'handle' => 'article',
         'title' => 'Article',
         'fields' => [['handle' => 'price', 'type' => 'number', 'config' => []]],
@@ -212,7 +216,7 @@ it('queries published entries with field filters, terms and ordering', function 
     createEntry($collection, 'Dear', ['price' => 50]);
     createEntry($collection, 'Hidden', ['price' => 1], 'draft');
 
-    $results = \Sunrice\Query\EntryQuery::collection('articles')
+    $results = EntryQuery::collection('articles')
         ->where('price', '>', 10)
         ->orderBy('price', 'desc')
         ->get();
@@ -226,6 +230,6 @@ it('paginates entry queries', function () {
         createEntry($collection, "E{$i}");
     }
 
-    $page = \Sunrice\Query\EntryQuery::collection('articles')->paginate(10);
+    $page = EntryQuery::collection('articles')->paginate(10);
     expect($page->total())->toBe(15)->and($page->count())->toBe(10);
 });

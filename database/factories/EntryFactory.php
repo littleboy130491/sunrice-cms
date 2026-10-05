@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
 
+/** @extends Factory<Entry> */
 class EntryFactory extends Factory
 {
     protected $model = Entry::class;

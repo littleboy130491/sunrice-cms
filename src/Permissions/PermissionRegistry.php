@@ -47,6 +47,28 @@ class PermissionRegistry
     }
 
     /**
+     * Permissions grouped by section for the role editor:
+     * [{group, permissions: [{name, label}]}]
+     *
+     * @return array<int, array{group: string, permissions: array<int, array{name: string, label: string}>}>
+     */
+    public function grouped(): array
+    {
+        $groups = [];
+        foreach ($this->all() as $permission) {
+            $groups[$permission['group']][] = [
+                'name' => $permission['name'],
+                'label' => $permission['label'],
+            ];
+        }
+
+        return collect($groups)
+            ->map(fn (array $permissions, string $group) => ['group' => $group, 'permissions' => $permissions])
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return array<int, array{name: string, label: string, group: string}>
      */
     public function global(): array

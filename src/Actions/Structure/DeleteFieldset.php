@@ -38,6 +38,7 @@ class DeleteFieldset
         return $handles;
     }
 
+    /** @param array<int, array<string, mixed>> $fields */
     protected function treeContains(array $fields, string $handle): bool
     {
         foreach ($fields as $field) {

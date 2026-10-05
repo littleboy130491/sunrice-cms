@@ -10,9 +10,22 @@ use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
+use Sunrice\Database\Factories\FormSubmissionFactory;
 
+/**
+ * @property int $id
+ * @property int $form_id
+ * @property array<string,mixed> $data
+ * @property array<string,mixed> $meta
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @use HasFactory<FormSubmissionFactory>
+ */
 class FormSubmission extends Model
 {
+    /** @use HasFactory<FormSubmissionFactory> */
     use HasFactory, MassPrunable, SoftDeletes;
 
     protected $table = 'sunrice_form_submissions';
@@ -21,9 +34,9 @@ class FormSubmission extends Model
 
     protected $casts = ['data' => 'array'];
 
-    protected static function newFactory(): \Sunrice\Database\Factories\FormSubmissionFactory
+    protected static function newFactory(): FormSubmissionFactory
     {
-        return \Sunrice\Database\Factories\FormSubmissionFactory::new();
+        return FormSubmissionFactory::new();
     }
 
     /** @return BelongsTo<Form, $this> */
@@ -34,6 +47,8 @@ class FormSubmission extends Model
 
     /**
      * Nothing is pruned while sunrice.forms.prune_after_days is null.
+     *
+     * @return Builder<static>
      */
     public function prunable(): Builder
     {

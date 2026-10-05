@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
 
+/** @extends Factory<FormSubmission> */
 class FormSubmissionFactory extends Factory
 {
     protected $model = FormSubmission::class;

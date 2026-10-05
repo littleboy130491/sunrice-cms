@@ -28,7 +28,7 @@ class UrlGenerator
             return Locales::prefix($locale) ?: '/';
         }
 
-        $route = $collection?->setting('route', '/{slug}') ?? '/{slug}';
+        $route = $collection->setting('route', '/{slug}');
         $slug = $this->entrySlug($entry, $locale);
 
         return Locales::prefix($locale).str_replace('{slug}', $slug, $route);
@@ -43,7 +43,9 @@ class UrlGenerator
             }
         }
 
-        return $entry->mainTranslation()?->slug ?? '';
+        $main = $entry->mainTranslation();
+
+        return $main === null ? '' : $main->slug;
     }
 
     public function archive(Collection $collection, ?string $locale = null): string
@@ -57,9 +59,10 @@ class UrlGenerator
     {
         $locale ??= Locales::current();
         $taxonomy = $term->taxonomy;
-        $route = $taxonomy?->setting('route', '/'.$taxonomy?->handle.'/{slug}') ?? '/{slug}';
+        $route = $taxonomy->setting('route', '/'.$taxonomy->handle.'/{slug}');
 
-        $slug = $term->mainTranslation()?->slug ?? '';
+        $main = $term->mainTranslation();
+        $slug = $main === null ? '' : $main->slug;
         if (! Locales::isMain($locale)) {
             $translation = $term->translation($locale);
             if ($translation !== null) {

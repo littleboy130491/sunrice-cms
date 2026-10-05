@@ -9,9 +9,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Sunrice\Database\Factories\TaxonomyFactory;
 
+/**
+ * @property int $id
+ * @property string $handle
+ * @property string $title
+ * @property int|null $blueprint_id
+ * @property bool $hierarchical
+ * @property array<string,mixed> $settings
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @use HasFactory<TaxonomyFactory>
+ */
 class Taxonomy extends Model
 {
+    /** @use HasFactory<TaxonomyFactory> */
     use HasFactory;
 
     protected $table = 'sunrice_taxonomies';
@@ -23,9 +38,9 @@ class Taxonomy extends Model
         'settings' => 'array',
     ];
 
-    protected static function newFactory(): \Sunrice\Database\Factories\TaxonomyFactory
+    protected static function newFactory(): TaxonomyFactory
     {
-        return \Sunrice\Database\Factories\TaxonomyFactory::new();
+        return TaxonomyFactory::new();
     }
 
     /** @return BelongsTo<Blueprint, $this> */

@@ -75,6 +75,6 @@ class HtmlSanitizer
 
         preg_match_all('/data-asset-id=["\'](\d+)["\']/', $html, $matches);
 
-        return array_values(array_map('intval', array_unique($matches[1] ?? [])));
+        return array_values(array_map('intval', array_unique($matches[1])));
     }
 }

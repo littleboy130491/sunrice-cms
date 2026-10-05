@@ -7,6 +7,7 @@ namespace Sunrice\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Sunrice\Models\Fieldset;
 
+/** @extends Factory<Fieldset> */
 class FieldsetFactory extends Factory
 {
     protected $model = Fieldset::class;

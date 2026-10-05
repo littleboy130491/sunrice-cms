@@ -7,6 +7,7 @@ namespace Sunrice\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Sunrice\Models\Taxonomy;
 
+/** @extends Factory<Taxonomy> */
 class TaxonomyFactory extends Factory
 {
     protected $model = Taxonomy::class;

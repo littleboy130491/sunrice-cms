@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Actions\Entries;
 
+use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
 use Sunrice\Models\EntryTranslation;
@@ -16,11 +17,11 @@ class CreateEntry
      * Creates a draft entry plus its main-language translation with
      * draft content populated.
      *
-     * @param  array{title: string, slug?: string, data?: array, seo?: array}  $attributes
+     * @param  array{title?: string, slug?: string, data?: array<string, mixed>, seo?: array<string, mixed>}  $attributes
      */
     public function handle(Collection $collection, array $attributes, ?int $authorId = null, ?int $blueprintId = null): Entry
     {
-        $blueprint = $blueprintId ? \Sunrice\Models\Blueprint::findOrFail($blueprintId) : $collection->blueprint;
+        $blueprint = $blueprintId ? Blueprint::findOrFail($blueprintId) : $collection->blueprint;
         $schema = $blueprint?->schema();
 
         $data = $schema ? $schema->normalize($attributes['data'] ?? []) : ($attributes['data'] ?? []);

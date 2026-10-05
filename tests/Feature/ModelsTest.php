@@ -2,11 +2,17 @@
 
 declare(strict_types=1);
 
-use Sunrice\Models\Blueprint;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Storage;
+use Sunrice\Models\Asset;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
 use Sunrice\Models\EntryTranslation;
+use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
+use Sunrice\Models\GlobalSet;
+use Sunrice\Models\Menu;
 use Sunrice\Models\Setting;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
@@ -41,7 +47,7 @@ it('enforces slug uniqueness per collection and locale', function () {
             'title' => 'Other',
             'slug' => 'hello-world',
             'data' => [],
-        ]))->toThrow(\Illuminate\Database\QueryException::class);
+        ]))->toThrow(QueryException::class);
 
     // Same slug allowed in a different locale and a different collection.
     $entry = createEntry($collection, 'Hola');
@@ -82,22 +88,22 @@ it('attaches terms to entries and builds a term tree', function () {
 });
 
 it('creates menus, globals and taxonomies via factories', function () {
-    $menu = \Sunrice\Models\Menu::factory()->create();
+    $menu = Menu::factory()->create();
     $menu->items()->create(['type' => 'url', 'url' => 'https://x.test', 'labels' => ['id' => 'X'], 'sort_order' => 0]);
     expect($menu->rootItems)->toHaveCount(1);
 
-    $global = \Sunrice\Models\GlobalSet::factory()->create(['translatable' => true]);
+    $global = GlobalSet::factory()->create(['translatable' => true]);
     $global->values()->create(['locale' => 'id', 'data' => ['name' => 'Situs']]);
     expect($global->valueFor('id')->data)->toBe(['name' => 'Situs']);
 
-    expect(Taxonomy::factory()->create()->terms())->toBeInstanceOf(\Illuminate\Database\Eloquent\Relations\HasMany::class);
+    expect(Taxonomy::factory()->create()->terms())->toBeInstanceOf(HasMany::class);
 });
 
 it('stores assets with urls and version cache busting', function () {
-    \Illuminate\Support\Facades\Storage::fake('public');
-    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    Storage::fake('public');
+    $disk = Storage::disk('public');
     $disk->put('sunrice/2025/01/pic.jpg', 'x');
-    $asset = \Sunrice\Models\Asset::factory()->create(['path' => 'sunrice/2025/01/pic.jpg', 'version' => 3]);
+    $asset = Asset::factory()->create(['path' => 'sunrice/2025/01/pic.jpg', 'version' => 3]);
 
     expect($asset->url())->toContain('pic.jpg')->toContain('v=3')
         ->and($asset->isImage())->toBeTrue();
@@ -107,7 +113,7 @@ it('stores assets with urls and version cache busting', function () {
 });
 
 it('prunes only old submissions when configured', function () {
-    $form = \Sunrice\Models\Form::factory()->create();
+    $form = Form::factory()->create();
     $old = FormSubmission::factory()->create(['form_id' => $form->id, 'created_at' => now()->subDays(40)]);
     $new = FormSubmission::factory()->create(['form_id' => $form->id, 'created_at' => now()]);
 

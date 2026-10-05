@@ -17,7 +17,7 @@ use Sunrice\Support\SlugValidator;
 class SaveDraft
 {
     /**
-     * @param  array{title: string, slug?: string, data?: array, seo?: array}  $attributes
+     * @param  array{title?: string, slug?: string, data?: array<string, mixed>, seo?: array<string, mixed>, is_ready?: bool}  $attributes
      *
      * @throws ValidationException
      */
@@ -52,6 +52,9 @@ class SaveDraft
             'data' => $data,
             'seo' => $seo,
         ];
+        if (array_key_exists('is_ready', $attributes)) {
+            $translation->is_ready = (bool) $attributes['is_ready'];
+        }
         $translation->save();
 
         return $translation;

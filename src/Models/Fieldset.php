@@ -6,10 +6,23 @@ namespace Sunrice\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+use Sunrice\Database\Factories\FieldsetFactory;
 use Sunrice\Fields\BlueprintSchema;
 
+/**
+ * @property int $id
+ * @property string $handle
+ * @property string $title
+ * @property array<int,array<string,mixed>> $fields
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @use HasFactory<FieldsetFactory>
+ */
 class Fieldset extends Model
 {
+    /** @use HasFactory<FieldsetFactory> */
     use HasFactory;
 
     protected $table = 'sunrice_fieldsets';
@@ -18,9 +31,9 @@ class Fieldset extends Model
 
     protected $casts = ['fields' => 'array'];
 
-    protected static function newFactory(): \Sunrice\Database\Factories\FieldsetFactory
+    protected static function newFactory(): FieldsetFactory
     {
-        return \Sunrice\Database\Factories\FieldsetFactory::new();
+        return FieldsetFactory::new();
     }
 
     public function schema(): BlueprintSchema

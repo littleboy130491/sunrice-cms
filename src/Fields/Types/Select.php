@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Fields\Types;
 
+use Illuminate\Validation\Rule;
 use Sunrice\Fields\FieldType;
 
 /**
@@ -25,7 +26,7 @@ class Select extends FieldType
             return ['array'];
         }
 
-        return $options === [] ? ['string'] : ['string', \Illuminate\Validation\Rule::in($options)];
+        return $options === [] ? ['string'] : ['string', Rule::in($options)];
     }
 
     public function normalize(mixed $value, array $field): mixed
@@ -43,11 +44,15 @@ class Select extends FieldType
     }
 
     /**
+     * @param  array<string, mixed>  $field
      * @return array<int, string>
      */
     protected function optionValues(array $field): array
     {
-        return collect($field['config']['options'] ?? [])
+        /** @var array<int, mixed> $options */
+        $options = $field['config']['options'] ?? [];
+
+        return collect($options)
             ->map(fn ($o) => is_array($o) ? (string) ($o['value'] ?? '') : (string) $o)
             ->filter(fn (string $v) => $v !== '')
             ->values()

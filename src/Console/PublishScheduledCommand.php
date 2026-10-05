@@ -8,7 +8,6 @@ use Illuminate\Console\Command;
 use Sunrice\Actions\Entries\PublishTranslation;
 use Sunrice\Events\EntryPublished;
 use Sunrice\Models\Entry;
-use Sunrice\Models\EntryTranslation;
 use Sunrice\Support\Locales;
 
 /**

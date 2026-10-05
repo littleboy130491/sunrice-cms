@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Query;
 
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -15,6 +16,11 @@ class JsonField
 {
     /**
      * @param  'in'|'contains'|'='|'!='|'<'|'<='|'>'|'>='|string  $operator
+     *
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     * @return Builder<TModel>
      */
     public static function where(
         Builder $query,
@@ -36,6 +42,12 @@ class JsonField
         };
     }
 
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     * @return Builder<TModel>
+     */
     protected static function compare(Builder $query, string $column, string $path, string $operator, mixed $value, ?string $cast): Builder
     {
         if ($cast === 'number' || $cast === 'date') {
@@ -48,6 +60,12 @@ class JsonField
         return $query->where($column.'->'.$path, $operator, $value);
     }
 
+    /**
+     * @template TModel of \Illuminate\Database\Eloquent\Model
+     *
+     * @param  Builder<TModel>  $query
+     * @return Builder<TModel>
+     */
     public static function orderBy(Builder $query, string $column, string $path, ?string $cast, string $direction = 'asc'): Builder
     {
         $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
@@ -61,10 +79,15 @@ class JsonField
 
     /**
      * Driver-specific CAST for numeric and date comparison/sorting.
+     *
+     * @param  Builder<covariant \Illuminate\Database\Eloquent\Model>  $query
      */
     public static function castExpression(Builder $query, string $column, string $path, string $cast): string
     {
-        $driver = $query->getConnection()->getDriverName();
+        $connection = $query->getConnection();
+        $driver = $connection instanceof Connection
+            ? $connection->getDriverName()
+            : (string) config('database.default');
         $col = '"'.str_replace('.', '"."', $column).'"';
         $extract = match ($driver) {
             'pgsql' => "({$col} #>> '{".str_replace('.', ',', $path)."}')",

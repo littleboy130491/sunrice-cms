@@ -20,6 +20,9 @@ class ContentCache
         return (bool) config('sunrice.cache.enabled', true);
     }
 
+    /**
+     * @param  Closure(): mixed  $callback
+     */
     public static function remember(string $key, Closure $callback, ?string $locale = null): mixed
     {
         if (! static::enabled()) {
@@ -29,8 +32,10 @@ class ContentCache
         $locale ??= Locales::current();
         $fullKey = 'sunrice:'.ContentVersion::current().':'.$locale.':'.$key;
 
-        return Cache::store(config('sunrice.cache.store'))
-            ->remember($fullKey, (int) config('sunrice.cache.ttl', 3600), $callback);
+        $store = Cache::store(config('sunrice.cache.store'));
+
+        /** @var mixed */
+        return $store->remember($fullKey, (int) config('sunrice.cache.ttl', 3600), $callback);
     }
 
     /**

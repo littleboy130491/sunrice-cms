@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Sunrice\Actions\Entries;
 
-use Illuminate\Support\Str;
 use Sunrice\Models\Entry;
 use Sunrice\Models\EntryTranslation;
+use Sunrice\Support\SlugValidator;
 
 /**
  * Copies an entry and all its translations as a new draft with
@@ -38,7 +38,7 @@ class DuplicateEntry
         $base = $translation->slug.'-copy';
         $slug = $base;
         $i = 2;
-        while (! \Sunrice\Support\SlugValidator::isUniqueForEntry($slug, $translation->collection_id, $translation->locale)) {
+        while (! SlugValidator::isUniqueForEntry($slug, $translation->collection_id, $translation->locale)) {
             $slug = $base.'-'.$i++;
         }
 

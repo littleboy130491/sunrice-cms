@@ -87,7 +87,7 @@ class Flexible extends FieldType
                 continue;
             }
             foreach ($schema->references($block['values']) as $ref) {
-                $ref['field_path'] = $i.'.values.'.($ref['field_path'] ?? '');
+                $ref['field_path'] = $i.'.values.'.($ref['field_path']);
                 $refs[] = $ref;
             }
         }

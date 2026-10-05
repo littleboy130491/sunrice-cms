@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Sunrice\Actions\Structure;
 
-use Sunrice\Fields\BlueprintSchema;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Entry;
 
@@ -42,7 +41,7 @@ class RenameFieldHandle
                     $dirty = false;
                     foreach ($entry->translations()->get() as $translation) {
                         foreach (['data', 'draft.data'] as $path) {
-                            if ($path === 'data' && is_array($translation->data)) {
+                            if ($path === 'data' && $translation->data !== []) {
                                 $data = $translation->data;
                                 if (array_key_exists($from, $data)) {
                                     $data[$to] = $data[$from];
@@ -71,13 +70,17 @@ class RenameFieldHandle
         return ['updated_entries' => $updated];
     }
 
+    /**
+     * @param  array<int, array<string, mixed>>  $fields
+     * @return array<int, array<string, mixed>>
+     */
     protected function renameInTree(array $fields, string $from, string $to): array
     {
         foreach ($fields as &$field) {
             if (($field['handle'] ?? null) === $from) {
                 $field['handle'] = $to;
             }
-            if (isset($field['config']['fields']) && is_array($field['config']['fields'])) {
+            if (isset($field['config']['fields'])) {
                 $field['config']['fields'] = $this->renameInTree($field['config']['fields'], $from, $to);
             }
         }

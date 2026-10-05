@@ -7,10 +7,24 @@ namespace Sunrice\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Sunrice\Database\Factories\FormFactory;
 use Sunrice\Fields\BlueprintSchema;
 
+/**
+ * @property int $id
+ * @property string $handle
+ * @property string $title
+ * @property array<int,array<string,mixed>> $fields
+ * @property array<string,mixed> $settings
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @use HasFactory<FormFactory>
+ */
 class Form extends Model
 {
+    /** @use HasFactory<FormFactory> */
     use HasFactory;
 
     protected $table = 'sunrice_forms';
@@ -22,9 +36,9 @@ class Form extends Model
         'settings' => 'array',
     ];
 
-    protected static function newFactory(): \Sunrice\Database\Factories\FormFactory
+    protected static function newFactory(): FormFactory
     {
-        return \Sunrice\Database\Factories\FormFactory::new();
+        return FormFactory::new();
     }
 
     /** @return HasMany<FormSubmission, $this> */

@@ -7,12 +7,14 @@ namespace Sunrice\Query;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Sunrice\Cache\ContentCache;
+use Sunrice\Fields\FieldRegistry;
 use Sunrice\Fields\HydrationContext;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Reference;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
+use Sunrice\Models\TermTranslation;
 use Sunrice\Support\Locales;
 
 /**
@@ -25,6 +27,7 @@ use Sunrice\Support\Locales;
  */
 class EntryQuery
 {
+    /** @var Builder<Entry> */
     protected Builder $query;
 
     protected ?Collection $collection = null;
@@ -45,6 +48,7 @@ class EntryQuery
     /**
      * @param  array<string, mixed>  $state  extra state for the cache key
      */
+    /** @var array<string, mixed> */
     protected array $filters = [];
 
     public function __construct(Collection $collection)
@@ -54,16 +58,16 @@ class EntryQuery
         $this->query = Entry::query()->where('sunrice_entries.collection_id', $collection->id)->published();
     }
 
-    public static function collection(string $handle): static
+    public static function collection(string $handle): self
     {
         $collection = Collection::query()->where('handle', $handle)->firstOrFail();
 
-        return new static($collection);
+        return new self($collection);
     }
 
-    public static function forCollection(Collection $collection): static
+    public static function forCollection(Collection $collection): self
     {
-        return new static($collection);
+        return new self($collection);
     }
 
     public function locale(string $locale): static
@@ -121,6 +125,7 @@ class EntryQuery
      * Filter to entries carrying a term (slug or id list) of a
      * taxonomy; includeChildren() adds descendant terms.
      */
+    /** @param string|int|array<int, int|string> $term */
     public function whereTerm(string $taxonomyHandle, string|int|array $term, bool $includeChildren = false): static
     {
         $taxonomy = Taxonomy::query()->where('handle', $taxonomyHandle)->first();
@@ -146,6 +151,7 @@ class EntryQuery
     }
 
     /**
+     * @param  string|int|array<int, int|string>  $term
      * @return array<int, int>
      */
     protected function termIds(int $taxonomyId, string|int|array $term): array
@@ -157,7 +163,7 @@ class EntryQuery
 
         $ids = $numeric;
         if ($slugs !== []) {
-            $ids = array_merge($ids, \Sunrice\Models\TermTranslation::query()
+            $ids = array_merge($ids, TermTranslation::query()
                 ->where('taxonomy_id', $taxonomyId)
                 ->whereIn('slug', $slugs)
                 ->pluck('term_id')->all());
@@ -228,6 +234,7 @@ class EntryQuery
         return $this->resolve($results);
     }
 
+    /** @return LengthAwarePaginator<int, Entry> */
     public function paginate(int $perPage = 12, string $pageName = 'page'): LengthAwarePaginator
     {
         $this->filters['paginate'] = [$perPage, $pageName, (int) request($pageName, 1)];
@@ -243,6 +250,8 @@ class EntryQuery
 
     /**
      * The query builder — public escape hatch.
+     *
+     * @return Builder<Entry>
      */
     public function toBase(): Builder
     {
@@ -278,7 +287,7 @@ class EntryQuery
             return null;
         }
 
-        return app(\Sunrice\Fields\FieldRegistry::class)
+        return app(FieldRegistry::class)
             ->get($definition['type'] ?? 'text')
             ->sortCast();
     }
@@ -307,7 +316,9 @@ class EntryQuery
      */
     protected function resolve(\Illuminate\Support\Collection $entries): \Illuminate\Support\Collection
     {
-        $entries->loadMissing(array_unique($this->eager));
+        if ($entries instanceof \Illuminate\Database\Eloquent\Collection) {
+            $entries->loadMissing(array_unique($this->eager));
+        }
 
         $ctx = new HydrationContext($this->locale, $this->preview);
 

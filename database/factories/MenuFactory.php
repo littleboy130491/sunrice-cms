@@ -7,6 +7,7 @@ namespace Sunrice\Database\Factories;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Sunrice\Models\Menu;
 
+/** @extends Factory<Menu> */
 class MenuFactory extends Factory
 {
     protected $model = Menu::class;

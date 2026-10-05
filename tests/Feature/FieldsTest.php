@@ -2,13 +2,18 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Storage;
+use Sunrice\Fields\Block;
 use Sunrice\Fields\BlueprintSchema;
 use Sunrice\Fields\CustomField;
 use Sunrice\Fields\FieldRegistry;
 use Sunrice\Fields\FieldType;
 use Sunrice\Fields\HydrationContext;
 use Sunrice\Models\Asset;
+use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\Fieldset;
+use Sunrice\Query\JsonField;
+use Sunrice\Support\HtmlSanitizer;
 
 class DummyRatingField extends FieldType
 {
@@ -110,7 +115,7 @@ it('expands fieldset includes and detects cycles', function () {
 });
 
 it('hydrates asset and entries fields via the context memo', function () {
-    \Illuminate\Support\Facades\Storage::fake('public');
+    Storage::fake('public');
     $asset = Asset::factory()->create();
     $collection = createCollection();
     $linked = createEntry($collection, 'Linked');
@@ -167,7 +172,7 @@ it('round-trips a repeater inside a flexible block', function () {
 
     $hydrated = $schema->hydrate($normalized, new HydrationContext('id'));
     $block = $hydrated['sections']->first();
-    expect($block)->toBeInstanceOf(\Sunrice\Fields\Block::class)
+    expect($block)->toBeInstanceOf(Block::class)
         ->and($block->type)->toBe('gallery')
         ->and($block->photos)->toHaveCount(2);
 });
@@ -190,11 +195,11 @@ it('wraps custom fields around a base type with preset config and extra rules', 
 });
 
 it('sanitizes rich text and extracts asset ids', function () {
-    $clean = \Sunrice\Support\HtmlSanitizer::sanitize('<p onclick="x()">Hi<script>alert(1)</script><a href="javascript:x">l</a></p>');
+    $clean = HtmlSanitizer::sanitize('<p onclick="x()">Hi<script>alert(1)</script><a href="javascript:x">l</a></p>');
     expect($clean)->not->toContain('script')->not->toContain('onclick')->not->toContain('javascript:');
 
     $html = '<img src="a.jpg" data-asset-id="12"><img src="b.jpg" data-asset-id="12"><img src="c.jpg" data-asset-id="9">';
-    expect(\Sunrice\Support\HtmlSanitizer::extractAssetIds($html))->toBe([12, 9]);
+    expect(HtmlSanitizer::extractAssetIds($html))->toBe([12, 9]);
 });
 
 it('queries JSON fields with casts', function () {
@@ -202,17 +207,17 @@ it('queries JSON fields with casts', function () {
     $cheap = createEntry($collection, 'Cheap', ['price' => 2]);
     $dear = createEntry($collection, 'Dear', ['price' => 10]);
 
-    $q = \Sunrice\Models\EntryTranslation::query()->where('collection_id', $collection->id);
-    \Sunrice\Query\JsonField::where($q, 'data', 'price', '>', 5, 'number');
+    $q = EntryTranslation::query()->where('collection_id', $collection->id);
+    JsonField::where($q, 'data', 'price', '>', 5, 'number');
     expect($q->pluck('title')->all())->toBe(['Dear']);
 
-    $q2 = \Sunrice\Models\EntryTranslation::query()->where('collection_id', $collection->id);
-    \Sunrice\Query\JsonField::orderBy($q2, 'data', 'price', 'number', 'asc');
+    $q2 = EntryTranslation::query()->where('collection_id', $collection->id);
+    JsonField::orderBy($q2, 'data', 'price', 'number', 'asc');
     expect($q2->pluck('title')->all())->toBe(['Cheap', 'Dear']);
 
     // 'contains' for multi-select JSON arrays.
     $multi = createEntry($collection, 'Multi', ['tags' => ['a', 'b']]);
-    $q3 = \Sunrice\Models\EntryTranslation::query()->where('collection_id', $collection->id);
-    \Sunrice\Query\JsonField::where($q3, 'data', 'tags', 'contains', 'b');
+    $q3 = EntryTranslation::query()->where('collection_id', $collection->id);
+    JsonField::where($q3, 'data', 'tags', 'contains', 'b');
     expect($q3->pluck('title')->all())->toBe(['Multi']);
 });

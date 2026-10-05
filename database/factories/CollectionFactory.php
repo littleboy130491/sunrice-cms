@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 
+/** @extends Factory<Collection> */
 class CollectionFactory extends Factory
 {
     protected $model = Collection::class;

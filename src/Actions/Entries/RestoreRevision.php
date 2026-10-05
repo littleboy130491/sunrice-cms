@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Actions\Entries;
 
+use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\Revision;
 
 /**
@@ -12,7 +13,7 @@ use Sunrice\Models\Revision;
  */
 class RestoreRevision
 {
-    public function handle(Revision $revision): \Sunrice\Models\EntryTranslation
+    public function handle(Revision $revision): EntryTranslation
     {
         $translation = $revision->translation;
         $translation->draft = $revision->content;

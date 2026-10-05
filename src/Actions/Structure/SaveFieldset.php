@@ -12,6 +12,7 @@ class SaveFieldset
     /**
      * @param  array{handle?: string, title: string, fields?: array}  $attributes
      */
+    /** @param array<string, mixed> $attributes */
     public function handle(array $attributes, ?Fieldset $fieldset = null): Fieldset
     {
         $validated = validator($attributes, [

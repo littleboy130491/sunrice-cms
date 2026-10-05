@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace Sunrice\Actions\Structure;
 
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Blueprint;
 
 class SaveBlueprint
 {
     /**
-     * @param  array{handle?: string, title: string, fields?: array}  $attributes
+     * @param  array{handle?: string, title: string, fields?: array<int, array<string, mixed>>}  $attributes
      */
     public function handle(array $attributes, ?Blueprint $blueprint = null): Blueprint
     {

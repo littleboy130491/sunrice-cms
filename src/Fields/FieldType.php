@@ -60,7 +60,7 @@ abstract class FieldType
      * rebuild the references table.
      *
      * @param  array<string, mixed>  $field
-     * @return array<int, array{target_type: string, target_id: int}>
+     * @return array<int, array{target_type: string, target_id: int, field_path?: string}>
      */
     public function references(mixed $value, array $field): array
     {
@@ -113,6 +113,7 @@ abstract class FieldType
         return app(FieldRegistry::class);
     }
 
+    /** @param array<string, mixed> $definition */
     protected function field(array $definition): FieldType
     {
         return $this->registry()->get($definition['type'] ?? 'text');

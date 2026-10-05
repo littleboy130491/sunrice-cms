@@ -9,9 +9,18 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Sunrice\Database\Factories\CollectionFactory;
 use Sunrice\Fields\BlueprintSchema;
 
 /**
+ * @property int $id
+ * @property string $handle
+ * @property string $title
+ * @property int|null $blueprint_id
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  * @property array<string, mixed> $settings
  * @property array<string, mixed>|null $archive_data
  *
@@ -19,9 +28,12 @@ use Sunrice\Fields\BlueprintSchema;
  * translatable, template, archive_template, archive_blueprint_id,
  * default_sort ('manual'|'published_at_desc'|'title_asc'), per_page,
  * icon, table_columns (array of field handles).
+ *
+ * @use HasFactory<CollectionFactory>
  */
 class Collection extends Model
 {
+    /** @use HasFactory<CollectionFactory> */
     use HasFactory;
 
     protected $table = 'sunrice_collections';
@@ -33,9 +45,9 @@ class Collection extends Model
         'archive_data' => 'array',
     ];
 
-    protected static function newFactory(): \Sunrice\Database\Factories\CollectionFactory
+    protected static function newFactory(): CollectionFactory
     {
-        return \Sunrice\Database\Factories\CollectionFactory::new();
+        return CollectionFactory::new();
     }
 
     /** @return BelongsTo<Blueprint, $this> */

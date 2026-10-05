@@ -8,10 +8,31 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Sunrice\Database\Factories\EntryTranslationFactory;
 use Sunrice\Support\Locales;
 
+/**
+ * @property int $id
+ * @property int $entry_id
+ * @property int $collection_id
+ * @property string $locale
+ * @property string $title
+ * @property string $slug
+ * @property array<string,mixed> $data
+ * @property array<string,mixed> $seo
+ * @property array<string,mixed>|null $draft
+ * @property bool $is_ready
+ * @property bool $is_outdated
+ * @property Carbon|null $content_published_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @use HasFactory<EntryTranslationFactory>
+ */
 class EntryTranslation extends Model
 {
+    /** @use HasFactory<EntryTranslationFactory> */
     use HasFactory;
 
     protected $table = 'sunrice_entry_translations';
@@ -26,9 +47,9 @@ class EntryTranslation extends Model
         'content_published_at' => 'datetime',
     ];
 
-    protected static function newFactory(): \Sunrice\Database\Factories\EntryTranslationFactory
+    protected static function newFactory(): EntryTranslationFactory
     {
-        return \Sunrice\Database\Factories\EntryTranslationFactory::new();
+        return EntryTranslationFactory::new();
     }
 
     /** @return BelongsTo<Entry, $this> */

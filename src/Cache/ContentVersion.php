@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sunrice\Cache;
 
 use Illuminate\Support\Facades\Cache;
+use Spatie\ResponseCache\Facades\ResponseCache;
 
 /**
  * Single global version number included in every public cache key.
@@ -34,8 +35,8 @@ class ContentVersion
         $store->forever(static::KEY, time());
 
         // Optional full-page cache is fully cleared on every bump.
-        if (config('sunrice.cache.full_page') && class_exists(\Spatie\ResponseCache\Facades\ResponseCache::class)) {
-            \Spatie\ResponseCache\Facades\ResponseCache::clear();
+        if (config('sunrice.cache.full_page') && class_exists(ResponseCache::class)) {
+            ResponseCache::clear();
         }
     }
 }
