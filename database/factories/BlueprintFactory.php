@@ -1,0 +1,24 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Sunrice\Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Sunrice\Models\Blueprint;
+
+class BlueprintFactory extends Factory
+{
+    protected $model = Blueprint::class;
+
+    public function definition(): array
+    {
+        return [
+            'handle' => fake()->unique()->slug(2),
+            'title' => fake()->words(2, true),
+            'fields' => [
+                ['handle' => 'body', 'type' => 'textarea', 'label' => 'Body'],
+            ],
+        ];
+    }
+}

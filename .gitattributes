@@ -1,0 +1,15 @@
+tests/ export-ignore
+workbench/ export-ignore
+.github/ export-ignore
+resources/js/ export-ignore
+*.md export-ignore
+!README.md export-ignore
+package.json export-ignore
+package-lock.json export-ignore
+vite.config.ts export-ignore
+tsconfig.json export-ignore
+components.json export-ignore
+pint.json export-ignore
+phpstan.neon export-ignore
+phpunit.xml export-ignore
+testbench.yaml export-ignore

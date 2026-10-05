@@ -1,0 +1,21 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Sunrice\Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Sunrice\Models\Menu;
+
+class MenuFactory extends Factory
+{
+    protected $model = Menu::class;
+
+    public function definition(): array
+    {
+        return [
+            'handle' => fake()->unique()->slug(2),
+            'title' => fake()->words(2, true),
+        ];
+    }
+}
