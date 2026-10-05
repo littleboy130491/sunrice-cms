@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
@@ -320,4 +321,25 @@ it('serves entry and term search endpoints for pickers', function () {
     get('/cms/api/terms?taxonomy=cats&q=beri')
         ->assertOk()
         ->assertJsonPath('data.0.title', 'Berita');
+});
+
+it('limits term search to taxonomies the user may use', function () {
+    $collection = Collection::factory()->create(['handle' => 'posts']);
+    $taxonomy = Taxonomy::factory()->create(['handle' => 'cats']);
+    $collection->taxonomies()->attach($taxonomy);
+    $term = Term::factory()->for($taxonomy)->create();
+    $term->translations->first()->update(['name' => 'Berita', 'slug' => 'berita']);
+    app(SyncPermissions::class)->handle();
+
+    $user = User::query()->create(['name' => 'Author', 'email' => 'author@x.com', 'password' => bcrypt('password')]);
+    $user->givePermissionTo('sunrice.access-admin');
+    test()->actingAs($user);
+
+    get('/cms/api/terms?taxonomy=cats')->assertOk()->assertJsonCount(0, 'data');
+
+    $user->givePermissionTo("sunrice.entries.{$collection->id}.edit-own");
+    $user->unsetRelation('permissions');
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    get('/cms/api/terms?taxonomy=cats')->assertOk()->assertJsonPath('data.0.title', 'Berita');
 });

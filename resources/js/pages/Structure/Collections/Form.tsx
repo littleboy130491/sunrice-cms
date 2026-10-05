@@ -35,7 +35,6 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             sluggable: collection?.settings?.sluggable !== false,
             archivable: !!collection?.settings?.archivable,
             route: (collection?.settings?.route as string) ?? '',
-            fallback: (collection?.settings?.fallback as string) ?? '404',
         },
         taxonomy_ids: collection?.taxonomy_ids ?? [],
     });
@@ -110,16 +109,6 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                     <div className="grid gap-2">
                         <Label htmlFor="route">Route prefix (e.g. blog/…)</Label>
                         <Input id="route" value={form.data.settings.route} onChange={(e) => form.setData('settings', { ...form.data.settings, route: e.target.value })} />
-                    </div>
-                    <div className="grid gap-2">
-                        <Label>Missing-translation fallback</Label>
-                        <Select value={form.data.settings.fallback} onValueChange={(v) => form.setData('settings', { ...form.data.settings, fallback: v })}>
-                            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="main">Fall back to main locale</SelectItem>
-                                <SelectItem value="404">404</SelectItem>
-                            </SelectContent>
-                        </Select>
                     </div>
                 </CardContent>
             </Card>

@@ -33,7 +33,6 @@ class SaveCollection
             'settings.archivable' => ['boolean'],
             'settings.route' => ['nullable', 'string', 'max:255'],
             'settings.archive_entries_in' => ['nullable', 'string', 'max:100'],
-            'settings.fallback' => ['nullable', Rule::in(['main', '404'])],
             'taxonomy_ids' => ['array'],
             'taxonomy_ids.*' => ['integer', Rule::exists('sunrice_taxonomies', 'id')],
         ])->validate();

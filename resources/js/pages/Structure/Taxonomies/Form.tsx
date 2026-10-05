@@ -10,7 +10,7 @@ import type { SharedProps } from '@/types';
 
 interface TaxonomyShape {
     id: number; handle: string; title: string; blueprint_id: number | null; hierarchical: boolean;
-    settings: { sluggable?: boolean; route?: string; fallback?: string };
+    settings: { sluggable?: boolean; route?: string };
 }
 
 interface Props {
@@ -28,7 +28,6 @@ export default function TaxonomyForm({ taxonomy, blueprints }: Props) {
         settings: {
             sluggable: taxonomy?.settings?.sluggable !== false,
             route: taxonomy?.settings?.route ?? '',
-            fallback: taxonomy?.settings?.fallback ?? '404',
         },
     });
 

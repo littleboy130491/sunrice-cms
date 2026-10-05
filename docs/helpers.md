@@ -36,5 +36,5 @@ Sunrice::entries('articles')
 ```
 
 Public queries only ever return published, non-trashed entries and
-resolve the whole-entity translation (with `main` fallback depending on
-`collection.settings.fallback`).
+resolve the whole-entity translation (Ready translation, otherwise the
+whole main-locale translation).

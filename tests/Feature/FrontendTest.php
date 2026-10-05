@@ -49,6 +49,46 @@ it('serves the main slug under non-main locales for fallback pages', function ()
     get('/en/pages/about')->assertOk()->assertSee('About');
 });
 
+it('does not route draft translation slugs and falls back to the main entry', function () {
+    $collection = createCollection('pages', ['route' => '/pages/{slug}']);
+    $entry = createEntry($collection, title: 'Tentang');
+    $entry->mainTranslation()->update(['slug' => 'tentang']);
+    $entry->translations()->create([
+        'collection_id' => $collection->id,
+        'locale' => 'en',
+        'title' => 'About draft',
+        'slug' => 'about-draft',
+        'data' => [],
+        'is_ready' => false,
+    ]);
+
+    get('/en/pages/about-draft')->assertNotFound();
+    get('/en/pages/tentang')->assertOk()->assertSee('Tentang')->assertDontSee('About draft');
+});
+
+it('resolves entries on term archives for the active locale', function () {
+    $collection = createCollection('posts', ['route' => '/posts/{slug}']);
+    $entry = createEntry($collection, title: 'Halo Dunia');
+    $entry->translations()->create([
+        'collection_id' => $collection->id,
+        'locale' => 'en',
+        'title' => 'Hello World EN',
+        'slug' => 'hello-world-en',
+        'data' => [],
+        'is_ready' => true,
+        'content_published_at' => now(),
+    ]);
+
+    $taxonomy = Taxonomy::factory()->create(['handle' => 'topics', 'settings' => ['has_archive' => true, 'route' => '/topics/{slug}']]);
+    $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
+    $term->translations()->first()->update(['name' => 'Laravel', 'slug' => 'laravel']);
+    $entry->terms()->attach($term);
+    RouteMatcher::flush();
+
+    get('/topics/laravel')->assertOk()->assertSee('Halo Dunia');
+    get('/en/topics/laravel')->assertOk()->assertSee('Hello World EN')->assertDontSee('Halo Dunia');
+});
+
 it('renders archive and term archive pages', function () {
     $collection = createCollection('posts', ['route' => '/posts/{slug}', 'has_archive' => true, 'archive_route' => '/posts']);
     createEntry($collection, title: 'First Post');

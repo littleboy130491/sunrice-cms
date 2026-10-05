@@ -67,12 +67,15 @@ class PageController extends Controller
     {
         abort_if($match->collection === null || $match->slug === null, 404);
 
-        // The URL slug may be the locale slug or the main-language slug
-        // (fallback pages keep the main-language address).
+        // The URL slug may be the locale's Ready translation slug or the
+        // main-language slug (fallback pages keep the main-language address).
+        // Draft translation slugs are never routable.
         $translation = EntryTranslation::query()
             ->where('collection_id', $match->collection->id)
             ->where('slug', $match->slug)
-            ->where(fn ($q) => $q->where('locale', $locale)->orWhere('locale', Locales::main()))
+            ->where(fn ($q) => $q
+                ->where(fn ($q) => $q->where('locale', $locale)->where('is_ready', true))
+                ->orWhere('locale', Locales::main()))
             ->whereHas('entry', fn ($q) => $q->published())
             ->orderByRaw('(locale = ?) desc', [$locale])
             ->first();
@@ -135,6 +138,9 @@ class PageController extends Controller
             ->with('translations')
             ->paginate((int) $match->taxonomy->setting('per_page', 12))
             ->withQueryString();
+
+        // Resolve each entry for the active locale (whole-entry fallback).
+        $entries->getCollection()->each(fn (Entry $entry) => $entry->resolveFor($locale));
 
         return $this->render(new TemplateContext(
             pageType: 'term',

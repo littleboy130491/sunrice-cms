@@ -30,7 +30,6 @@ class SaveTaxonomy
             'settings' => ['array'],
             'settings.sluggable' => ['boolean'],
             'settings.route' => ['nullable', 'string', 'max:255'],
-            'settings.fallback' => ['nullable', Rule::in(['main', '404'])],
         ])->validate();
 
         $taxonomy ??= new Taxonomy;

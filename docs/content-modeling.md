@@ -10,8 +10,6 @@ Settings:
 - `has_single`, `has_archive` — toggle detail/archive pages.
 - `translatable`, `sluggable`, `dated`, `archivable`.
 - `per_page` — archive pagination size.
-- `fallback` — `main` (serve main-locale page when a translation is
-  missing) or `404`.
 - `template` — default Blade view for singles.
 - `taxonomies` — attached taxonomy ids.
 
