@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Cache;
 use Sunrice\Actions\Entries\PublishTranslation;
 use Sunrice\Actions\Entries\SaveDraft;
 use Sunrice\Cache\ContentVersion;
+use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Form;
@@ -21,7 +22,7 @@ use function Pest\Laravel\seed;
 beforeEach(function () {
     config()->set('honeypot.enabled', false);
     seed(DemoSeeder::class);
-    \Sunrice\Frontend\RouteMatcher::flush();
+    RouteMatcher::flush();
 });
 
 /**

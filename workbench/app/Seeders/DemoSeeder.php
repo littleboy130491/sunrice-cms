@@ -12,6 +12,7 @@ use Sunrice\Models\Entry;
 use Sunrice\Models\Form;
 use Sunrice\Models\GlobalSet;
 use Sunrice\Models\Menu;
+use Sunrice\Models\Setting;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
@@ -83,7 +84,7 @@ class DemoSeeder extends Seeder
             'title' => 'Home', 'slug' => 'home', 'data' => ['body' => '<p>Welcome</p>'], 'is_ready' => true,
         ]);
         app(PublishTranslation::class)->handle($t);
-        \Sunrice\Models\Setting::set('homepage_entry_id', $home->id);
+        Setting::set('homepage_entry_id', $home->id);
 
         $menu->items()->create(['type' => 'entry', 'target_id' => $home->id, 'labels' => [Locales::main() => 'Home', 'en' => 'Home'], 'sort_order' => 0]);
     }
