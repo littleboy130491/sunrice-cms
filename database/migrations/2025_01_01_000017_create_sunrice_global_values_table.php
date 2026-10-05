@@ -14,7 +14,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('global_id')->constrained('sunrice_globals')->cascadeOnDelete();
             $table->string('locale', 10)->nullable(); // null when not translatable
-            $table->json('data')->default('{}');
+            $table->json('data');
             $table->timestamps();
 
             $table->unique(['global_id', 'locale']);

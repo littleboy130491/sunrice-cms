@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('type'); // entry | collection | term | url
             $table->unsignedBigInteger('target_id')->nullable();
             $table->string('url')->nullable();
-            $table->json('labels')->default('{}'); // {locale: label}
+            $table->json('labels'); // {locale: label}
             $table->boolean('new_tab')->default(false);
             $table->timestamps();
 

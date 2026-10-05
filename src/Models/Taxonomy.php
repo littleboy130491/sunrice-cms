@@ -33,6 +33,8 @@ class Taxonomy extends Model
 
     protected $guarded = [];
 
+    protected $attributes = ['settings' => '{}'];
+
     protected $casts = [
         'hierarchical' => 'boolean',
         'settings' => 'array',

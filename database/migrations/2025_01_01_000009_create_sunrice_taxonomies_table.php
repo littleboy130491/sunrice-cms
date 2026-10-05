@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('title');
             $table->foreignId('blueprint_id')->nullable()->constrained('sunrice_blueprints')->restrictOnDelete();
             $table->boolean('hierarchical')->default(false);
-            $table->json('settings')->default('{}');
+            $table->json('settings');
             $table->timestamps();
         });
     }

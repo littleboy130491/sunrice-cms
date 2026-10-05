@@ -22,6 +22,8 @@ class GlobalValue extends Model
 
     protected $guarded = [];
 
+    protected $attributes = ['data' => '{}'];
+
     protected $casts = ['data' => 'array'];
 
     /** @return BelongsTo<GlobalSet, $this> */

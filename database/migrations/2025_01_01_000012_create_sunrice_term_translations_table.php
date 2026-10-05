@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('locale', 10);
             $table->string('name');
             $table->string('slug');
-            $table->json('data')->default('{}');
+            $table->json('data');
             $table->timestamps();
 
             $table->unique(['term_id', 'locale']);

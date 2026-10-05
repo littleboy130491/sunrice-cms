@@ -30,6 +30,8 @@ class Blueprint extends Model
 
     protected $guarded = [];
 
+    protected $attributes = ['fields' => '[]'];
+
     protected $casts = ['fields' => 'array'];
 
     protected static function newFactory(): BlueprintFactory

@@ -17,8 +17,8 @@ return new class extends Migration
             $table->string('locale', 10);
             $table->string('title');
             $table->string('slug');
-            $table->json('data')->default('{}');
-            $table->json('seo')->default('{}');
+            $table->json('data');
+            $table->json('seo');
             $table->json('draft')->nullable();
             $table->boolean('is_ready')->default(false);
             $table->timestamp('content_published_at')->nullable();

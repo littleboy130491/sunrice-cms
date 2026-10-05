@@ -32,6 +32,8 @@ class TermTranslation extends Model
 
     protected $guarded = [];
 
+    protected $attributes = ['data' => '{}'];
+
     protected $casts = ['data' => 'array'];
 
     protected static function newFactory(): TermTranslationFactory

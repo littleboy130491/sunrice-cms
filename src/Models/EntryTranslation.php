@@ -39,6 +39,11 @@ class EntryTranslation extends Model
 
     protected $guarded = [];
 
+    protected $attributes = [
+        'data' => '{}',
+        'seo' => '{}',
+    ];
+
     protected $casts = [
         'data' => 'array',
         'seo' => 'array',

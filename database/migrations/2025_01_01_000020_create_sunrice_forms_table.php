@@ -15,7 +15,7 @@ return new class extends Migration
             $table->string('handle')->unique();
             $table->string('title');
             $table->json('fields');
-            $table->json('settings')->default('{}'); // notify_emails, success_message, redirect_url
+            $table->json('settings'); // notify_emails, success_message, redirect_url
             $table->timestamps();
         });
     }

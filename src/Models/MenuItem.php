@@ -28,6 +28,8 @@ class MenuItem extends Model
 
     protected $guarded = [];
 
+    protected $attributes = ['labels' => '{}'];
+
     protected $casts = [
         'labels' => 'array',
         'new_tab' => 'boolean',

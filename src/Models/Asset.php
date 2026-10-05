@@ -43,6 +43,8 @@ class Asset extends Model
 
     protected $guarded = [];
 
+    protected $attributes = ['sizes' => '{}'];
+
     protected $casts = [
         'sizes' => 'array',
         'size' => 'integer',

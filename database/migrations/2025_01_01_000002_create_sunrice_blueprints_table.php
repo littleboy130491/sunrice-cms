@@ -14,7 +14,7 @@ return new class extends Migration
             $table->id();
             $table->string('handle')->unique();
             $table->string('title');
-            $table->json('fields')->default('[]');
+            $table->json('fields');
             $table->timestamps();
         });
     }

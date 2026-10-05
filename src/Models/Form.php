@@ -31,6 +31,8 @@ class Form extends Model
 
     protected $guarded = [];
 
+    protected $attributes = ['settings' => '{}'];
+
     protected $casts = [
         'fields' => 'array',
         'settings' => 'array',

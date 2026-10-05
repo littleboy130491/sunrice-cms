@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('title')->nullable();
             $table->string('alt')->nullable();
             $table->string('caption')->nullable();
-            $table->json('sizes')->default('{}'); // {name: path}
+            $table->json('sizes'); // {name: path}
             $table->unsignedInteger('version')->default(1);
             $table->unsignedBigInteger('uploaded_by')->nullable();
             $table->timestamps();
