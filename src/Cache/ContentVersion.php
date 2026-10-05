@@ -32,7 +32,9 @@ class ContentVersion
     public static function bump(): void
     {
         $store = Cache::store(config('sunrice.cache.store'));
-        $store->forever(static::KEY, time());
+        // Must strictly increase even when several bumps land within the
+        // same second, so stale keys can never be reused.
+        $store->forever(static::KEY, max(time(), static::current() + 1));
 
         // Optional full-page cache is fully cleared on every bump.
         if (config('sunrice.cache.full_page') && class_exists(ResponseCache::class)) {

@@ -66,7 +66,7 @@ class Navigation
 
         foreach (app(Sunrice::class)->resources() as $key => $resource) {
             if ($user->can("sunrice.resources.{$key}.view")) {
-                $groups[] = ['label' => 'Resources', 'items' => [['label' => $resource::title(), 'href' => "resources/{$key}"]]];
+                $groups[] = ['label' => 'Resources', 'items' => [['label' => $resource::label(), 'href' => "resources/{$key}"]]];
             }
         }
 

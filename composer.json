@@ -3,7 +3,11 @@
     "description": "An easy to set up and extend CMS for Laravel, built as a package.",
     "type": "library",
     "license": "MIT",
-    "keywords": ["cms", "laravel", "content-management"],
+    "keywords": [
+        "cms",
+        "laravel",
+        "content-management"
+    ],
     "require": {
         "php": "^8.3",
         "illuminate/contracts": "^13.0",
@@ -25,7 +29,7 @@
         "larastan/larastan": "^3.0"
     },
     "suggest": {
-        "spatie/laravel-responsecache": "^8.0 (requires PHP 8.4) — enables the optional full-page cache (sunrice.cache.full_page)."
+        "spatie/laravel-responsecache": "^8.0 (requires PHP 8.4) \u2014 enables the optional full-page cache (sunrice.cache.full_page)."
     },
     "autoload": {
         "psr-4": {

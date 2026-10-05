@@ -125,20 +125,29 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::put('assets/{asset}', [Admin\AssetsController::class, 'update'])->name('assets.update');
     Route::post('assets/{asset}/replace', [Admin\AssetsController::class, 'replace'])->name('assets.replace');
     Route::delete('assets/{asset}', [Admin\AssetsController::class, 'destroy'])->name('assets.destroy');
+    Route::post('assets/{asset}/restore', [Admin\AssetsController::class, 'restore'])->name('assets.restore');
+    Route::delete('assets/{asset}/force', [Admin\AssetsController::class, 'forceDelete'])->name('assets.force-delete');
     Route::post('asset-folders', [Admin\AssetFoldersController::class, 'store'])->name('asset-folders.store');
     Route::put('asset-folders/{folder}', [Admin\AssetFoldersController::class, 'update'])->name('asset-folders.update');
     Route::delete('asset-folders/{folder}', [Admin\AssetFoldersController::class, 'destroy'])->name('asset-folders.destroy');
 
-    // Forms (T13.4)
+    // Forms (T13.3)
+    Route::get('forms', [Admin\FormsController::class, 'index'])->name('forms.index');
+    Route::get('forms/create', [Admin\FormsController::class, 'create'])->name('forms.create');
+    Route::post('forms', [Admin\FormsController::class, 'store'])->name('forms.store');
+    Route::delete('forms/{form}', [Admin\FormsController::class, 'destroy'])->name('forms.destroy');
     Route::get('forms/{form:handle}', [Admin\FormsController::class, 'edit'])->name('forms.edit');
     Route::put('forms/{form}', [Admin\FormsController::class, 'update'])->name('forms.update');
     Route::get('forms/{form}/submissions', [Admin\FormSubmissionsController::class, 'index'])->name('forms.submissions');
     Route::get('forms/{form}/submissions/export', [Admin\FormSubmissionsController::class, 'export'])->name('forms.submissions.export');
     Route::get('submissions/{submission}', [Admin\FormSubmissionsController::class, 'show'])->name('submissions.show');
+    Route::get('submissions/{submission}/download/{field}', [Admin\FormSubmissionsController::class, 'download'])->name('submissions.download');
     Route::delete('submissions/{submission}', [Admin\FormSubmissionsController::class, 'destroy'])->name('submissions.destroy');
 
     // Resources (T14.2)
     Route::get('resources/{resource}', [Admin\ResourceController::class, 'index'])->name('resources.index');
+    Route::get('resources/{resource}/create', [Admin\ResourceController::class, 'create'])->name('resources.create');
+    Route::get('resources/{resource}/{id}/edit', [Admin\ResourceController::class, 'edit'])->name('resources.edit');
     Route::get('resources/{resource}/export', [Admin\ResourceController::class, 'export'])->name('resources.export');
     Route::post('resources/{resource}', [Admin\ResourceController::class, 'store'])->name('resources.store');
     Route::put('resources/{resource}/{id}', [Admin\ResourceController::class, 'update'])->name('resources.update');
@@ -147,5 +156,7 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
 
     // Field picker APIs (T7.4)
     Route::get('api/entries', [Admin\Api\EntrySearchController::class, 'index'])->name('api.entries');
+    Route::get('api/assets', [Admin\Api\AssetSearchController::class, 'index'])->name('api.assets');
     Route::get('api/terms', [Admin\Api\TermSearchController::class, 'index'])->name('api.terms');
+    Route::get('api/resources/{resource}/options/{field}', [Admin\Api\ResourceOptionsController::class, 'index'])->name('api.resources.options');
 });

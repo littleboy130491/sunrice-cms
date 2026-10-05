@@ -1,0 +1,181 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
+use Sunrice\Actions\Taxonomies\DeleteTaxonomy;
+use Sunrice\Actions\Taxonomies\SaveTerm;
+use Sunrice\Actions\Taxonomies\TrashTerm;
+use Sunrice\Frontend\GlobalsRepository;
+use Sunrice\Frontend\MenuBuilder;
+use Sunrice\Frontend\UrlGenerator;
+use Sunrice\Models\Blueprint;
+use Sunrice\Models\GlobalSet;
+use Sunrice\Models\Menu;
+use Sunrice\Models\MenuItem;
+use Sunrice\Models\Taxonomy;
+use Sunrice\Models\Term;
+use Sunrice\Query\EntryQuery;
+use Sunrice\Support\Locales;
+
+beforeEach(function () {
+    actingAsSuperAdmin();
+});
+
+// ---------------- taxonomy domain (T10.1) ----------------
+
+it('resolves a term translation with whole-term fallback', function () {
+    $taxonomy = Taxonomy::factory()->create();
+    $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
+    $term->translations()->first()->update(['name' => 'Main', 'slug' => 'main-slug']);
+
+    // No 'en' translation → falls back to main locale.
+    expect($term->resolveFor('en')->slug)->toBe('main-slug');
+
+    $term->translations()->create([
+        'taxonomy_id' => $taxonomy->id,
+        'locale' => 'en',
+        'name' => 'English',
+        'slug' => 'english-slug',
+        'data' => [],
+    ]);
+
+    expect($term->resolveFor('en')->slug)->toBe('english-slug')
+        ->and($term->resolveFor(Locales::main())->slug)->toBe('main-slug');
+});
+
+it('enforces term slug uniqueness per taxonomy and locale including trashed', function () {
+    $taxonomy = Taxonomy::factory()->create();
+    $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
+    $term->translations()->first()->update(['name' => 'Taken', 'slug' => 'taken']);
+    app(TrashTerm::class)->handle($term);
+
+    // Same slug in a new term of the same taxonomy + locale is rejected.
+    try {
+        app(SaveTerm::class)->handle($taxonomy, [
+            'translations' => [Locales::main() => ['title' => 'Taken2', 'slug' => 'taken']],
+        ]);
+        $this->fail('expected ValidationException');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('translations.'.Locales::main().'.slug');
+    }
+});
+
+it('deletes a taxonomy with its terms', function () {
+    $taxonomy = Taxonomy::factory()->create();
+    $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
+
+    app(DeleteTaxonomy::class)->handle($taxonomy);
+
+    expect(Taxonomy::find($taxonomy->id))->toBeNull()
+        ->and(Term::withTrashed()->find($term->id))->toBeNull();
+});
+
+it('builds term URLs from the taxonomy route', function () {
+    $taxonomy = Taxonomy::factory()->create(['settings' => ['route' => '/blog/tags/{slug}']]);
+    $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
+    $term->translations()->first()->update(['slug' => 'laravel']);
+
+    expect(app(UrlGenerator::class)->term($term, Locales::main()))->toBe('/blog/tags/laravel');
+});
+
+it('filters entries by term including descendants', function () {
+    $collection = createCollection();
+    $taxonomy = Taxonomy::factory()->create(['hierarchical' => true]);
+    $collection->taxonomies()->attach($taxonomy->id);
+
+    $parent = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
+    $child = Term::factory()->create(['taxonomy_id' => $taxonomy->id, 'parent_id' => $parent->id]);
+
+    $inChild = createEntry($collection, title: 'Tagged');
+    $inChild->terms()->attach($child->id);
+    $unrelated = createEntry($collection, title: 'Untagged');
+
+    $query = EntryQuery::forCollection($collection)->whereTerm($taxonomy->handle, $parent->id, includeChildren: true);
+    expect($query->get()->pluck('id')->all())->toBe([$inChild->id]);
+
+    $query = EntryQuery::forCollection($collection)->whereTerm($taxonomy->handle, $parent->id);
+    expect($query->get())->toHaveCount(0);
+});
+
+// ---------------- navigation domain (T10.2) ----------------
+
+it('builds menus with locale labels and URLs that follow slug changes', function () {
+    $collection = createCollection();
+    $entry = createEntry($collection);
+    $entry->mainTranslation()->update(['slug' => 'old-slug']);
+
+    $menu = Menu::factory()->create(['handle' => 'main']);
+    MenuItem::query()->create([
+        'menu_id' => $menu->id,
+        'sort_order' => 0,
+        'type' => 'entry',
+        'target_id' => $entry->id,
+        'labels' => [Locales::main() => 'Beranda', 'en' => 'Home'],
+        'new_tab' => false,
+    ]);
+
+    $nodes = app(MenuBuilder::class)->build('main', 'en');
+    expect($nodes)->toHaveCount(1)
+        ->and($nodes->first()->label)->toBe('Home');
+
+    // Slug change is reflected in the generated URL.
+    $entry->mainTranslation()->update(['slug' => 'new-slug']);
+    Cache::flush();
+    $nodes = app(MenuBuilder::class)->build('main', 'en');
+    expect($nodes->first()->url)->toContain('new-slug');
+});
+
+it('skips menu items whose target is unpublished or trashed', function () {
+    $collection = createCollection();
+    $entry = createEntry($collection, title: 'Live');
+    $draft = createEntry($collection, title: 'Draft', status: 'draft');
+    $trashed = createEntry($collection, title: 'Trashed');
+    $trashed->delete();
+
+    $menu = Menu::factory()->create(['handle' => 'main']);
+    foreach ([$entry->id, $draft->id, $trashed->id] as $i => $target) {
+        MenuItem::query()->create([
+            'menu_id' => $menu->id, 'sort_order' => $i,
+            'type' => 'entry', 'target_id' => $target, 'labels' => [],
+            'new_tab' => false,
+        ]);
+    }
+
+    $nodes = app(MenuBuilder::class)->build('main', Locales::main());
+    expect($nodes)->toHaveCount(1);
+});
+
+// ---------------- globals domain (T10.3) ----------------
+
+it('returns global values with whole-set locale fallback', function () {
+    $blueprint = Blueprint::create(['handle' => 'footer', 'title' => 'Footer', 'fields' => [
+        ['handle' => 'tagline', 'type' => 'text', 'label' => 'Tagline', 'config' => []],
+    ]]);
+    $set = GlobalSet::factory()->create(['blueprint_id' => $blueprint->id, 'translatable' => true]);
+    $set->values()->create(['locale' => Locales::main(), 'data' => ['tagline' => 'Halo']]);
+
+    $globals = app(GlobalsRepository::class);
+
+    // Missing 'en' row → whole-set fallback to main locale.
+    expect($globals->get($set->handle, 'en')->get('tagline'))->toBe('Halo');
+    expect($globals->get($set->handle)->get('tagline'))->toBe('Halo');
+    expect($globals->get($set->handle)->tagline)->toBe('Halo');
+
+    // With an 'en' row, the locale wins.
+    $set->values()->create(['locale' => 'en', 'data' => ['tagline' => 'Hello']]);
+    Cache::flush();
+    expect($globals->get($set->handle, 'en')->get('tagline'))->toBe('Hello');
+});
+
+it('reads non-translatable globals from the shared row', function () {
+    $blueprint = Blueprint::create(['handle' => 'social', 'title' => 'Social', 'fields' => [
+        ['handle' => 'twitter', 'type' => 'text', 'label' => 'Twitter', 'config' => []],
+    ]]);
+    $set = GlobalSet::factory()->create(['blueprint_id' => $blueprint->id, 'translatable' => false]);
+    $set->values()->create(['locale' => null, 'data' => ['twitter' => '@sunrice']]);
+
+    expect(app(GlobalsRepository::class)->get($set->handle, 'en')->get('twitter'))->toBe('@sunrice')
+        ->and(sunrice_global($set->handle)->twitter)->toBe('@sunrice');
+});

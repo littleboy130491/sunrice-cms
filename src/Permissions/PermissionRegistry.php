@@ -22,7 +22,7 @@ class PermissionRegistry
 
     public const FORM_ACTIONS = ['edit', 'view-submissions', 'export-submissions', 'delete-submissions'];
 
-    public const RESOURCE_ACTIONS = ['view', 'create', 'edit', 'delete'];
+    public const RESOURCE_ACTIONS = ['view', 'create', 'edit', 'delete', 'export'];
 
     /**
      * @return array<int, array{name: string, label: string, group: string}>
@@ -156,8 +156,8 @@ class PermissionRegistry
             foreach (static::RESOURCE_ACTIONS as $action) {
                 $out[] = [
                     'name' => "sunrice.resources.{$key}.{$action}",
-                    'label' => "{$resource::title()}: {$action}",
-                    'group' => "Resources — {$resource::title()}",
+                    'label' => "{$resource::label()}: {$action}",
+                    'group' => "Resources — {$resource::label()}",
                 ];
             }
         }

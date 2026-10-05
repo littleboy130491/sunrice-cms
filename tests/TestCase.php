@@ -9,6 +9,7 @@ use Inertia\ServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Spatie\Honeypot\HoneypotServiceProvider;
 use Spatie\Permission\PermissionServiceProvider;
+use Spatie\Sitemap\SitemapServiceProvider;
 use Sunrice\SunriceServiceProvider;
 use Workbench\App\Models\User;
 
@@ -23,6 +24,7 @@ class TestCase extends Orchestra
             ServiceProvider::class,
             PermissionServiceProvider::class,
             HoneypotServiceProvider::class,
+            SitemapServiceProvider::class,
         ];
     }
 
@@ -42,5 +44,16 @@ class TestCase extends Orchestra
     protected function defineDatabaseMigrations(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../workbench/database/migrations');
+    }
+
+    /**
+     * Host-application routes are defined while the app boots, before
+     * Sunrice's catch-all — mirroring a real host app.
+     */
+    protected function defineRoutes($router): void
+    {
+        if (file_exists($file = __DIR__.'/../workbench/routes/web.php')) {
+            $router->middleware('web')->group($file);
+        }
     }
 }

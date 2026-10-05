@@ -6,11 +6,12 @@ namespace Sunrice\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Sunrice\Database\Factories\FormSubmissionFactory;
 
 /**
@@ -26,7 +27,7 @@ use Sunrice\Database\Factories\FormSubmissionFactory;
 class FormSubmission extends Model
 {
     /** @use HasFactory<FormSubmissionFactory> */
-    use HasFactory, MassPrunable, SoftDeletes;
+    use HasFactory, Prunable, SoftDeletes;
 
     protected $table = 'sunrice_form_submissions';
 
@@ -59,5 +60,25 @@ class FormSubmission extends Model
         }
 
         return static::query()->where('created_at', '<=', now()->subDays((int) $days));
+    }
+
+    /**
+     * Prunable hook — remove the submission's uploaded files
+     * (file-type fields under form-uploads/{handle}) before deletion.
+     */
+    public function pruning(): void
+    {
+        $disk = Storage::disk(config('sunrice.forms.upload_disk'));
+        $prefix = 'form-uploads/';
+
+        foreach ($this->form?->schema()->fields() ?? [] as $field) {
+            if (($field['type'] ?? null) !== 'file') {
+                continue;
+            }
+            $path = $this->data[$field['handle']] ?? null;
+            if (is_string($path) && str_starts_with($path, $prefix) && $disk->exists($path)) {
+                $disk->delete($path);
+            }
+        }
     }
 }

@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace Sunrice;
 
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Exceptions\Handler;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Spatie\Permission\Models\Role;
+use Spatie\ResponseCache\Middlewares\CacheResponse;
 use Sunrice\Http\Middleware\HandleSunriceInertiaRequests;
 use Sunrice\Models\Asset;
 use Sunrice\Models\Blueprint;
@@ -35,6 +41,8 @@ use Sunrice\Policies\RolePolicy;
 use Sunrice\Policies\StructurePolicy;
 use Sunrice\Policies\TermPolicy;
 use Sunrice\Policies\UserPolicy;
+use Sunrice\View\Components\Entries;
+use Sunrice\View\Components\Seo;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class SunriceServiceProvider extends PackageServiceProvider
@@ -97,6 +105,46 @@ class SunriceServiceProvider extends PackageServiceProvider
         $this->registerPermissions();
         $this->registerExceptionRendering();
         $this->registerAssetPublishing();
+        $this->registerBladeComponents();
+        $this->registerContentCache();
+        $this->registerRateLimiters();
+    }
+
+    /**
+     * Global content-version cache + invalidation listeners (T12).
+     */
+    protected function registerContentCache(): void
+    {
+        Event::listen(
+            [
+                Events\EntryPublished::class,
+                Events\EntryUnpublished::class,
+                Events\EntryDeleted::class,
+                Events\EntryRestored::class,
+                Events\ContentChanged::class,
+            ],
+            Cache\BumpContentVersion::class,
+        );
+    }
+
+    /**
+     * Form submissions rate limit: per IP + form from sunrice.forms.rate_limit.
+     */
+    protected function registerRateLimiters(): void
+    {
+        RateLimiter::for('sunrice-forms', function (Request $request) {
+            $conf = (array) config('sunrice.forms.rate_limit', ['attempts' => 5, 'per_minutes' => 1]);
+            $form = $request->route('form');
+            $key = $request->ip().'|'.($form instanceof Form ? $form->getKey() : (string) $form);
+
+            return Limit::perMinutes((int) ($conf['per_minutes'] ?? 1), (int) ($conf['attempts'] ?? 5))->by($key);
+        });
+    }
+
+    protected function registerBladeComponents(): void
+    {
+        Blade::component(Entries::class, 'sunrice::entries');
+        Blade::component(Seo::class, 'sunrice::seo');
     }
 
     protected function registerAdminRoutes(): void
@@ -164,6 +212,8 @@ class SunriceServiceProvider extends PackageServiceProvider
             Console\RenameFieldCommand::class,
             Console\SyncPermissionsCommand::class,
             Console\InstallCommand::class,
+            Console\PublishAssetsCommand::class,
+            Console\RegenerateImageSizesCommand::class,
         ]);
     }
 
@@ -175,7 +225,12 @@ class SunriceServiceProvider extends PackageServiceProvider
                 return;
             }
 
-            Route::middleware(config('sunrice.frontend.middleware', ['web']))
+            $middleware = (array) config('sunrice.frontend.middleware', ['web']);
+            if (config('sunrice.cache.full_page') && class_exists(CacheResponse::class)) {
+                $middleware[] = CacheResponse::class;
+            }
+
+            Route::middleware($middleware)
                 ->group(__DIR__.'/../routes/frontend.php');
         });
     }

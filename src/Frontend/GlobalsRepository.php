@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Frontend;
 
+use Sunrice\Cache\ContentCache;
 use Sunrice\Fields\HydrationContext;
 use Sunrice\Models\GlobalSet;
 use Sunrice\Support\Locales;
@@ -16,6 +17,11 @@ use Sunrice\Support\Locales;
 class GlobalsRepository
 {
     public function get(string $handle, ?string $locale = null): GlobalData
+    {
+        return ContentCache::remember('global:'.$handle, fn () => $this->resolve($handle, $locale), $locale);
+    }
+
+    protected function resolve(string $handle, ?string $locale): GlobalData
     {
         $locale ??= Locales::current();
         $set = GlobalSet::query()

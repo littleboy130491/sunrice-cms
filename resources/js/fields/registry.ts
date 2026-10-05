@@ -15,6 +15,7 @@ import RepeaterField from './RepeaterField';
 import FlexibleField from './FlexibleField';
 import FieldsetField from './FieldsetField';
 import FileField from './FileField';
+import BelongsToField from './BelongsToField';
 import type { AdminField, Json } from '@/types';
 
 export interface ContainerFieldProps {
@@ -42,4 +43,6 @@ export const fieldComponents: Record<string, ComponentType<ContainerFieldProps>>
     flexible: FlexibleField,
     fieldset: FieldsetField,
     file: FileField,
+    belongs_to: BelongsToField,
+    belongs_to_many: BelongsToField,
 };

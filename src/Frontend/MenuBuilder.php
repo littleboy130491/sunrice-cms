@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sunrice\Frontend;
 
 use Illuminate\Support\Collection;
+use Sunrice\Cache\ContentCache;
 use Sunrice\Models\Collection as ContentCollection;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Menu;
@@ -26,6 +27,12 @@ class MenuBuilder
      * @return Collection<int, MenuNode>
      */
     public function build(string $handle, ?string $locale = null): Collection
+    {
+        return ContentCache::remember('menu:'.$handle, fn () => $this->buildMenu($handle, $locale), $locale);
+    }
+
+    /** @return Collection<int, MenuNode> */
+    protected function buildMenu(string $handle, ?string $locale): Collection
     {
         $locale ??= Locales::current();
         $menu = Menu::query()

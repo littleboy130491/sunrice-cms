@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="{{ $locale ?? 'en' }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <x-sunrice::seo />
+</head>
+<body>
+    <h1>{{ $collection->title ?? 'Archive' }}</h1>
+    <ul>
+        @foreach($entries as $entry)
+            <li><a href="{{ $entry->url }}">{{ $entry->title }}</a></li>
+        @endforeach
+    </ul>
+    @if($entries instanceof \Illuminate\Contracts\Pagination\Paginator)
+        {{ $entries->links() }}
+    @endif
+</body>
+</html>

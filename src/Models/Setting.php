@@ -6,6 +6,7 @@ namespace Sunrice\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Sunrice\Events\ContentChanged;
 
 /**
  * @property int $id
@@ -32,5 +33,7 @@ class Setting extends Model
     public static function set(string $key, mixed $value): void
     {
         static::query()->updateOrCreate(['key' => $key], ['value' => $value]);
+
+        ContentChanged::dispatch('setting_saved');
     }
 }

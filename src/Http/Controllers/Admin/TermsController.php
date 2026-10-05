@@ -12,7 +12,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Actions\Support\Reorder;
 use Sunrice\Actions\Taxonomies\SaveTerm;
-use Sunrice\Events\ContentChanged;
+use Sunrice\Actions\Taxonomies\TrashTerm;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Models\TermTranslation;
@@ -75,8 +75,7 @@ class TermsController extends Controller
     {
         $this->authorize('delete', $term);
 
-        $term->delete();
-        ContentChanged::dispatch('term_deleted');
+        app(TrashTerm::class)->handle($term);
 
         return back()->with('success', 'Term deleted.');
     }

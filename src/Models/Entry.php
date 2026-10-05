@@ -24,6 +24,7 @@ use Sunrice\Support\Locales;
  * @property int|null $blueprint_id
  * @property int|null $author_id
  * @property string $status
+ * @property string|null $template
  * @property Carbon|null $published_at
  * @property int $sort_order
  * @property Carbon|null $created_at

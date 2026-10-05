@@ -22,6 +22,12 @@ use Sunrice\Database\Factories\AssetFactory;
  * @property string|null $mime_type
  * @property int|null $size
  * @property array<string,mixed> $meta
+ * @property array<string,string> $sizes
+ * @property int|null $width
+ * @property int|null $height
+ * @property string|null $title
+ * @property string|null $alt
+ * @property string|null $caption
  * @property int $version
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at

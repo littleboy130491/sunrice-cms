@@ -1,0 +1,1 @@
+<x-sunrice::seo :entry="$entry" />

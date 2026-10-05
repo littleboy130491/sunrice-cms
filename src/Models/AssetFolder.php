@@ -13,7 +13,6 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int|null $parent_id
  * @property string $name
- * @property string $path
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
