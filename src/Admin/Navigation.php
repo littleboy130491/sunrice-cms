@@ -26,7 +26,7 @@ class Navigation
         $content = [];
         foreach (Collection::query()->orderBy('sort_order')->orderBy('title')->get() as $collection) {
             if ($user->can('viewAny', [Entry::class, $collection->id])) {
-                $content[] = ['label' => $collection->title, 'href' => "collections/{$collection->handle}"];
+                $content[] = ['label' => $collection->title, 'href' => "collections/{$collection->handle}/entries"];
             }
         }
         if ($content !== []) {

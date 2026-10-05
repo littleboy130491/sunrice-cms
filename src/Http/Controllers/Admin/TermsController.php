@@ -49,7 +49,7 @@ class TermsController extends Controller
                 'count' => $t->entries()->count(),
             ]),
             'locales' => Locales::available(),
-            'blueprint' => $taxonomy->blueprint?->schema()->toAdminSchema(),
+            'blueprint' => $taxonomy->blueprint?->schema()->toAdminTabs(),
         ]);
     }
 

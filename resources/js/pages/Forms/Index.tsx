@@ -20,7 +20,7 @@ export default function FormsIndex({ forms }: Props) {
                 <h1 className="text-xl font-semibold">Forms</h1>
                 {can('sunrice.manage-structure') && (
                     <Button asChild>
-                        <Link href={adminUrl(adminPath, 'forms/create')}>
+                        <Link href={adminUrl('forms/create', adminPath)}>
                             <Plus className="mr-1 h-4 w-4" /> New form
                         </Link>
                     </Button>
@@ -39,7 +39,7 @@ export default function FormsIndex({ forms }: Props) {
                         <TableRow
                             key={form.id}
                             className="cursor-pointer"
-                            onClick={() => router.get(adminUrl(adminPath, `forms/${form.handle}`))}
+                            onClick={() => router.get(adminUrl(`forms/${form.handle}`, adminPath))}
                         >
                             <TableCell className="font-medium">{form.title}</TableCell>
                             <TableCell className="text-muted-foreground">{form.handle}</TableCell>

@@ -286,4 +286,17 @@ class BlueprintSchema
             $this->fields,
         );
     }
+
+    /**
+     * Tabbed admin schema ({handle, label, fields}) for the entry/global/term
+     * editors.
+     *
+     * @return array<int, array{handle: string, label: string, fields: array<int, array<string, mixed>>}>
+     */
+    public function toAdminTabs(string $label = 'Content'): array
+    {
+        return [
+            ['handle' => 'content', 'label' => $label, 'fields' => $this->toAdminSchema()],
+        ];
+    }
 }

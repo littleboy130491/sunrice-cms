@@ -37,9 +37,9 @@ export default function FormEditor({ form, fieldTypes }: Props) {
     function save() {
         const payload = { handle, title, fields: fields as unknown as Json, settings };
         if (isNew) {
-            router.post(adminUrl(adminPath, 'forms'), payload, { onError: setErrors });
+            router.post(adminUrl('forms', adminPath), payload, { onError: setErrors });
         } else {
-            router.put(adminUrl(adminPath, `forms/${form.id}`), payload, { onError: setErrors });
+            router.put(adminUrl(`forms/${form.id}`, adminPath), payload, { onError: setErrors });
         }
     }
 

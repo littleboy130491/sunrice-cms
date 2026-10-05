@@ -23,7 +23,7 @@ export default function Submissions({ form, submissions, filters }: Props) {
     const handles = form.fields.map((f) => f.handle as string);
 
     function apply() {
-        router.get(adminUrl(adminPath, `forms/${form.id}/submissions`), { search }, { preserveState: true });
+        router.get(adminUrl(`forms/${form.id}/submissions`, adminPath), { search }, { preserveState: true });
     }
 
     return (
@@ -32,7 +32,7 @@ export default function Submissions({ form, submissions, filters }: Props) {
                 <h1 className="text-xl font-semibold">Submissions: {form.title}</h1>
                 {can(`sunrice.forms.${form.id}.export-submissions`) && (
                     <Button variant="outline" asChild>
-                        <a href={adminUrl(adminPath, `forms/${form.id}/submissions/export`)}>Export CSV</a>
+                        <a href={adminUrl(`forms/${form.id}/submissions/export`, adminPath)}>Export CSV</a>
                     </Button>
                 )}
             </div>

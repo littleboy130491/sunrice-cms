@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Actions\Entries;
 
+use Illuminate\Support\Facades\DB;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
@@ -20,6 +21,14 @@ class CreateEntry
      * @param  array{title?: string, slug?: string, data?: array<string, mixed>, seo?: array<string, mixed>}  $attributes
      */
     public function handle(Collection $collection, array $attributes, ?int $authorId = null, ?int $blueprintId = null): Entry
+    {
+        return DB::transaction(fn (): Entry => $this->create($collection, $attributes, $authorId, $blueprintId));
+    }
+
+    /**
+     * @param  array{title?: string, slug?: string, data?: array<string, mixed>, seo?: array<string, mixed>}  $attributes
+     */
+    protected function create(Collection $collection, array $attributes, ?int $authorId, ?int $blueprintId): Entry
     {
         $blueprint = $blueprintId ? Blueprint::findOrFail($blueprintId) : $collection->blueprint;
         $schema = $blueprint?->schema();

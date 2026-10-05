@@ -177,6 +177,32 @@ it('creates, edits, publishes and trashes an entry through the admin', function 
     expect(Entry::withTrashed()->find($entry->id))->toBeNull();
 });
 
+it('rejects a duplicate slug on create without leaving an orphaned entry', function () {
+    $collection = createCollection('pages');
+    createEntry($collection, 'About'); // slug 'about'
+
+    post("/cms/collections/{$collection->handle}/entries", [
+        'title' => 'Again',
+        'slug' => 'about',
+    ])->assertSessionHasErrors('slug');
+
+    expect(Entry::count())->toBe(1);
+});
+
+it('rejects a slug on update that collides with another entry', function () {
+    $collection = createCollection('pages');
+    $first = createEntry($collection, 'About');
+    $second = createEntry($collection, 'Contact');
+
+    put("/cms/entries/{$second->id}", [
+        'locale' => 'id',
+        'title' => 'Contact',
+        'slug' => 'about',
+    ])->assertSessionHasErrors('slug');
+
+    expect($second->mainTranslation()->slug)->toBe('contact');
+});
+
 it('duplicates an entry', function () {
     $collection = Collection::factory()->create(['handle' => 'pages']);
     $entry = createEntry($collection, 'Home', ['x' => 1]);

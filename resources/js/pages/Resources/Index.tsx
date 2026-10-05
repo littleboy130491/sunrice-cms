@@ -22,7 +22,7 @@ export default function ResourceIndex({ resource, columns, rows, meta, can }: Pr
                 <h1 className="text-2xl font-semibold">{resource.label}</h1>
                 {can.create && (
                     <Button asChild>
-                        <Link href={adminUrl(adminPath, `resources/${resource.key}/create`)}>
+                        <Link href={adminUrl(`resources/${resource.key}/create`, adminPath)}>
                             <Plus className="mr-1 h-4 w-4" /> New {resource.singularLabel}
                         </Link>
                     </Button>
@@ -33,10 +33,10 @@ export default function ResourceIndex({ resource, columns, rows, meta, can }: Pr
                 rows={rows}
                 meta={meta}
                 tableKey={`resource.${resource.key}`}
-                exportUrl={adminUrl(adminPath, `resources/${resource.key}/export`)}
-                bulkUrl={adminUrl(adminPath, `resources/${resource.key}/bulk`)}
+                exportUrl={adminUrl(`resources/${resource.key}/export`, adminPath)}
+                bulkUrl={adminUrl(`resources/${resource.key}/bulk`, adminPath)}
                 bulkActions={[{ key: 'delete', label: 'Delete', variant: 'destructive', confirm: 'Delete selected records?' }]}
-                rowHref={(row) => adminUrl(adminPath, `resources/${resource.key}/${row.id}/edit`)}
+                rowHref={(row) => adminUrl(`resources/${resource.key}/${row.id}/edit`, adminPath)}
             />
         </div>
     );

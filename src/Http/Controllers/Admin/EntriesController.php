@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Actions\Entries\ChangeBlueprint;
@@ -113,7 +114,11 @@ class EntriesController extends Controller
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255'],
+            'slug' => [
+                'nullable', 'string', 'max:255',
+                Rule::unique('sunrice_entry_translations', 'slug')
+                    ->where(fn ($q) => $q->where('collection_id', $collection->id)->where('locale', Locales::main())),
+            ],
             'data' => ['array'],
             'seo' => ['array'],
             'blueprint_id' => ['nullable', 'integer', 'exists:sunrice_blueprints,id'],
@@ -139,7 +144,14 @@ class EntriesController extends Controller
         $validated = $request->validate([
             'locale' => ['required', 'string', 'max:10'],
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255'],
+            'slug' => [
+                'nullable', 'string', 'max:255',
+                Rule::unique('sunrice_entry_translations', 'slug')
+                    ->where(fn ($q) => $q
+                        ->where('collection_id', $entry->collection_id)
+                        ->where('locale', $request->input('locale', Locales::main())))
+                    ->ignore($entry->id, 'entry_id'),
+            ],
             'data' => ['array'],
             'seo' => ['array'],
             'is_ready' => ['nullable', 'boolean'],
@@ -285,6 +297,22 @@ class EntriesController extends Controller
 
     // ---- internals -----------------------------------------------------------
 
+    /**
+     * Standard SEO fields rendered as the `seo` admin tab (stored in the
+     * translation's `seo` JSON).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    protected static function seoFields(): array
+    {
+        return [
+            ['handle' => 'title', 'type' => 'text', 'label' => 'Meta title'],
+            ['handle' => 'description', 'type' => 'textarea', 'label' => 'Meta description'],
+            ['handle' => 'canonical', 'type' => 'text', 'label' => 'Canonical URL'],
+            ['handle' => 'image', 'type' => 'asset', 'label' => 'Open Graph image'],
+        ];
+    }
+
     protected function translationFor(Entry $entry, string $locale): EntryTranslation
     {
         abort_unless(Locales::isAvailable($locale), 422, 'Unknown locale.');
@@ -346,7 +374,10 @@ class EntriesController extends Controller
                 'term_ids' => $entry->terms->pluck('id'),
                 'translations' => $translations,
             ],
-            'blueprint' => $blueprint?->schema()->toAdminSchema(),
+            'blueprint' => $blueprint === null ? null : array_merge(
+                $blueprint->schema()->toAdminTabs(),
+                [['handle' => 'seo', 'label' => 'SEO', 'fields' => static::seoFields()]],
+            ),
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
             'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title')),
             'locales' => Locales::available(),

@@ -21,9 +21,9 @@ export default function ResourceEdit({ resource, fields, record }: Props) {
     function save() {
         const payload = { attributes: values };
         if (isNew) {
-            router.post(adminUrl(adminPath, `resources/${resource.key}`), payload, { onError: setErrors });
+            router.post(adminUrl(`resources/${resource.key}`, adminPath), payload, { onError: setErrors });
         } else {
-            router.put(adminUrl(adminPath, `resources/${resource.key}/${(record as Record<string, Json>).id}`), payload, { onError: setErrors });
+            router.put(adminUrl(`resources/${resource.key}/${(record as Record<string, Json>).id}`, adminPath), payload, { onError: setErrors });
         }
     }
 

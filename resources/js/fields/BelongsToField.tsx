@@ -23,7 +23,7 @@ export default function BelongsToField({ field, value, onChange }: FieldProps) {
     React.useEffect(() => {
         if (!resource) return;
         const handle = setTimeout(() => {
-            fetch(adminUrl(adminPath, `api/resources/${resource}/options/${field.handle}?q=${encodeURIComponent(query)}`))
+            fetch(adminUrl(`api/resources/${resource}/options/${field.handle}?q=${encodeURIComponent(query)}`, adminPath))
                 .then((r) => r.json())
                 .then((d) => setOptions(d.options ?? []))
                 .catch(() => setOptions([]));
@@ -71,7 +71,7 @@ export default function BelongsToField({ field, value, onChange }: FieldProps) {
                         {o.label}
                     </label>
                 ))}
-                {current !== null && !options.some((o) => o.id === current) && (
+                {current != null && !options.some((o) => o.id === current) && (
                     <span className="text-sm text-muted-foreground">Selected: {String(current)}</span>
                 )}
             </div>

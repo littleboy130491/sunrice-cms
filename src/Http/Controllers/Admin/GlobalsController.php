@@ -120,7 +120,7 @@ class GlobalsController extends Controller
     {
         return Inertia::render('Globals/Form', [
             'globalSet' => $set?->only('id', 'handle', 'title', 'group', 'blueprint_id', 'translatable'),
-            'blueprint' => $set?->blueprint?->schema()->toAdminSchema(),
+            'blueprint' => $set?->blueprint?->schema()->toAdminTabs(),
             'values' => $set?->values->keyBy(fn ($v) => $v->locale ?? '_shared')->map->data,
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
             'locales' => Locales::available(),

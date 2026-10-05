@@ -42,6 +42,7 @@ use Sunrice\Policies\StructurePolicy;
 use Sunrice\Policies\TermPolicy;
 use Sunrice\Policies\UserPolicy;
 use Sunrice\View\Components\Entries;
+use Sunrice\View\Components\Form as FormComponent;
 use Sunrice\View\Components\Seo;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -145,6 +146,7 @@ class SunriceServiceProvider extends PackageServiceProvider
     {
         Blade::component(Entries::class, 'sunrice::entries');
         Blade::component(Seo::class, 'sunrice::seo');
+        Blade::component(FormComponent::class, 'sunrice::form');
     }
 
     protected function registerAdminRoutes(): void
