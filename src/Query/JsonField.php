@@ -57,6 +57,10 @@ class JsonField
             );
         }
 
+        if ($operator === 'like') {
+            return $query->whereLike($column.'->'.$path, (string) $value);
+        }
+
         return $query->where($column.'->'.$path, $operator, $value);
     }
 

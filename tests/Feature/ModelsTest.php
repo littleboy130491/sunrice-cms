@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Sunrice\Models\Asset;
 use Sunrice\Models\Collection;
@@ -40,14 +41,16 @@ it('enforces slug uniqueness per collection and locale', function () {
     $collection = createCollection();
     createEntry($collection, 'Hello World');
 
-    expect(fn () => $collection->entries()->create(['status' => 'published'])
+    // Nested savepoint so the expected violation doesn't poison the
+    // test transaction on PostgreSQL.
+    expect(fn () => DB::transaction(fn () => $collection->entries()->create(['status' => 'published'])
         ->translations()->create([
             'collection_id' => $collection->id,
             'locale' => 'id',
             'title' => 'Other',
             'slug' => 'hello-world',
             'data' => [],
-        ]))->toThrow(QueryException::class);
+        ])))->toThrow(QueryException::class);
 
     // Same slug allowed in a different locale and a different collection.
     $entry = createEntry($collection, 'Hola');

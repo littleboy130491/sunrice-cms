@@ -24,8 +24,8 @@ class AssetSearchController extends Controller
         if ($request->filled('search')) {
             $search = (string) $request->query('search');
             $query->where(fn ($q) => $q
-                ->where('filename', 'like', "%{$search}%")
-                ->orWhere('title', 'like', "%{$search}%"));
+                ->whereLike('filename', "%{$search}%")
+                ->orWhereLike('title', "%{$search}%"));
         }
         if ($request->boolean('images_only')) {
             $query->where('mime_type', 'like', 'image/%');

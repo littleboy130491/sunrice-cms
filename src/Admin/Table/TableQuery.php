@@ -136,7 +136,7 @@ class TableQuery
                             fn (Builder $qq) => JsonField::where($qq, $this->dataColumn, $path, 'like', $term, 'string'),
                         );
                     } else {
-                        $q->{$i === 0 ? 'where' : 'orWhere'}($column, 'like', $term);
+                        $q->{$i === 0 ? 'whereLike' : 'orWhereLike'}($column, $term);
                     }
                 }
             });

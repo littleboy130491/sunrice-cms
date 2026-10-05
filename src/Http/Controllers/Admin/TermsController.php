@@ -30,7 +30,7 @@ class TermsController extends Controller
             ->where('taxonomy_id', $taxonomy->id)
             ->with(['translations', 'parent:id'])
             ->when($request->input('search'), function ($q, string $search) {
-                $q->whereHas('translations', fn ($t) => $t->where('name', 'like', "%{$search}%"));
+                $q->whereHas('translations', fn ($t) => $t->whereLike('name', "%{$search}%"));
             })
             ->orderBy('sort_order')
             ->orderBy('id')

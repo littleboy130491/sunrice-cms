@@ -21,7 +21,7 @@ class TermSearchController extends Controller
             ->when($taxonomy, fn ($query) => $query->whereHas('taxonomy', fn ($t) => $t->where('handle', $taxonomy)))
             ->with('translations')
             ->when($q !== '', function ($query) use ($q) {
-                $query->whereHas('translations', fn ($t) => $t->where('name', 'like', "%{$q}%"));
+                $query->whereHas('translations', fn ($t) => $t->whereLike('name', "%{$q}%"));
             })
             ->orderBy('sort_order')
             ->limit(50)

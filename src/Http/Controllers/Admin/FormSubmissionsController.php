@@ -25,7 +25,15 @@ class FormSubmissionsController extends Controller
 
         $query = $form->submissions()->orderByDesc('id');
         if ($search = $request->string('search')->toString()) {
-            $query->where('data', 'like', "%{$search}%");
+            // `data` is a JSON column: cast to text for matching (pgsql
+            // also requires ILIKE for case-insensitive search).
+            $driver = $query->getModel()->getConnection()->getDriverName();
+            $expr = match ($driver) {
+                'pgsql' => '"data"::text',
+                'mysql', 'mariadb' => 'CAST(`data` AS CHAR)',
+                default => '"data"',
+            };
+            $query->whereRaw("{$expr} ".($driver === 'pgsql' ? 'ILIKE' : 'LIKE').' ?', ["%{$search}%"]);
         }
         if ($from = $request->string('from')->toString()) {
             $query->whereDate('created_at', '>=', $from);

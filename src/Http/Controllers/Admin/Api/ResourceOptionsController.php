@@ -44,7 +44,7 @@ class ResourceOptionsController extends Controller
             ->limit(50);
 
         if ($search = $request->string('q')->toString()) {
-            $query->where($labelColumn, 'like', "%{$search}%");
+            $query->whereLike($labelColumn, "%{$search}%");
         }
 
         return response()->json([

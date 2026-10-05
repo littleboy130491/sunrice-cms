@@ -26,7 +26,7 @@ class EntrySearchController extends Controller
             ->whereIn('collection_id', $collectionIds)
             ->with(['collection:id,handle', 'translations' => fn ($t) => $t->where('locale', Locales::main())])
             ->when($q !== '', function ($query) use ($q) {
-                $query->whereHas('translations', fn ($t) => $t->where('title', 'like', "%{$q}%"));
+                $query->whereHas('translations', fn ($t) => $t->whereLike('title', "%{$q}%"));
             })
             ->latest()
             ->limit(25)

@@ -38,9 +38,9 @@ class AssetsController extends Controller
         if ($request->filled('search')) {
             $search = (string) $request->query('search');
             $query->where(fn ($q) => $q
-                ->where('filename', 'like', "%{$search}%")
-                ->orWhere('title', 'like', "%{$search}%")
-                ->orWhere('alt', 'like', "%{$search}%"));
+                ->whereLike('filename', "%{$search}%")
+                ->orWhereLike('title', "%{$search}%")
+                ->orWhereLike('alt', "%{$search}%"));
         }
         if ($request->filled('type')) {
             match ((string) $request->query('type')) {
