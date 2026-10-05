@@ -2,8 +2,12 @@ tests/ export-ignore
 workbench/ export-ignore
 .github/ export-ignore
 resources/js/ export-ignore
-*.md export-ignore
-!README.md export-ignore
+docs/ export-ignore
+AGENTS.md export-ignore
+CLAUDE.md export-ignore
+SPEC.md export-ignore
+EXECUTION_PLAN.md export-ignore
+CHANGELOG.md export-ignore
 package.json export-ignore
 package-lock.json export-ignore
 vite.config.ts export-ignore
