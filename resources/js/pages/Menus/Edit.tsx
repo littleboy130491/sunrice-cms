@@ -194,7 +194,8 @@ export default function MenuEdit({ menu, items, collections, taxonomies }: Props
                         {form.type === 'entry' && (
                             <div className="grid gap-2">
                                 <Label>Entry</Label>
-                                <EntryPicker value={form.entry} onChange={(entry) => setForm({ ...form, entry })} />
+                                <EntryPicker
+                                    linkable value={form.entry} onChange={(entry) => setForm({ ...form, entry })} />
                                 <InputError message={errors.target_id} />
                             </div>
                         )}

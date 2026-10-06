@@ -425,3 +425,23 @@ it('updates global settings through the meta route', function () {
         ->assertSessionHas('success');
     expect($set->fresh()->title)->toBe('Site info')->and($set->fresh()->translatable)->toBeTrue();
 });
+
+it('lists everything a blueprint is used by', function () {
+    $blueprint = Blueprint::factory()->create(['title' => 'Category']);
+    Taxonomy::create(['handle' => 'topics', 'title' => 'Topics', 'blueprint_id' => $blueprint->id]);
+    createCollection('news', ['has_archive' => true, 'archive_blueprint_id' => $blueprint->id]);
+
+    get('/cms/structure/blueprints')->assertInertia(fn (Assert $page) => $page
+        ->where('blueprints.0.used_by', [
+            ['type' => 'Taxonomy', 'title' => 'Topics'],
+            ['type' => 'Listing page', 'title' => 'News'],
+        ]));
+});
+
+it('renders unknown admin URLs as a 404 inside the admin layout', function () {
+    get('/cms/does-not-exist')->assertNotFound()->assertInertia(fn (Assert $page) => $page
+        ->component('Error')
+        ->where('status', 404)
+        ->has('auth.user')
+        ->has('navigation'));
+});

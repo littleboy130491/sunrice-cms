@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { adminUrl } from '@/lib/route';
+import { xsrfToken } from '@/lib/fetch-json';
 import type { SharedProps } from '@/types';
 
 export interface PickedAsset {
@@ -30,7 +31,6 @@ interface ApiAsset {
     thumbnail: string;
 }
 
-const xsrf = () => decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '');
 
 /**
  * Asset library dialog: folder navigation, search, upload. Returns
@@ -80,7 +80,7 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
             const res = await fetch(adminUrl('assets', adminPath), {
                 method: 'POST',
                 body: form,
-                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-XSRF-TOKEN': xsrf() },
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-XSRF-TOKEN': xsrfToken() },
             });
             const json = await res.json().catch(() => ({}));
             if (!res.ok) {

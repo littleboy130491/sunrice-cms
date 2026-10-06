@@ -6,7 +6,7 @@ import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
 import type { SharedProps } from '@/types';
 
-interface Row { id: number; handle: string; title: string; fields_count: number; collections_count: number }
+interface Row { id: number; handle: string; title: string; fields_count: number; used_by: { type: string; title: string }[] }
 
 export default function BlueprintsIndex({ blueprints }: { blueprints: Row[] }) {
     const { adminPath } = usePage<SharedProps>().props;
@@ -28,7 +28,19 @@ export default function BlueprintsIndex({ blueprints }: { blueprints: Row[] }) {
                             <TableCell><Link className="font-medium hover:underline" href={adminUrl(`structure/blueprints/${b.id}/edit`, adminPath)}>{b.title}</Link></TableCell>
                             <TableCell><code className="text-xs">{b.handle}</code></TableCell>
                             <TableCell>{b.fields_count}</TableCell>
-                            <TableCell>{b.collections_count}</TableCell>
+                            <TableCell>
+                                {b.used_by.length === 0 ? (
+                                    <span className="text-muted-foreground">Not used</span>
+                                ) : (
+                                    <div className="flex flex-wrap gap-1">
+                                        {b.used_by.map((u) => (
+                                            <span key={`${u.type}-${u.title}`} className="rounded-md border px-1.5 py-0.5 text-xs">
+                                                <span className="text-muted-foreground">{u.type}:</span> {u.title}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </TableCell>
                             <TableCell>
                                 {can('sunrice.blueprints.delete') && (
                                     <Button

@@ -64,8 +64,42 @@ class SunriceServiceProvider extends PackageServiceProvider
             ->runsMigrations();
     }
 
+    /**
+     * Laravel only merges a package's config one level deep, so an app
+     * that published config/sunrice.php before a nested setting existed
+     * (e.g. assets.allowed_extensions) would see it as missing — an
+     * empty upload allowlist rejects every file. Fill in nested keys the
+     * app's file doesn't have; values it sets, lists included, win.
+     */
+    protected function fillMissingConfig(): void
+    {
+        $defaults = require __DIR__.'/../config/sunrice.php';
+        $current = (array) $this->app['config']->get('sunrice', []);
+
+        $this->app['config']->set('sunrice', static::mergeMissing($defaults, $current));
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $defaults
+     * @param  array<array-key, mixed>  $values
+     * @return array<array-key, mixed>
+     */
+    public static function mergeMissing(array $defaults, array $values): array
+    {
+        foreach ($defaults as $key => $default) {
+            if (! array_key_exists($key, $values)) {
+                $values[$key] = $default;
+            } elseif (is_array($default) && is_array($values[$key]) && ! array_is_list($default) && ! array_is_list($values[$key])) {
+                $values[$key] = static::mergeMissing($default, $values[$key]);
+            }
+        }
+
+        return $values;
+    }
+
     public function packageRegistered(): void
     {
+        $this->fillMissingConfig();
         $this->app->singleton(Sunrice::class);
         $this->app->singleton(Fields\FieldRegistry::class, function (): Fields\FieldRegistry {
             $registry = new Fields\FieldRegistry;
@@ -209,7 +243,12 @@ class SunriceServiceProvider extends PackageServiceProvider
                     return null;
                 }
 
-                return Inertia::render('Error', ['status' => $status])
+                // An unknown admin URL is answered by the site's catch-all
+                // route, outside the admin middleware: add the admin's shared
+                // data (user, navigation…) so the page renders in its layout.
+                $shared = app(HandleSunriceInertiaRequests::class)->share($request);
+
+                return Inertia::render('Error', ['status' => $status] + $shared)
                     ->rootView('sunrice::app')
                     ->toResponse($request)
                     ->setStatusCode($status);

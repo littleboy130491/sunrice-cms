@@ -75,6 +75,7 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::delete('entries/{entry}', [Admin\EntriesController::class, 'destroy'])->name('entries.destroy');
     Route::post('entries/{entry}/publish', [Admin\EntriesController::class, 'publish'])->name('entries.publish');
     Route::post('entries/{entry}/unpublish', [Admin\EntriesController::class, 'unpublish'])->name('entries.unpublish');
+    Route::put('entries/{entry}/publish-date', [Admin\EntriesController::class, 'publishDate'])->name('entries.publish-date');
     Route::post('entries/{entry}/duplicate', [Admin\EntriesController::class, 'duplicate'])->name('entries.duplicate');
     Route::post('entries/{entry}/restore', [Admin\EntriesController::class, 'restore'])->withTrashed()->name('entries.restore');
     Route::delete('entries/{entry}/force', [Admin\EntriesController::class, 'forceDelete'])->withTrashed()->name('entries.force-delete');
@@ -82,6 +83,7 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::post('entries/{entry}/preview', [Admin\EntriesController::class, 'preview'])->name('entries.preview');
     Route::put('entry-translations/{translation}/return-to-draft', [Admin\EntriesController::class, 'returnToDraft'])->name('entry-translations.return-to-draft');
     Route::post('revisions/{revision}/restore', [Admin\EntriesController::class, 'restoreRevision'])->name('revisions.restore');
+    Route::post('entry-translations/{translation}/undo-restore', [Admin\EntriesController::class, 'undoRestore'])->name('revisions.undo-restore');
 
     // Taxonomy terms (T8.4)
     Route::get('taxonomies/{taxonomy:handle}', [Admin\TermsController::class, 'index'])->name('terms.index');

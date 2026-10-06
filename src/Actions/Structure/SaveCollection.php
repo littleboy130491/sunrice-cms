@@ -33,6 +33,8 @@ class SaveCollection
             'settings.sluggable' => ['boolean'],
             'settings.archivable' => ['boolean'],
             'settings.has_single' => ['boolean'],
+            'settings.sort' => ['nullable', Rule::in(array_keys(Collection::SORTS))],
+            'settings.sort_direction' => ['nullable', Rule::in(['asc', 'desc'])],
             // Fields for the listing page, edited from the collection's entries list.
             'settings.archive_blueprint_id' => ['nullable', 'integer', Rule::exists('sunrice_blueprints', 'id')],
             'settings.titles' => ['nullable', 'array'],
@@ -115,7 +117,7 @@ class SaveCollection
                 unset($settings['titles']);
             }
         }
-        foreach (['archive_route', 'template', 'archive_template', 'per_page', 'archive_blueprint_id'] as $key) {
+        foreach (['archive_route', 'template', 'archive_template', 'per_page', 'archive_blueprint_id', 'sort', 'sort_direction'] as $key) {
             if (array_key_exists($key, $settings) && ($settings[$key] === null || $settings[$key] === '')) {
                 unset($settings[$key]);
             }

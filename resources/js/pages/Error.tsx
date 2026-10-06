@@ -1,4 +1,6 @@
+import * as React from 'react';
 import { Link, usePage } from '@inertiajs/react';
+import AppLayout from '@/layouts/AppLayout';
 import { Button } from '@/components/ui/button';
 import { adminUrl } from '@/lib/route';
 import type { SharedProps } from '@/types';
@@ -10,7 +12,7 @@ const MESSAGES: Record<number, { title: string; body: string }> = {
 };
 
 export default function Error({ status }: { status: number }) {
-    const { adminPath } = usePage<SharedProps>().props;
+    const { adminPath = 'cms' } = usePage<SharedProps>().props;
     const message = MESSAGES[status] ?? MESSAGES[500];
 
     return (
@@ -24,3 +26,12 @@ export default function Error({ status }: { status: number }) {
         </div>
     );
 }
+
+/** The admin layout needs a signed-in user; without one, show the page on its own. */
+function ErrorLayout({ children }: { children: React.ReactNode }) {
+    const { auth } = usePage<Partial<SharedProps>>().props;
+
+    return auth?.user ? <AppLayout>{children}</AppLayout> : <main className="p-6">{children}</main>;
+}
+
+Error.layout = (page: React.ReactNode) => <ErrorLayout>{page}</ErrorLayout>;

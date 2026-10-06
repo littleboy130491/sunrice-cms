@@ -20,8 +20,26 @@ Props: `collection` (required), `paginate`, `per-page`, `page-name`
 (default `{collection}_page`, so two components on one page paginate
 independently), `limit`, `where` (`['author' => 3]` or
 `[['price', '>', 10]]`), `terms` (`'news'`/`['news','guides']` — includes
-child terms), `order-by` (`published_at desc`), `with` (extra eager
-loads).
+child terms), `order-by`, `with` (extra eager loads).
+
+`order-by` takes `manual` (the drag-and-drop order from the admin),
+`published_at`, `created_at`, `updated_at`, `title` or a field handle,
+written `-created_at` or `created_at desc`; several are comma-separated.
+Without it, entries follow the collection's **Order** setting (Structure →
+Collections), which also orders the listing page and the admin list.
+
+A collection with **Each entry has its own page** turned off is a list of
+information (team members, FAQs…): its entries have no URL
+(`$entry->url` is null), aren't routable, aren't offered in menus or
+link fields, and are shown only through templates:
+
+```blade
+<x-sunrice::entries collection="team" order-by="manual">
+    @foreach ($component->entries as $person)
+        <h3>{{ $person->title }}</h3> {{ $person->get('role') }}
+    @endforeach
+</x-sunrice::entries>
+```
 
 ## `<x-sunrice::seo>`
 

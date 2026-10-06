@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { adminUrl } from '@/lib/route';
 import type { SharedProps } from '@/types';
-import { fetchJson } from '@/lib/fetch-json';
+import { fetchJson, xsrfToken } from '@/lib/fetch-json';
 
 interface AssetRow {
     id: number;
@@ -39,6 +39,8 @@ interface Props {
     filters: { folder?: string; search?: string; type?: string; trashed?: string };
     maxUploadKb: number;
     allowedExtensions: string[];
+    /** public/storage is missing, so uploaded files can't be shown. */
+    storageLinkMissing?: boolean;
 }
 
 const formatKb = (kb: number) => (kb >= 1024 ? `${Math.round((kb / 1024) * 10) / 10} MB` : `${kb} KB`);
@@ -49,7 +51,14 @@ function iconFor(asset: AssetRow) {
     return <FileText className="h-8 w-8 text-muted-foreground" />;
 }
 
-export default function AssetsIndex({ assets, folders, filters, maxUploadKb, allowedExtensions }: Props) {
+function uploadFailure(status: number): string {
+    if (status === 413) return 'the file is too large for this server.';
+    if (status === 419) return 'your session expired. Reload the page and try again.';
+    if (status === 403) return "you don't have permission to upload.";
+    return `the upload failed (${status}).`;
+}
+
+export default function AssetsIndex({ assets, folders, filters, maxUploadKb, allowedExtensions, storageLinkMissing }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const [search, setSearch] = React.useState(filters.search ?? '');
     const [view, setView] = React.useState<'grid' | 'list'>('grid');
@@ -76,8 +85,13 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
 
     const [uploading, setUploading] = React.useState(false);
 
-    // All files go in one request: separate requests would cancel each other.
-    const upload = (files: FileList | null) => {
+    const [progress, setProgress] = React.useState<string | null>(null);
+
+    // One request per file, one after another: a single request with every
+    // file can exceed the server's post_max_size (8 MB by default) and fail
+    // as a whole. Fetch (not Inertia visits, which cancel each other), then
+    // reload the list once.
+    const upload = async (files: FileList | null) => {
         if (!files?.length) return;
         const accepted: File[] = [];
         for (const file of Array.from(files)) {
@@ -92,15 +106,37 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
         }
         if (accepted.length === 0) return;
 
-        const data = new FormData();
-        accepted.forEach((file) => data.append('files[]', file));
-        if (filters.folder) data.append('folder_id', filters.folder);
         setUploading(true);
-        router.post(adminUrl('assets', adminPath), data, {
-            forceFormData: true,
-            preserveScroll: true,
-            onFinish: () => setUploading(false),
-        });
+        let done = 0;
+        for (const [i, file] of accepted.entries()) {
+            if (accepted.length > 1) setProgress(`${i + 1}/${accepted.length}`);
+            const data = new FormData();
+            data.append('file', file);
+            if (filters.folder) data.append('folder_id', filters.folder);
+            try {
+                const res = await fetch(adminUrl('assets', adminPath), {
+                    method: 'POST',
+                    body: data,
+                    headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-XSRF-TOKEN': xsrfToken() },
+                });
+                if (res.ok) {
+                    done++;
+                    continue;
+                }
+                const json = await res.json().catch(() => ({}));
+                const message = json.errors ? (Object.values(json.errors).flat()[0] as string) : json.message;
+                toast.error(`${file.name}: ${message || uploadFailure(res.status)}`);
+            } catch {
+                toast.error(`${file.name}: the upload was interrupted. Check your connection and try again.`);
+            }
+        }
+        setUploading(false);
+        setProgress(null);
+
+        if (done > 0) {
+            toast.success(done === 1 ? `Uploaded ${accepted.length === 1 ? accepted[0].name : '1 file'}.` : `Uploaded ${done} files.`);
+            router.reload({ only: ['assets', 'folders'] });
+        }
     };
 
     const openDetail = async (asset: AssetRow) => {
@@ -159,8 +195,8 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
     const goToPage = (url: string | null) => url && router.get(url, {}, { preserveState: true, preserveScroll: false });
 
     return (
-        <div className="flex gap-6">
-            <aside className="w-48 shrink-0 space-y-1">
+        <div className="flex flex-col gap-6 md:flex-row">
+            <aside className="space-y-1 md:w-48 md:shrink-0">
                 <div className="mb-2 flex items-center justify-between">
                     <span className="text-sm font-medium">Folders</span>
                     <Dialog open={folderDialog} onOpenChange={setFolderDialog}>
@@ -193,24 +229,31 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
                         >
                             <Folder className="h-4 w-4 shrink-0" /> <span className="truncate">{f.name}</span>
                         </button>
-                        <button className="hidden px-1 text-muted-foreground hover:text-foreground group-hover:block" aria-label="Rename folder" onClick={() => renameFolder(f)}>
+                        {/* Always shown on touch screens, which have no hover. */}
+                        <button className="px-1 text-muted-foreground hover:text-foreground md:hidden md:group-hover:block" aria-label="Rename folder" onClick={() => renameFolder(f)}>
                             <Pencil className="h-3 w-3" />
                         </button>
-                        <button className="hidden px-1 text-muted-foreground hover:text-destructive group-hover:block" aria-label="Delete folder" onClick={() => deleteFolder(f)}>
+                        <button className="px-1 text-muted-foreground hover:text-destructive md:hidden md:group-hover:block" aria-label="Delete folder" onClick={() => deleteFolder(f)}>
                             <Trash2 className="h-3 w-3" />
                         </button>
                     </div>
                 ))}
             </aside>
 
-            <div className="flex-1 space-y-4">
-                <div className="flex items-center justify-between gap-2">
-                    <div className="relative w-72">
+            <div className="min-w-0 flex-1 space-y-4">
+                {storageLinkMissing && (
+                    <p className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 text-sm">
+                        Uploads are saved, but they can't be shown yet: the <code>public/storage</code> link is missing.
+                        Run <code>php artisan storage:link</code> on the server.
+                    </p>
+                )}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="relative w-full sm:w-72">
                         <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input className="pl-8" placeholder="Search assets…" value={search}
                             onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && visit()} />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         <Select value={filters.type ?? 'all'} onValueChange={(v) => visit({ type: v === 'all' ? undefined : v })}>
                             <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                             <SelectContent>
@@ -237,7 +280,7 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
                             </Button>
                         )}
                         <Button onClick={() => fileRef.current?.click()} disabled={uploading}>
-                            <Upload className="mr-1 h-4 w-4" /> {uploading ? 'Uploading…' : 'Upload'}
+                            <Upload className="mr-1 h-4 w-4" /> {uploading ? `Uploading${progress ? ` ${progress}` : ''}…` : 'Upload'}
                         </Button>
                         <input
                             ref={fileRef}

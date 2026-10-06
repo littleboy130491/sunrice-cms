@@ -6,12 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputError } from '@/components/app/input-error';
+import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { useBreadcrumbs } from '@/components/app/breadcrumbs';
 import FieldRenderer from '@/fields/FieldRenderer';
 import { TranslationModeProvider } from '@/fields/translation-mode';
@@ -19,7 +19,7 @@ import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
 import type { AdminField, AdminTab, SharedProps } from '@/types'; import type { Json } from '@/types';
 
-interface RevisionRow { id: number; created_at: string | null; user_id: number | null }
+interface RevisionRow { id: number; created_at: string | null; created_at_iso?: string | null; user_id: number | null }
 
 interface TranslationState {
     id?: number;
@@ -30,6 +30,8 @@ interface TranslationState {
     is_ready: boolean;
     is_outdated: boolean;
     has_draft: boolean;
+    /** A revision was restored this session and can be undone. */
+    can_undo_restore?: boolean;
     draft_title: string;
     draft_slug: string;
     revisions: RevisionRow[];
@@ -48,6 +50,22 @@ interface Props {
     mainLocale?: string;
     /** What the current user may do with this entry (null for a new entry). */
     can?: { update: boolean; translate: boolean; publish: boolean; delete: boolean; create: boolean } | null;
+}
+
+/** A readable local date and time, e.g. "6 Oct 2026, 16:49". */
+function formatDate(iso: string | null | undefined): string | null {
+    if (!iso) return null;
+    const date = new Date(iso);
+    return Number.isNaN(date.getTime()) ? iso : date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+/** ISO date → the value a datetime-local input expects (local time). */
+function toLocalInput(iso: string | null): string {
+    if (!iso) return '';
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 function flatFields(tabs: AdminTab[] | null): AdminField[] {
@@ -145,9 +163,14 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         form.put(adminUrl(`entries/${entry.id}`, adminPath), { preserveScroll: true, onSuccess: () => form.setDefaults() });
     };
 
-    const publish = () => {
+    // Publish date for the main language: empty = now, a future time schedules it.
+    const [publishAt, setPublishAt] = React.useState(toLocalInput(entry?.published_at ?? null));
+    React.useEffect(() => setPublishAt(toLocalInput(entry?.published_at ?? null)), [entry?.published_at]);
+
+    const publish = (at?: string) => {
         if (!entry) return;
-        const go = () => router.post(adminUrl(`entries/${entry.id}/publish`, adminPath), { locale }, { preserveScroll: true });
+        const publishedAt = locale === mainLocale && at ? new Date(at).toISOString() : null;
+        const go = () => router.post(adminUrl(`entries/${entry.id}/publish`, adminPath), { locale, published_at: publishedAt }, { preserveScroll: true });
         // Publishing takes the saved draft, so save unsaved edits first.
         if (form.isDirty && canEdit) {
             form.put(adminUrl(`entries/${entry.id}`, adminPath), { preserveScroll: true, onSuccess: () => { form.setDefaults(); go(); } });
@@ -156,7 +179,12 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         }
     };
 
-    const unpublish = () => entry && router.post(adminUrl(`entries/${entry.id}/unpublish`, adminPath), {}, { preserveScroll: true });
+    const changePublishDate = () => entry && publishAt && router.put(
+        adminUrl(`entries/${entry.id}/publish-date`, adminPath),
+        { published_at: new Date(publishAt).toISOString() },
+        { preserveScroll: true },
+    );
+    const unpublish = () => entry && window.confirm('Unpublish this entry? It will be taken off the site.') && router.post(adminUrl(`entries/${entry.id}/unpublish`, adminPath), {}, { preserveScroll: true });
     // A different entry: start fresh rather than carrying this form over.
     const duplicate = () => entry && router.post(adminUrl(`entries/${entry.id}/duplicate`, adminPath), {}, { preserveState: false });
     const trash = () => entry && window.confirm('Move this entry to trash?') && router.delete(adminUrl(`entries/${entry.id}`, adminPath));
@@ -164,9 +192,16 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         const tid = existing[locale]?.id;
         if (tid) router.put(adminUrl(`entry-translations/${tid}/return-to-draft`, adminPath), {}, { preserveScroll: true, onSuccess: reloadFromServer });
     };
-    const restoreRevision = (id: number) => {
-        if (form.isDirty && !window.confirm('Discard your unsaved changes and restore this revision?')) return;
-        router.post(adminUrl(`revisions/${id}/restore`, adminPath), {}, { preserveScroll: true, onSuccess: reloadFromServer });
+    const restoreRevision = (r: RevisionRow) => {
+        const question = form.isDirty
+            ? `Restore the revision from ${formatDate(r.created_at_iso) ?? r.created_at}? Your unsaved changes will be lost. You can undo the restore afterwards.`
+            : `Restore the revision from ${formatDate(r.created_at_iso) ?? r.created_at} into the draft? You can undo this afterwards.`;
+        if (!window.confirm(question)) return;
+        router.post(adminUrl(`revisions/${r.id}/restore`, adminPath), {}, { preserveScroll: true, onSuccess: reloadFromServer });
+    };
+    const undoRestore = () => {
+        const tid = existing[locale]?.id;
+        if (tid) router.post(adminUrl(`entry-translations/${tid}/undo-restore`, adminPath), {}, { preserveScroll: true, onSuccess: reloadFromServer });
     };
 
     const markReady = () => {
@@ -178,7 +213,10 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         });
     };
 
-    const statusLabel = entry?.status === 'published' ? 'Published' : 'Draft';
+    const scheduled = entry?.status === 'published' && !!entry.published_at && new Date(entry.published_at) > new Date();
+    const statusLabel = entry?.status !== 'published' ? 'Draft' : scheduled ? 'Scheduled' : 'Published';
+    const publishAtChanged = publishAt !== toLocalInput(entry?.published_at ?? null);
+    const publishAtFuture = !!publishAt && new Date(publishAt) > new Date();
 
     useBreadcrumbs([
         { label: 'Content' },
@@ -202,7 +240,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                             <span>{collection.title}</span>
                             {entry && (
-                                <Badge variant={entry.status === 'published' ? 'success' : 'secondary'}>{statusLabel}</Badge>
+                                <Badge variant={scheduled ? 'warning' : entry.status === 'published' ? 'success' : 'secondary'}>{statusLabel}</Badge>
                             )}
                             {current.is_outdated && <Badge variant="warning">Outdated translation</Badge>}
                             {current.has_draft && entry?.status === 'published' && <Badge variant="outline">Unpublished changes</Badge>}
@@ -212,7 +250,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                 {!isNew && (
                     <div className="flex items-center gap-2">
                         {perms.publish && (
-                            <Button type="button" onClick={publish}>
+                            <Button type="button" onClick={() => publish()}>
                                 <Send /> Publish
                             </Button>
                         )}
@@ -284,11 +322,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
             <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
                 <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-6 disabled:opacity-80">
                     {contentTabs.map((tab, index) => (
-                        <Card key={tab.handle}>
-                            <CardHeader>
-                                <CardTitle>{tab.label}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-6">
+                        <CollapsibleCard key={tab.handle} title={tab.label} storageKey={`entry:${collection.handle}:${tab.handle}`} contentClassName="flex flex-col gap-6">
                                 {index === 0 && (
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="grid gap-2">
@@ -326,42 +360,37 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                         onChange={(values) => form.setData('data', values)}
                                     />
                                 </TranslationModeProvider>
-                            </CardContent>
-                        </Card>
+                        </CollapsibleCard>
                     ))}
                     {seoTab && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>{seoTab.label}</CardTitle>
-                                <CardDescription>How this entry appears in search results and social shares.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <FieldRenderer
-                                    fields={seoTab.fields}
-                                    values={form.data.seo}
-                                    errors={form.errors}
-                                    pathPrefix="seo"
-                                    onChange={(values) => form.setData('seo', values)}
-                                />
-                            </CardContent>
-                        </Card>
+                        <CollapsibleCard
+                            title={seoTab.label}
+                            description="How this entry appears in search results and social shares."
+                            storageKey={`entry:${collection.handle}:seo`}
+                        >
+                            <FieldRenderer
+                                fields={seoTab.fields}
+                                values={form.data.seo}
+                                errors={form.errors}
+                                pathPrefix="seo"
+                                onChange={(values) => form.setData('seo', values)}
+                            />
+                        </CollapsibleCard>
                     )}
                 </fieldset>
 
                 <div className="flex flex-col gap-6 lg:sticky lg:top-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-sm">Status</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-4">
+                    <CollapsibleCard title="Status" titleClassName="text-sm" storageKey="entry:status" contentClassName="flex flex-col gap-4">
                             {entry && (
-                                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-                                    <dt className="text-muted-foreground">Visibility</dt>
-                                    <dd className="text-right">{statusLabel}</dd>
+                                <dl className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-sm">
+                                    <dt className="text-muted-foreground">Status</dt>
+                                    <dd className="text-right">
+                                        <Badge variant={scheduled ? 'warning' : entry.status === 'published' ? 'success' : 'secondary'}>{statusLabel}</Badge>
+                                    </dd>
                                     {entry.published_at && (
                                         <>
-                                            <dt className="text-muted-foreground">Published</dt>
-                                            <dd className="text-right">{entry.published_at}</dd>
+                                            <dt className="text-muted-foreground">{scheduled ? 'Goes live' : 'Published'}</dt>
+                                            <dd className="text-right" title={entry.published_at}>{formatDate(entry.published_at)}</dd>
                                         </>
                                     )}
                                     {locale !== mainLocale && (
@@ -371,6 +400,33 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                         </>
                                     )}
                                 </dl>
+                            )}
+                            {entry && perms.publish && locale === mainLocale && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="publish-at">Publish date</Label>
+                                    <Input id="publish-at" type="datetime-local" value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />
+                                    <p className="text-xs text-muted-foreground">
+                                        {publishAt ? (publishAtFuture ? 'In the future: the entry goes live then.' : 'The date shown as published.') : 'Empty: publish now.'}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {entry.status !== 'published' ? (
+                                            <Button type="button" size="sm" onClick={() => publish(publishAt)}>
+                                                <Send /> {publishAtFuture ? 'Schedule' : 'Publish'}
+                                            </Button>
+                                        ) : (
+                                            <>
+                                                {publishAtChanged && publishAt && (
+                                                    <Button type="button" size="sm" onClick={changePublishDate}>
+                                                        {publishAtFuture ? 'Reschedule' : 'Update date'}
+                                                    </Button>
+                                                )}
+                                                <Button type="button" size="sm" variant="outline" onClick={unpublish}>
+                                                    <EyeOff /> {scheduled ? 'Cancel schedule' : 'Unpublish'}
+                                                </Button>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
                             )}
                             {isNew && blueprints.length > 1 && (
                                 <div className="grid gap-2">
@@ -392,36 +448,34 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                     {isNew ? 'Create draft' : 'Save draft'}
                                 </Button>
                             )}
-                        </CardContent>
-                    </Card>
+                    </CollapsibleCard>
 
-                    {!isNew && canEdit && current.revisions.length > 0 && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-sm">
-                                    <History className="size-4" /> Revisions
-                                </CardTitle>
-                                <CardDescription>Restoring copies a revision into the draft.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ul className="-mx-2 flex flex-col">
-                                    {current.revisions.slice(0, 10).map((r) => (
-                                        <li key={r.id} className="flex items-center justify-between rounded-md px-2 py-1 text-sm hover:bg-accent">
-                                            <span className="text-muted-foreground">{r.created_at}</span>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-7"
-                                                onClick={() => restoreRevision(r.id)}
-                                            >
-                                                Restore
-                                            </Button>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </CardContent>
-                        </Card>
+                    {!isNew && canEdit && (current.revisions.length > 0 || current.can_undo_restore) && (
+                        <CollapsibleCard
+                            title={<span className="flex items-center gap-2"><History className="size-4" /> Revisions</span>}
+                            titleClassName="text-sm"
+                            description="Restoring copies a revision into the draft; the live page changes when you publish."
+                            storageKey="entry:revisions"
+                        >
+                            {current.can_undo_restore && (
+                                <div className="mb-3 flex items-center justify-between gap-2 rounded-md border border-dashed px-3 py-2 text-sm">
+                                    <span className="text-muted-foreground">A revision was restored.</span>
+                                    <Button type="button" variant="outline" size="sm" className="h-7" onClick={undoRestore}>
+                                        <Undo2 /> Undo
+                                    </Button>
+                                </div>
+                            )}
+                            <ul className="-mx-2 flex flex-col">
+                                {current.revisions.slice(0, 10).map((r) => (
+                                    <li key={r.id} className="flex items-center justify-between rounded-md px-2 py-1 text-sm hover:bg-accent">
+                                        <span className="text-muted-foreground" title={r.created_at ?? undefined}>{formatDate(r.created_at_iso) ?? r.created_at}</span>
+                                        <Button type="button" variant="ghost" size="sm" className="h-7" onClick={() => restoreRevision(r)}>
+                                            Restore
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </CollapsibleCard>
                     )}
                 </div>
             </form>

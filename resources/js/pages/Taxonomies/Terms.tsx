@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -179,6 +179,17 @@ export default function TermsPage({ taxonomy, terms, locales, mainLocale, bluepr
                                 </TabsContent>
                             ))}
                         </Tabs>
+                        {fields.length === 0 && (
+                            <p className="text-xs text-muted-foreground">
+                                Need more on terms, such as a description or image? Pick a blueprint in{' '}
+                                {can('sunrice.taxonomies.edit') ? (
+                                    <Link className="underline" href={adminUrl(`structure/taxonomies/${taxonomy.id}/edit`, adminPath)}>this taxonomy's settings</Link>
+                                ) : (
+                                    "this taxonomy's settings"
+                                )}
+                                .
+                            </p>
+                        )}
                         <InputError message={errors.translations} />
                         <Button onClick={submit} disabled={processing}>{processing ? 'Saving…' : 'Save term'}</Button>
                     </div>

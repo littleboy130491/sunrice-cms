@@ -34,6 +34,21 @@ class UrlGenerator
         return Locales::prefix($locale).str_replace('{slug}', $slug, $route);
     }
 
+    /**
+     * The entry's public URL, or null when its collection has no single
+     * pages ("Each entry has its own page" off): such entries are data
+     * for templates, not pages. The homepage entry always has one.
+     */
+    public function entryUrl(Entry $entry, ?string $locale = null): ?string
+    {
+        $isHomepage = (int) Setting::get('homepage_entry_id') === (int) $entry->id;
+        if (! $isHomepage && $entry->collection !== null && ! $entry->collection->hasSinglePages()) {
+            return null;
+        }
+
+        return $this->entry($entry, $locale);
+    }
+
     public function entrySlug(Entry $entry, string $locale): string
     {
         if (! Locales::isMain($locale)) {
@@ -90,7 +105,10 @@ class UrlGenerator
 
         if ($page instanceof Entry) {
             foreach (Locales::available() as $locale) {
-                $urls[$locale] = $this->entry($page, $locale);
+                $url = $this->entryUrl($page, $locale);
+                if ($url !== null) {
+                    $urls[$locale] = $url;
+                }
             }
 
             return $urls;

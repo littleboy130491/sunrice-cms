@@ -14,3 +14,8 @@ export async function fetchJson<T = unknown>(url: string, init?: RequestInit): P
     }
     return res.json() as Promise<T>;
 }
+
+/** The CSRF token Laravel sets in the XSRF-TOKEN cookie, for fetch() writes. */
+export function xsrfToken(): string {
+    return decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '');
+}

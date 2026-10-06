@@ -11,7 +11,7 @@
     <h1>{{ isset($collection) ? $collection->titleIn($locale ?? null) : 'Archive' }}</h1>
     <ul>
         @foreach($entries as $entry)
-            <li><a href="{{ $entry->url }}">{{ $entry->title }}</a></li>
+            <li>@if($entry->url)<a href="{{ $entry->url }}">{{ $entry->title }}</a>@else{{ $entry->title }}@endif</li>
         @endforeach
     </ul>
     @if($entries instanceof \Illuminate\Contracts\Pagination\Paginator)

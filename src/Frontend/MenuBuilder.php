@@ -148,10 +148,12 @@ class MenuBuilder
         }
 
         $entry->resolveFor($locale);
+        // Entries without a page of their own can't be linked to.
+        $url = $this->urls->entryUrl($entry, $locale);
 
-        return [
+        return $url === null ? null : [
             'title' => $entry->renderedTranslation()?->title,
-            'url' => $this->urls->entry($entry, $locale),
+            'url' => $url,
         ];
     }
 

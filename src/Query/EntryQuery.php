@@ -182,6 +182,10 @@ class EntryQuery
             $direction = 'desc';
             $field = substr($field, 1);
         }
+        // 'manual' is the drag-and-drop order from the admin.
+        if ($field === 'manual') {
+            $field = 'sort_order';
+        }
 
         $this->filters['order'][] = [$field, $direction];
 
@@ -227,6 +231,8 @@ class EntryQuery
      */
     public function get(): \Illuminate\Support\Collection
     {
+        $this->applyDefaultOrder();
+
         $results = $this->runQuery(
             fn () => ($this->limit ? $this->query->limit($this->limit) : $this->query)->get(),
         );
@@ -237,6 +243,7 @@ class EntryQuery
     /** @return LengthAwarePaginator<int, Entry> */
     public function paginate(int $perPage = 12, string $pageName = 'page'): LengthAwarePaginator
     {
+        $this->applyDefaultOrder();
         $this->filters['paginate'] = [$perPage, $pageName, (int) request($pageName, 1)];
 
         $paginator = $this->runQuery(
@@ -259,6 +266,24 @@ class EntryQuery
     }
 
     // ---- internals -----------------------------------------------------------
+
+    /**
+     * Without an explicit orderBy(), use the collection's default order
+     * (Structure → Collections → Order).
+     */
+    protected function applyDefaultOrder(): void
+    {
+        if (! empty($this->filters['order']) || ! empty($this->filters['default_order'])) {
+            return;
+        }
+
+        [$column, $direction] = $this->collection?->defaultSort() ?? ['published_at', 'desc'];
+        $this->filters['default_order'] = [$column, $direction];
+        $this->orderBy($column, $direction);
+        unset($this->filters['order']);
+        // Manual order: oldest first on ties, as the admin's drag-and-drop numbers them.
+        $this->query->orderBy('sunrice_entries.id', $column === 'sort_order' ? 'asc' : 'desc');
+    }
 
     protected function isStandardColumn(string $field): bool
     {

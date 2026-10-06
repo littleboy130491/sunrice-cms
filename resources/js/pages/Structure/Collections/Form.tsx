@@ -42,6 +42,8 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             template: (collection?.settings?.template as string) ?? '',
             archive_template: (collection?.settings?.archive_template as string) ?? '',
             icon: (collection?.settings?.icon as string) ?? 'file-text',
+            sort: (collection?.settings?.sort as string) ?? 'published_at',
+            sort_direction: (collection?.settings?.sort_direction as string) ?? '',
             archive_blueprint_id: (collection?.settings?.archive_blueprint_id as number | undefined) ?? ('' as number | ''),
             titles: ((collection?.settings?.titles ?? {}) as Record<string, string>),
         },
@@ -135,6 +137,38 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                 </CardContent>
             </Card>
             <Card>
+                <CardHeader><CardTitle>Order</CardTitle></CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                    <p className="text-sm text-muted-foreground">
+                        How entries are listed on the site (listing page, <code>&lt;x-sunrice::entries&gt;</code> without <code>order-by</code>) and in the admin.
+                    </p>
+                    <div className="flex flex-wrap gap-3">
+                        <Select value={settings.sort} onValueChange={(v) => setSetting('sort', v)}>
+                            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="manual">Manual (drag and drop)</SelectItem>
+                                <SelectItem value="published_at">Published date</SelectItem>
+                                <SelectItem value="created_at">Created date</SelectItem>
+                                <SelectItem value="updated_at">Last updated</SelectItem>
+                                <SelectItem value="title">Title</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={settings.sort_direction || 'default'} onValueChange={(v) => setSetting('sort_direction', v === 'default' ? '' : v)}>
+                            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="default">{settings.sort === 'manual' || settings.sort === 'title' ? 'First to last (A–Z)' : 'Newest first'}</SelectItem>
+                                <SelectItem value="asc">Ascending</SelectItem>
+                                <SelectItem value="desc">Descending</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    {settings.sort === 'manual' && (
+                        <p className="text-xs text-muted-foreground">Drag entries into order on the collection's entries list. New entries go to the end.</p>
+                    )}
+                    <InputError message={errors['settings.sort'] ?? errors['settings.sort_direction']} />
+                </CardContent>
+            </Card>
+            <Card>
                 <CardHeader><CardTitle>Pages &amp; URLs</CardTitle></CardHeader>
                 <CardContent className="flex flex-col gap-4">
                     <label className="flex items-center gap-3 text-sm">
@@ -146,6 +180,12 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                         <Checkbox checked={settings.has_single} onCheckedChange={(c) => setSetting('has_single', !!c)} />
                         Each entry has its own page
                     </label>
+                    {!settings.has_single && (
+                        <p className="pl-7 text-xs text-muted-foreground">
+                            Entries have no URL: use the collection as a list of information (team members, FAQs, partners…) shown by
+                            templates with <code>&lt;x-sunrice::entries collection="{handle}"&gt;</code>. Menus and links can't point to them.
+                        </p>
+                    )}
                     {settings.has_single && (
                         <div className="grid gap-2 pl-7">
                             <Label htmlFor="route">Entry URL</Label>
