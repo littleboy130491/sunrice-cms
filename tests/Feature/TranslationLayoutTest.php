@@ -230,11 +230,18 @@ it('previews an unready translation from its draft over the main draft layout', 
         'draft' => ['title' => 'Home draft', 'slug' => 'home', 'data' => ['intro' => 'Welcome draft'], 'seo' => []],
     ]);
 
+    view()->addNamespace('testviews', __DIR__.'/../fixtures/views');
+    $this->pages->update(['settings' => $this->pages->settings + ['template' => 'testviews::landing']]);
+
     $url = URL::temporarySignedRoute('sunrice.frontend.preview', now()->addMinutes(30), [
         'entry' => $entry->id, 'locale' => 'en',
     ]);
 
-    get($url)->assertOk()->assertSee('Home draft')->assertSee('Welcome draft');
+    get($url)->assertOk()
+        ->assertSee('TITLE[Home draft]', false)
+        ->assertSee('INTRO[Welcome draft]', false)
+        ->assertSee('CODE[SKU-1]', false)
+        ->assertSee('HERO[Halo]', false);
     expect($en->is_ready)->toBeFalse();
 });
 
