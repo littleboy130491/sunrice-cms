@@ -192,18 +192,30 @@ class LangFileTranslator
     {
         $nested = [];
         foreach ($flat as $path => $value) {
-            $ref = &$nested;
-            foreach (explode(self::SEPARATOR, (string) $path) as $segment) {
-                if (! isset($ref[$segment]) || ! is_array($ref[$segment])) {
-                    $ref[$segment] = [];
-                }
-                $ref = &$ref[$segment];
-            }
-            $ref = $value;
-            unset($ref);
+            $nested = $this->setPath($nested, explode(self::SEPARATOR, (string) $path), $value);
         }
 
         return $nested;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $array
+     * @param  array<int, string>  $segments
+     * @return array<array-key, mixed>
+     */
+    protected function setPath(array $array, array $segments, string $value): array
+    {
+        $key = (string) array_shift($segments);
+        if ($segments === []) {
+            $array[$key] = $value;
+
+            return $array;
+        }
+
+        $child = isset($array[$key]) && is_array($array[$key]) ? $array[$key] : [];
+        $array[$key] = $this->setPath($child, $segments, $value);
+
+        return $array;
     }
 
     /**

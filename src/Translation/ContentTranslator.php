@@ -102,8 +102,9 @@ class ContentTranslator
         $work['data'] = (array) ($work['data'] ?? []) + $sourceData;
         $work['seo'] = (array) ($work['seo'] ?? []) + $sourceSeo;
 
-        $label = ($entry->collection?->title ?? 'Entry').' “'.$source->title.'”';
-        if (! $this->translateInto($work, $strings, $label)) {
+        $label = ($entry->collection->title ?? 'Entry').' “'.$source->title.'”';
+        $work = $this->translateInto($work, $strings, $label);
+        if ($work === null) {
             return;
         }
 
@@ -142,9 +143,10 @@ class ContentTranslator
                     + TranslatableStrings::collect($term->taxonomy?->blueprint?->schema()->fields() ?? [], (array) $source->data, 'data.');
 
                 $target = $term->translation($this->to);
-                $work = ['name' => $target?->name ?? '', 'data' => (array) ($target?->data ?? []) + (array) $source->data];
+                $work = ['name' => $target->name ?? '', 'data' => (array) ($target->data ?? []) + (array) $source->data];
 
-                if (! $this->translateInto($work, $strings, ($term->taxonomy?->title ?? 'Term').' “'.$source->name.'”')) {
+                $work = $this->translateInto($work, $strings, ($term->taxonomy->title ?? 'Term').' “'.$source->name.'”');
+                if ($work === null) {
                     continue;
                 }
 
@@ -168,12 +170,13 @@ class ContentTranslator
     {
         GlobalSet::query()->where('translatable', true)->with(['blueprint', 'values'])->get()
             ->each(function (GlobalSet $set): void {
-                $sourceData = (array) ($set->values->firstWhere('locale', $this->from)?->data ?? []);
+                $sourceData = (array) ($set->values->firstWhere('locale', $this->from)->data ?? []);
                 $strings = TranslatableStrings::collect($set->blueprint?->schema()->fields() ?? [], $sourceData, 'data.');
                 $target = $set->values->firstWhere('locale', $this->to);
-                $work = ['data' => (array) ($target?->data ?? []) + $sourceData];
+                $work = ['data' => (array) ($target->data ?? []) + $sourceData];
 
-                if (! $this->translateInto($work, $strings, 'Site content “'.$set->title.'”')) {
+                $work = $this->translateInto($work, $strings, 'Site content “'.$set->title.'”');
+                if ($work === null) {
                     return;
                 }
 
@@ -194,7 +197,8 @@ class ContentTranslator
                 }
             }
 
-            if (! $this->translateInto($work, $strings, 'Navigation menu labels')) {
+            $work = $this->translateInto($work, $strings, 'Navigation menu labels');
+            if ($work === null) {
                 return;
             }
 
@@ -208,13 +212,14 @@ class ContentTranslator
 
     /**
      * Translate the strings whose target value is missing (or all of them
-     * with --force) and write them into $work. Returns true when anything
-     * was written.
+     * with --force) and return $work with them written in, or null when
+     * nothing was written.
      *
-     * @param  array<string, mixed>  $work
+     * @param  array<array-key, mixed>  $work
      * @param  array<string, array{value: string, rich: bool}>  $strings
+     * @return array<array-key, mixed>|null
      */
-    protected function translateInto(array &$work, array $strings, string $label): bool
+    protected function translateInto(array $work, array $strings, string $label): ?array
     {
         $pending = [];
         foreach ($strings as $path => $string) {
@@ -228,14 +233,14 @@ class ContentTranslator
         }
 
         if ($pending === []) {
-            return false;
+            return null;
         }
 
         if ($this->dryRun) {
             $this->stats->pending += count($pending);
             $this->report("{$label}: ".count($pending).' string(s) to translate');
 
-            return false;
+            return null;
         }
 
         try {
@@ -245,7 +250,7 @@ class ContentTranslator
             $this->stats->errors[] = "{$label}: {$e->getMessage()}";
             $this->report("{$label}: failed ({$e->getMessage()})");
 
-            return false;
+            return null;
         }
 
         $written = 0;
@@ -263,7 +268,7 @@ class ContentTranslator
         $this->stats->translated += $written;
         $this->report("{$label}: translated {$written} string(s)");
 
-        return $written > 0;
+        return $written > 0 ? $work : null;
     }
 
     protected function report(string $line): void
