@@ -34,8 +34,8 @@ export default function RichTextField({ value, onChange }: FieldProps) {
     if (!editor) return null;
 
     return (
-        <div className="rounded-md border">
-            <div className="flex flex-wrap items-center gap-0.5 border-b p-1">
+        <div className="overflow-hidden rounded-lg border border-input bg-card shadow-xs transition-[border-color,box-shadow] focus-within:border-ring/70 focus-within:ring-4 focus-within:ring-ring/12">
+            <div className="flex flex-wrap items-center gap-0.5 border-b border-border/70 bg-muted/40 p-1">
                 <Toolbar editor={editor} />
                 <AssetPicker
                     imageOnly
@@ -51,7 +51,7 @@ export default function RichTextField({ value, onChange }: FieldProps) {
                     }}
                 />
             </div>
-            <EditorContent editor={editor} className="prose prose-sm max-w-none p-3 [&_.ProseMirror]:min-h-32 [&_.ProseMirror]:outline-none" />
+            <EditorContent editor={editor} className="sunrice-prose px-3.5 py-3 text-sm [&_.ProseMirror]:min-h-32 [&_.ProseMirror]:outline-none" />
         </div>
     );
 }

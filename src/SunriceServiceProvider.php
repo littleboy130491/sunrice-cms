@@ -77,6 +77,14 @@ class SunriceServiceProvider extends PackageServiceProvider
         $current = (array) $this->app['config']->get('sunrice', []);
 
         $this->app['config']->set('sunrice', static::mergeMissing($defaults, $current));
+
+        // The default App\Models\User may not exist (custom namespaces,
+        // Testbench): fall back to the auth provider's model.
+        $userModel = $this->app['config']->get('sunrice.auth.user_model');
+        $authModel = $this->app['config']->get('auth.providers.users.model');
+        if (is_string($userModel) && ! class_exists($userModel) && is_string($authModel) && class_exists($authModel)) {
+            $this->app['config']->set('sunrice.auth.user_model', $authModel);
+        }
     }
 
     /**

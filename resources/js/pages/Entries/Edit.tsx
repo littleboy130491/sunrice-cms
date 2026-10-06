@@ -128,6 +128,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
     useUnsavedChanges(canEdit && form.isDirty && !form.processing, () => formRef.current?.requestSubmit());
 
     const switchLocale = (lc: string) => {
+        if (lc === locale) return;
         // Each language is saved separately: don't drop this one's edits silently.
         if (canEdit && form.isDirty && !window.confirm(`You have unsaved changes in ${locale.toUpperCase()}. Switch language and discard them?`)) return;
         setLocale(lc);
@@ -307,7 +308,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
             </div>
 
             {locales.length > 1 && (
-                <Tabs value={locale} onValueChange={switchLocale}>
+                <Tabs value={locale} onValueChange={switchLocale} activationMode="manual">
                     <TabsList>
                         {locales.map((lc) => (
                             <TabsTrigger key={lc} value={lc} className="gap-1.5 uppercase">

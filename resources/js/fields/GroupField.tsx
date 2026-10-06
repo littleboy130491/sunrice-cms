@@ -6,7 +6,7 @@ export default function GroupField({ field, value, errors, pathPrefix, onChange 
     const values = (value as Record<string, Json>) ?? {};
 
     return (
-        <div className="rounded-md border p-4">
+        <div className="rounded-lg border border-border/80 bg-muted/25 p-4">
             <FieldList
                 fields={field.fields ?? []}
                 values={values}

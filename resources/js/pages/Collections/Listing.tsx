@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +41,17 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
         setErrors({});
     }, [locale, saved]);
 
+    const formRef = React.useRef<HTMLFormElement>(null);
+    const dirty = editable && JSON.stringify(form) !== saved;
+    useUnsavedChanges(dirty && !processing, () => formRef.current?.requestSubmit());
+
+    // Each language is saved separately: don't drop this one's edits silently.
+    const switchLocale = (lc: string) => {
+        if (lc === locale) return;
+        if (dirty && !window.confirm(`You have unsaved changes in ${locale.toUpperCase()}. Switch language and discard them?`)) return;
+        setLocale(lc);
+    };
+
     const save = (e: React.FormEvent) => {
         e.preventDefault();
         router.put(adminUrl(`collections/${collection.handle}/listing`, adminPath), { locale, ...form } as unknown as Record<string, Json>, {
@@ -52,7 +64,7 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
     };
 
     return (
-        <form onSubmit={save} className="flex max-w-3xl flex-col gap-6">
+        <form ref={formRef} onSubmit={save} className="flex max-w-3xl flex-col gap-6">
             <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                     <Button variant="outline" size="icon" className="size-8 shrink-0" asChild>
@@ -79,7 +91,7 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
             )}
 
             {locales.available.length > 1 && (
-                <Tabs value={locale} onValueChange={setLocale}>
+                <Tabs value={locale} onValueChange={switchLocale} activationMode="manual">
                     <TabsList>
                         {locales.available.map((lc) => (
                             <TabsTrigger key={lc} value={lc}>{locales.names[lc] ?? lc.toUpperCase()}</TabsTrigger>

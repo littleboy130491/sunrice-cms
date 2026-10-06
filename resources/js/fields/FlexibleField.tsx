@@ -26,11 +26,11 @@ function SortableBlock({ id, locked, hidden, children }: { id: string; locked: b
         <div
             ref={setNodeRef}
             style={{ transform: CSS.Transform.toString(transform), transition }}
-            className={cn('rounded-md border', hidden && 'border-dashed bg-muted/40')}
+            className={cn('overflow-hidden rounded-lg border border-border/80 bg-muted/25', hidden && 'border-dashed opacity-75')}
         >
             <div className="flex flex-1">
                 {!locked && (
-                    <button type="button" className="cursor-grab px-2 text-muted-foreground" aria-label="Reorder" {...attributes} {...listeners}>
+                    <button type="button" className="cursor-grab border-r border-border/70 px-2 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Reorder" {...attributes} {...listeners}>
                         <GripVertical className="h-4 w-4" />
                     </button>
                 )}
@@ -71,7 +71,7 @@ export default function FlexibleField({ field, value, errors, pathPrefix, onChan
 
                         return (
                             <SortableBlock key={block.id} id={block.id} locked={secondary} hidden={!!block.hidden}>
-                                <div className="flex flex-wrap items-center justify-between gap-2 border-b px-3 py-1.5">
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/70 bg-muted/40 px-3 py-1.5">
                                     <button
                                         type="button"
                                         className="flex items-center gap-1.5 text-sm font-medium"
@@ -91,7 +91,7 @@ export default function FlexibleField({ field, value, errors, pathPrefix, onChan
                                     />
                                 </div>
                                 {!isCollapsed && (
-                                    <div className="p-3">
+                                    <div className="p-4">
                                         <FieldList
                                             fields={fieldset?.fields ?? []}
                                             values={block.values}
@@ -109,7 +109,7 @@ export default function FlexibleField({ field, value, errors, pathPrefix, onChan
             {!secondary && (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button type="button" variant="outline" size="sm" className="self-start">
+                        <Button type="button" variant="outline" size="sm" className="h-10 w-full border-dashed bg-muted/30 font-normal text-muted-foreground shadow-none hover:text-foreground">
                             <Plus /> Add block
                         </Button>
                     </DropdownMenuTrigger>

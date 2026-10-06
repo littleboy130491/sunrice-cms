@@ -23,7 +23,7 @@ export default function FieldList({ fields, values, errors = {}, pathPrefix = 'd
     const { secondary, mainLocale } = useTranslationMode();
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
             {fields.map((field) => {
                 const Component = fieldComponents[field.display_type ?? field.type] ?? fieldComponents[field.type];
                 if (!Component) {
@@ -47,13 +47,20 @@ export default function FieldList({ fields, values, errors = {}, pathPrefix = 'd
                     />
                 );
 
+                const labelled = field.type !== 'toggle' && field.type !== 'fieldset';
+                const instructions = typeof field.instructions === 'string' ? field.instructions.trim() : '';
+
                 return (
                     <div key={field.handle} className="grid gap-2">
-                        {field.type !== 'toggle' && field.type !== 'fieldset' && (
+                        {labelled && (
                             <Label className="flex items-center gap-2">
                                 <span>
                                     {field.label || field.handle}
-                                    {field.required && <span className="text-destructive"> *</span>}
+                                    {field.required && (
+                                        <span className="ml-0.5 text-destructive/80" aria-hidden>
+                                            *
+                                        </span>
+                                    )}
                                 </span>
                                 {shared && (
                                     <span className="inline-flex items-center gap-1 text-xs font-normal text-muted-foreground">
@@ -62,6 +69,7 @@ export default function FieldList({ fields, values, errors = {}, pathPrefix = 'd
                                 )}
                             </Label>
                         )}
+                        {instructions && labelled && <p className="-mt-1 text-[13px] leading-snug text-muted-foreground">{instructions}</p>}
                         {shared ? (
                             <fieldset disabled aria-disabled className="pointer-events-none opacity-60">
                                 {control}
@@ -69,7 +77,8 @@ export default function FieldList({ fields, values, errors = {}, pathPrefix = 'd
                         ) : (
                             control
                         )}
-                        {error && <p className="text-sm text-destructive">{error}</p>}
+                        {instructions && !labelled && <p className="text-[13px] leading-snug text-muted-foreground">{instructions}</p>}
+                        {error && <p className="text-[13px] text-destructive">{error}</p>}
                     </div>
                 );
             })}
