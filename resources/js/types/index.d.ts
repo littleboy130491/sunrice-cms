@@ -27,7 +27,7 @@ export interface SharedProps {
     permissions: string[] | ['*'];
     navigation: NavGroup[];
     locales: LocaleInfo;
-    flash: { success?: string | null; error?: string | null };
+    flash: { success?: string | null; error?: string | null; id?: string | null };
     adminPath: string;
     errors: Record<string, string>;
     [key: string]: unknown;

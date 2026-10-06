@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/sonner';
@@ -16,14 +16,34 @@ function sidebarDefaultOpen(): boolean {
     return !document.cookie.split('; ').includes('sidebar_state=false');
 }
 
+const shownFlashIds = new Set<string>();
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { flash } = usePage<SharedProps>().props;
     const match = useNavMatch();
 
     React.useEffect(() => {
+        // Back/forward restores old page props, flash included: show each
+        // flashed message once.
+        if (flash?.id) {
+            if (shownFlashIds.has(flash.id)) return;
+            shownFlashIds.add(flash.id);
+        }
         if (flash?.success) toast.success(flash.success);
         if (flash?.error) toast.error(flash.error);
-    }, [flash?.success, flash?.error]);
+    }, [flash?.id, flash?.success, flash?.error]);
+
+    // A rejected save is never silent: pages show field errors inline where
+    // they can, and this toast covers the rest (hidden fields, dialogs…).
+    React.useEffect(
+        () =>
+            router.on('error', (event) => {
+                const messages = Object.values(event.detail.errors ?? {}).filter(Boolean) as string[];
+                if (messages.length === 0) return;
+                toast.error(messages.length === 1 ? messages[0] : `${messages[0]} (+${messages.length - 1} more)`);
+            }),
+        [],
+    );
 
     return (
         <TooltipProvider delayDuration={0}>

@@ -11,6 +11,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Sunrice\Permissions\PermissionRegistry;
 
@@ -18,13 +19,10 @@ class RolesController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct()
-    {
-        $this->middleware('can:sunrice.manage-roles');
-    }
-
     public function index(): Response
     {
+        $this->authorize('viewAny', Role::class);
+
         return Inertia::render('Roles/Index', [
             'roles' => Role::query()->withCount('permissions')->orderBy('name')->get()
                 ->map(fn (Role $r) => [
@@ -37,6 +35,8 @@ class RolesController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Role::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('roles', 'name')],
         ]);
@@ -48,11 +48,14 @@ class RolesController extends Controller
 
     public function edit(Role $role): Response
     {
+        $this->authorize('view', $role);
+
         return Inertia::render('Roles/Edit', [
             'role' => [
                 'id' => $role->id,
                 'name' => $role->name,
                 'permissions' => $role->permissions->pluck('name'),
+                'editable' => request()->user()->can('update', $role),
             ],
             'permissionGroups' => app(PermissionRegistry::class)->grouped(),
         ]);
@@ -60,16 +63,29 @@ class RolesController extends Controller
 
     public function update(Request $request, Role $role): RedirectResponse
     {
+        $this->authorize('update', $role);
+
+        $guard = config('sunrice.auth.guard', 'web');
+        $known = app(PermissionRegistry::class)->names();
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:100', Rule::unique('roles', 'name')->ignore($role)],
             'permissions' => ['sometimes', 'array'],
-            'permissions.*' => ['string', Rule::exists('permissions', 'name')->where('guard_name', config('sunrice.auth.guard', 'web'))],
-        ]);
+            'permissions.*' => ['string', function (string $attribute, mixed $value, \Closure $fail) use ($known, $guard): void {
+                if (! in_array($value, $known, true) && ! Permission::query()->where('guard_name', $guard)->where('name', $value)->exists()) {
+                    $fail("Unknown permission \"{$value}\".");
+                }
+            }],
+        ], [], ['permissions.*' => 'permission']);
 
         if (isset($validated['name'])) {
             $role->update(['name' => $validated['name']]);
         }
         if (isset($validated['permissions'])) {
+            // The editor lists every permission the registry knows about,
+            // including ones for collections created since the last sync.
+            foreach (array_intersect($validated['permissions'], $known) as $name) {
+                Permission::findOrCreate($name, $guard);
+            }
             $role->syncPermissions($validated['permissions']);
         }
 
@@ -78,7 +94,10 @@ class RolesController extends Controller
 
     public function destroy(Role $role): RedirectResponse
     {
-        abort_if($role->users()->exists(), 422, 'Role still assigned to users.');
+        $this->authorize('delete', $role);
+        if ($role->users()->exists()) {
+            return back()->with('error', "Role \"{$role->name}\" is still assigned to users. Unassign it first.");
+        }
 
         $role->delete();
 

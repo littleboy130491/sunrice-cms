@@ -69,7 +69,7 @@ class RouteMatcher
 
         Collection::query()->get()->each(function (Collection $collection) use (&$routes): void {
             if ($collection->setting('has_single', true)) {
-                $route = (string) $collection->setting('route', '/'.$collection->handle.'/{slug}');
+                $route = $collection->entryRoute();
                 $routes[] = $this->route($route, new RouteMatch('entry', collection: $collection));
             }
             if ($collection->setting('has_archive')) {
@@ -78,10 +78,11 @@ class RouteMatcher
             }
         });
 
-        Taxonomy::query()->get()->each(function (Taxonomy $taxonomy) use (&$routes): void {
+        Taxonomy::query()->with('collections')->get()->each(function (Taxonomy $taxonomy) use (&$routes): void {
             if ($taxonomy->setting('has_archive')) {
-                $route = (string) $taxonomy->setting('route', '/'.$taxonomy->handle.'/{slug}');
-                $routes[] = $this->route($route, new RouteMatch('term', taxonomy: $taxonomy));
+                foreach ($taxonomy->termRoutes() as $termRoute) {
+                    $routes[] = $this->route($termRoute['route'], new RouteMatch('term', collection: $termRoute['collection'], taxonomy: $taxonomy));
+                }
             }
         });
 

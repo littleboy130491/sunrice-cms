@@ -1,6 +1,7 @@
 import { router, usePage } from '@inertiajs/react';
 import * as React from 'react';
-import { FileText, Folder, Grid3X3, Image as ImageIcon, List, Plus, Search, Trash2, Upload, Video } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Folder, Grid3X3, Image as ImageIcon, List, Pencil, Plus, Search, Trash2, Undo2, Upload, Video } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { adminUrl } from '@/lib/route';
 import type { SharedProps } from '@/types';
+import { fetchJson } from '@/lib/fetch-json';
 
 interface AssetRow {
     id: number;
@@ -25,16 +27,21 @@ interface AssetRow {
     url: string;
     thumbnail: string;
     trashed: boolean;
+    version?: number;
 }
 
-interface FolderRow { id: number; parent_id: number | null; name: string; path: string }
-interface Paginated<T> { data: T[]; total: number }
+interface FolderRow { id: number; parent_id: number | null; name: string; depth: number }
+interface Paginated<T> { data: T[]; total: number; current_page: number; last_page: number; prev_page_url: string | null; next_page_url: string | null }
 
 interface Props {
     assets: Paginated<AssetRow>;
     folders: FolderRow[];
     filters: { folder?: string; search?: string; type?: string; trashed?: string };
+    maxUploadKb: number;
+    allowedExtensions: string[];
 }
+
+const formatKb = (kb: number) => (kb >= 1024 ? `${Math.round((kb / 1024) * 10) / 10} MB` : `${kb} KB`);
 
 function iconFor(asset: AssetRow) {
     if (asset.mime_type?.startsWith('image/')) return <ImageIcon className="h-8 w-8 text-muted-foreground" />;
@@ -42,7 +49,7 @@ function iconFor(asset: AssetRow) {
     return <FileText className="h-8 w-8 text-muted-foreground" />;
 }
 
-export default function AssetsIndex({ assets, folders, filters }: Props) {
+export default function AssetsIndex({ assets, folders, filters, maxUploadKb, allowedExtensions }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const [search, setSearch] = React.useState(filters.search ?? '');
     const [view, setView] = React.useState<'grid' | 'list'>('grid');
@@ -67,21 +74,44 @@ export default function AssetsIndex({ assets, folders, filters }: Props) {
     const pickFolder = (id: number | null) =>
         router.get(adminUrl('assets', adminPath), { ...filters, folder: id ?? undefined }, { preserveState: true, replace: true });
 
+    const [uploading, setUploading] = React.useState(false);
+
+    // All files go in one request: separate requests would cancel each other.
     const upload = (files: FileList | null) => {
         if (!files?.length) return;
-        Array.from(files).forEach((file) => {
-            const data = new FormData();
-            data.append('file', file);
-            if (filters.folder) data.append('folder_id', filters.folder);
-            router.post(adminUrl('assets', adminPath), data, { forceFormData: true, preserveScroll: true });
+        const accepted: File[] = [];
+        for (const file of Array.from(files)) {
+            const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+            if (!allowedExtensions.includes(ext)) {
+                toast.error(`${file.name}: .${ext} files can't be uploaded.`);
+            } else if (file.size / 1024 > maxUploadKb) {
+                toast.error(`${file.name} is larger than the ${formatKb(maxUploadKb)} limit.`);
+            } else {
+                accepted.push(file);
+            }
+        }
+        if (accepted.length === 0) return;
+
+        const data = new FormData();
+        accepted.forEach((file) => data.append('files[]', file));
+        if (filters.folder) data.append('folder_id', filters.folder);
+        setUploading(true);
+        router.post(adminUrl('assets', adminPath), data, {
+            forceFormData: true,
+            preserveScroll: true,
+            onFinish: () => setUploading(false),
         });
     };
 
     const openDetail = async (asset: AssetRow) => {
         setDetail(asset);
-        const res = await fetch(adminUrl(`assets/${asset.id}`, adminPath), { headers: { Accept: 'application/json' } });
-        const json = await res.json();
-        setUsages(json.usages ?? []);
+        setUsages([]);
+        try {
+            const json = await fetchJson<{ usages?: typeof usages }>(adminUrl(`assets/${asset.id}`, adminPath));
+            setUsages(json.usages ?? []);
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Could not load where this asset is used.');
+        }
     };
 
     const saveMeta = () => {
@@ -92,9 +122,41 @@ export default function AssetsIndex({ assets, folders, filters }: Props) {
     };
 
     const bulkTrash = () => {
-        checked.forEach((id) => router.delete(adminUrl(`assets/${id}`, adminPath), { preserveScroll: true }));
-        setChecked(new Set());
+        router.post(adminUrl('assets/bulk-trash', adminPath), { ids: Array.from(checked) }, {
+            preserveScroll: true,
+            onSuccess: () => setChecked(new Set()),
+        });
     };
+
+    const replaceFile = (file: File) => {
+        if (!detail) return;
+        const data = new FormData();
+        data.append('file', file);
+        router.post(adminUrl(`assets/${detail.id}/replace`, adminPath), data, {
+            forceFormData: true,
+            preserveScroll: true,
+            // Show the new file: reload the asset's details.
+            onSuccess: async () => {
+                const res = await fetch(adminUrl(`assets/${detail.id}`, adminPath), { headers: { Accept: 'application/json' } });
+                if (res.ok) setDetail(await res.json());
+            },
+        });
+    };
+
+    const renameFolder = (f: FolderRow) => {
+        const name = window.prompt('Rename folder', f.name);
+        if (name && name !== f.name) router.put(adminUrl(`asset-folders/${f.id}`, adminPath), { name }, { preserveScroll: true });
+    };
+
+    const deleteFolder = (f: FolderRow) => {
+        if (!window.confirm(`Delete the folder "${f.name}"? It must be empty.`)) return;
+        router.delete(adminUrl(`asset-folders/${f.id}`, adminPath), {
+            preserveScroll: true,
+            onSuccess: () => String(f.id) === filters.folder && pickFolder(null),
+        });
+    };
+
+    const goToPage = (url: string | null) => url && router.get(url, {}, { preserveState: true, preserveScroll: false });
 
     return (
         <div className="flex gap-6">
@@ -123,14 +185,21 @@ export default function AssetsIndex({ assets, folders, filters }: Props) {
                     <Folder className="h-4 w-4" /> All assets
                 </button>
                 {folders.map((f) => (
-                    <button
-                        key={f.id}
-                        className={`flex w-full items-center gap-2 rounded px-2 py-1 text-sm ${String(f.id) === filters.folder ? 'bg-accent' : 'hover:bg-accent/50'}`}
-                        style={{ paddingLeft: `${8 + (f.path.match(/\//g)?.length ?? 0) * 12}px` }}
-                        onClick={() => pickFolder(f.id)}
-                    >
-                        <Folder className="h-4 w-4" /> {f.name}
-                    </button>
+                    <div key={f.id} className={`group flex items-center rounded ${String(f.id) === filters.folder ? 'bg-accent' : 'hover:bg-accent/50'}`}>
+                        <button
+                            className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1 text-sm"
+                            style={{ paddingLeft: `${8 + (f.depth ?? 0) * 12}px` }}
+                            onClick={() => pickFolder(f.id)}
+                        >
+                            <Folder className="h-4 w-4 shrink-0" /> <span className="truncate">{f.name}</span>
+                        </button>
+                        <button className="hidden px-1 text-muted-foreground hover:text-foreground group-hover:block" aria-label="Rename folder" onClick={() => renameFolder(f)}>
+                            <Pencil className="h-3 w-3" />
+                        </button>
+                        <button className="hidden px-1 text-muted-foreground hover:text-destructive group-hover:block" aria-label="Delete folder" onClick={() => deleteFolder(f)}>
+                            <Trash2 className="h-3 w-3" />
+                        </button>
+                    </div>
                 ))}
             </aside>
 
@@ -167,17 +236,24 @@ export default function AssetsIndex({ assets, folders, filters }: Props) {
                                 <Trash2 className="mr-1 h-4 w-4" /> Trash {checked.size}
                             </Button>
                         )}
-                        <Button onClick={() => fileRef.current?.click()}>
-                            <Upload className="mr-1 h-4 w-4" /> Upload
+                        <Button onClick={() => fileRef.current?.click()} disabled={uploading}>
+                            <Upload className="mr-1 h-4 w-4" /> {uploading ? 'Uploading…' : 'Upload'}
                         </Button>
-                        <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => upload(e.target.files)} />
+                        <input
+                            ref={fileRef}
+                            type="file"
+                            multiple
+                            accept={allowedExtensions.map((e) => `.${e}`).join(',')}
+                            className="hidden"
+                            onChange={(e) => { upload(e.target.files); e.target.value = ''; }}
+                        />
                     </div>
                 </div>
 
                 <div
                     className={`rounded-lg border-2 border-dashed p-4 ${dragging ? 'border-primary bg-accent/30' : 'border-transparent'}`}
                     onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-                    onDragLeave={() => setDragging(false)}
+                    onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
                     onDrop={(e) => { e.preventDefault(); setDragging(false); upload(e.dataTransfer.files); }}
                 >
                     {view === 'grid' ? (
@@ -224,7 +300,16 @@ export default function AssetsIndex({ assets, folders, filters }: Props) {
                         </div>
                     )}
                 </div>
-                <div className="text-sm text-muted-foreground">{assets.total} asset(s)</div>
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>{assets.total} asset(s) · up to {formatKb(maxUploadKb)} per file</span>
+                    {assets.last_page > 1 && (
+                        <span className="flex items-center gap-2">
+                            <Button variant="outline" size="icon" className="size-8" disabled={!assets.prev_page_url} onClick={() => goToPage(assets.prev_page_url)} aria-label="Previous page"><ChevronLeft /></Button>
+                            Page {assets.current_page} of {assets.last_page}
+                            <Button variant="outline" size="icon" className="size-8" disabled={!assets.next_page_url} onClick={() => goToPage(assets.next_page_url)} aria-label="Next page"><ChevronRight /></Button>
+                        </span>
+                    )}
+                </div>
             </div>
 
             <Sheet open={detail !== null} onOpenChange={(o) => !o && setDetail(null)}>
@@ -251,7 +336,7 @@ export default function AssetsIndex({ assets, folders, filters }: Props) {
                                     <Input value={detail.caption ?? ''} onChange={(e) => setDetail({ ...detail, caption: e.target.value })} />
                                 </div>
                                 <div className="text-xs text-muted-foreground">
-                                    {detail.width}×{detail.height} · {Math.round(detail.size / 1024)} KB
+                                    {detail.width && detail.height ? `${detail.width}×${detail.height} · ` : ''}{Math.round(detail.size / 1024)} KB
                                 </div>
                                 <div className="text-xs">
                                     <a href={detail.url} target="_blank" className="underline" rel="noreferrer">Copy / open URL</a>
@@ -270,17 +355,24 @@ export default function AssetsIndex({ assets, folders, filters }: Props) {
                                         <Button size="sm" variant="outline" asChild><span>Replace file</span></Button>
                                         <input type="file" className="hidden" onChange={(e) => {
                                             const file = e.target.files?.[0];
-                                            if (!file || !detail) return;
-                                            const data = new FormData();
-                                            data.append('file', file);
-                                            router.post(adminUrl(`assets/${detail.id}/replace`, adminPath), data, { forceFormData: true, preserveScroll: true });
+                                            e.target.value = '';
+                                            if (file) replaceFile(file);
                                         }} />
                                     </label>
-                                    {!detail.trashed && (
+                                    {!detail.trashed ? (
                                         <Button size="sm" variant="destructive" onClick={() => {
-                                            router.delete(adminUrl(`assets/${detail.id}`, adminPath), { preserveScroll: true });
-                                            setDetail(null);
+                                            router.delete(adminUrl(`assets/${detail.id}`, adminPath), { preserveScroll: true, onSuccess: () => setDetail(null) });
                                         }}>Trash</Button>
+                                    ) : (
+                                        <>
+                                            <Button size="sm" variant="outline" onClick={() => {
+                                                router.post(adminUrl(`assets/${detail.id}/restore`, adminPath), {}, { preserveScroll: true, onSuccess: () => setDetail(null) });
+                                            }}><Undo2 className="h-4 w-4" /> Restore</Button>
+                                            <Button size="sm" variant="destructive" onClick={() => {
+                                                if (!window.confirm('Delete this file permanently?')) return;
+                                                router.delete(adminUrl(`assets/${detail.id}/force`, adminPath), { preserveScroll: true, onSuccess: () => setDetail(null) });
+                                            }}>Delete forever</Button>
+                                        </>
                                     )}
                                 </div>
                             </div>

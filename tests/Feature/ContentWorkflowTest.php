@@ -169,7 +169,7 @@ it('syncs permissions for collections', function () {
 
     $expected = collect(PermissionRegistry::ENTRY_ACTIONS)
         ->map(fn ($a) => "sunrice.entries.{$collection->id}.{$a}");
-    expect(Permission::query()->whereIn('name', $expected)->count())->toBe(7);
+    expect(Permission::query()->whereIn('name', $expected)->count())->toBe(count(PermissionRegistry::ENTRY_ACTIONS));
 
     app(DeleteCollection::class)->handle($collection);
     expect(Permission::query()->whereIn('name', $expected)->count())->toBe(0);

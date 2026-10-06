@@ -8,13 +8,19 @@ php artisan sunrice:install
 ```
 
 `sunrice:install` publishes `config/sunrice.php`, publishes the compiled
-admin assets to `public/vendor/sunrice`, runs the package migrations
-(`sunrice_*` tables plus the spatie/laravel-permission tables), syncs
-permissions, creates the `Super Admin` role, and offers to create a
-super admin user (`--no-user` skips it).
+admin assets to `public/vendor/sunrice`, publishes the
+spatie/laravel-permission migration if your app doesn't have the
+permission tables yet, runs the migrations (`sunrice_*` tables plus the
+permission tables), syncs permissions, creates the `Super Admin` role, and
+offers to create a super admin user (`--no-user` skips it). Add `--roles`
+to also create the default Administrator, Editor, Author and Translator
+roles (see [permissions](permissions.md#default-roles)). It is safe to run
+again.
 
-The install command warns when your user model does not use
-`Spatie\Permission\Traits\HasRoles` — add it manually:
+Your user model must use `Spatie\Permission\Traits\HasRoles`. If it
+doesn't, the install command warns and skips creating the super admin
+(it couldn't be given the role); add the trait and run `sunrice:install`
+again:
 
 ```php
 use Spatie\Permission\Traits\HasRoles;

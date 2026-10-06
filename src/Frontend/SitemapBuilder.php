@@ -29,6 +29,11 @@ class SitemapBuilder
         $sitemap = Sitemap::create();
         $urls = app(UrlGenerator::class);
 
+        // The whole site is hidden from search engines (Settings).
+        if ((bool) config('sunrice.seo.noindex', false)) {
+            return $sitemap->render();
+        }
+
         Collection::query()->with('entries.translations')->get()->each(function (Collection $collection) use ($sitemap, $urls): void {
             if ($collection->setting('has_archive')) {
                 foreach (Locales::available() as $locale) {
@@ -62,16 +67,19 @@ class SitemapBuilder
             if (! $taxonomy->setting('has_archive')) {
                 return;
             }
-            $taxonomy->terms()->with('translations')->get()->each(function ($term) use ($sitemap, $urls): void {
+            $routes = $taxonomy->termRoutes();
+            $taxonomy->terms()->with('translations')->get()->each(function ($term) use ($sitemap, $urls, $routes): void {
                 foreach (Locales::available() as $locale) {
                     $resolved = $term->translation($locale);
                     if (! Locales::isMain($locale) && $resolved === null) {
                         continue;
                     }
-                    $sitemap->add(
-                        Url::create(url($urls->term($term, $locale)))
-                            ->setLastModificationDate($term->updated_at ?? now())
-                    );
+                    foreach ($routes as $route) {
+                        $sitemap->add(
+                            Url::create(url($urls->term($term, $locale, $route['collection'])))
+                                ->setLastModificationDate($term->updated_at ?? now())
+                        );
+                    }
                 }
             });
         });

@@ -6,6 +6,7 @@ namespace Sunrice\Fields\Types;
 
 use Sunrice\Fields\FieldType;
 use Sunrice\Fields\HydrationContext;
+use Sunrice\Models\Taxonomy;
 
 /**
  * Taxonomy terms. config: taxonomy (handle). Stores term ids; hydrates
@@ -41,5 +42,16 @@ class Terms extends FieldType
             ->filter(fn (array $r) => $r['target_id'] > 0)
             ->values()
             ->all();
+    }
+
+    public function settingsSchema(): array
+    {
+        return [
+            [
+                'handle' => 'taxonomy', 'type' => 'select', 'label' => 'Taxonomy',
+                'options' => Taxonomy::query()->orderBy('title')->get(['handle', 'title'])
+                    ->map(fn (Taxonomy $t) => ['value' => $t->handle, 'label' => $t->title])->all(),
+            ],
+        ];
     }
 }

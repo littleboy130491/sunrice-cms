@@ -17,9 +17,11 @@ class EntrySearchController extends Controller
     {
         $collections = collect((array) $request->input('collections', []));
         $q = (string) $request->input('q', '');
+        // `ids[]` looks up titles for entries already picked.
+        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
 
         $collectionIds = Collection::query()
-            ->when($collections->isNotEmpty(), fn ($query) => $query->whereIn('handle', $collections))
+            ->when($collections->isNotEmpty() && $ids === [], fn ($query) => $query->whereIn('handle', $collections))
             ->pluck('id');
 
         $entries = Entry::query()
@@ -28,10 +30,12 @@ class EntrySearchController extends Controller
             ->when($q !== '', function ($query) use ($q) {
                 $query->whereHas('translations', fn ($t) => $t->whereLike('title', "%{$q}%"));
             })
+            ->when($ids !== [], fn ($query) => $query->whereIn('id', $ids))
             ->latest()
-            ->limit(25)
+            ->limit($ids !== [] ? 100 : 25)
             ->get()
-            ->filter(fn (Entry $e) => $request->user()?->can('view', $e) ?? true)
+            // Menu editors link to any entry, even ones they can't edit.
+            ->filter(fn (Entry $e) => $request->user()?->can('sunrice.menus.edit') || ($request->user()?->can('view', $e) ?? true))
             ->map(fn (Entry $e) => [
                 'id' => $e->id,
                 'title' => $e->translations->first()->title ?? "Entry #{$e->id}",

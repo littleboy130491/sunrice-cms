@@ -14,11 +14,8 @@ class UpdateAssetMeta
      */
     public function handle(Asset $asset, array $attributes): Asset
     {
-        $asset->forceFill([
-            'title' => $attributes['title'] ?? $asset->title,
-            'alt' => $attributes['alt'] ?? $asset->alt,
-            'caption' => $attributes['caption'] ?? $asset->caption,
-        ])->save();
+        // Only the keys that were sent; an empty value clears the field.
+        $asset->forceFill(array_intersect_key($attributes, array_flip(['title', 'alt', 'caption'])))->save();
 
         ContentChanged::dispatch('asset_updated');
 

@@ -54,6 +54,11 @@ function slugify(input: string): string {
     return input.toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '');
 }
 
+/** The fieldset a `fieldset` field includes (config.fieldset; older data kept it at the top level). */
+function includedFieldset(field: BuilderField): string {
+    return String(field.config?.fieldset ?? field.fieldset ?? '');
+}
+
 function SettingControl({
     def, config, onChange, fieldsets,
 }: {
@@ -80,11 +85,38 @@ function SettingControl({
         case 'select':
             return (
                 <Select value={String(config[key] ?? '')} onValueChange={onChange}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Choose…" /></SelectTrigger>
                     <SelectContent>
                         {((def.options as { value: string; label: string }[]) ?? []).map((o) => (
                             <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                         ))}
+                    </SelectContent>
+                </Select>
+            );
+        case 'multiselect': {
+            const selected = (config[key] as string[]) ?? [];
+            const options = (def.options as { value: string; label: string }[]) ?? [];
+            return (
+                <div className="flex flex-col gap-1">
+                    {options.map((o) => (
+                        <label key={o.value} className="flex items-center gap-2 text-sm">
+                            <Checkbox
+                                checked={selected.includes(o.value)}
+                                onCheckedChange={(checked) => onChange(checked ? [...selected, o.value] : selected.filter((v) => v !== o.value))}
+                            />
+                            {o.label}
+                        </label>
+                    ))}
+                    {options.length === 0 && <span className="text-xs text-muted-foreground">Nothing to choose from yet.</span>}
+                </div>
+            );
+        }
+        case 'fieldset':
+            return (
+                <Select value={String(config[key] ?? '')} onValueChange={onChange}>
+                    <SelectTrigger><SelectValue placeholder="Choose a fieldset…" /></SelectTrigger>
+                    <SelectContent>
+                        {fieldsets.map((f) => <SelectItem key={f.id} value={f.handle}>{f.title}</SelectItem>)}
                     </SelectContent>
                 </Select>
             );
@@ -160,7 +192,7 @@ function FieldRow({
                 <button type="button" className="flex flex-1 items-center gap-2 text-left text-sm" onClick={() => setOpen(!open)}>
                     {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     <span className="font-medium">{field.label || field.handle || '(unnamed)'}</span>
-                    <span className="text-xs text-muted-foreground">{field.type}{field.fieldset ? ` → ${field.fieldset}` : ''}</span>
+                    <span className="text-xs text-muted-foreground">{field.type}{includedFieldset(field) ? ` → ${includedFieldset(field)}` : ''}</span>
                 </button>
                 <button type="button" className="text-muted-foreground hover:text-destructive" onClick={onRemove}>
                     <Trash2 className="h-4 w-4" />
@@ -246,7 +278,7 @@ export default function FieldBuilder({ value, onChange, fieldTypes, fieldsets, d
         };
         if (CONTAINER_TYPES.includes(type)) next.config = { fields: [] };
         if (type === 'flexible') next.config = { fieldsets: [] };
-        if (type === 'fieldset') next.fieldset = fieldsets[0]?.handle ?? '';
+        if (type === 'fieldset') next.config = { fieldset: fieldsets[0]?.handle ?? '' };
         onChange([...value, next]);
     };
 

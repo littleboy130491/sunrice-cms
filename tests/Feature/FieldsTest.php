@@ -221,3 +221,54 @@ it('queries JSON fields with casts', function () {
     JsonField::where($q3, 'data', 'tags', 'contains', 'b');
     expect($q3->pluck('title')->all())->toBe(['Multi']);
 });
+
+it('expands fieldset includes saved by older builders at the top level', function () {
+    Fieldset::create(['handle' => 'cta', 'title' => 'CTA', 'fields' => [
+        ['handle' => 'button', 'type' => 'text'],
+    ]]);
+
+    $schema = BlueprintSchema::make([
+        ['handle' => 'fieldset_1', 'type' => 'fieldset', 'fieldset' => 'cta'],
+    ]);
+
+    expect(collect($schema->fields())->pluck('handle')->all())->toBe(['button']);
+});
+
+it('offers settings for fieldset, terms, entries and link fields', function () {
+    $registry = app(FieldRegistry::class);
+
+    expect(collect($registry->get('fieldset')->settingsSchema())->pluck('handle')->all())->toBe(['fieldset'])
+        ->and(collect($registry->get('terms')->settingsSchema())->pluck('handle')->all())->toBe(['taxonomy'])
+        ->and(collect($registry->get('entries')->settingsSchema())->pluck('handle')->all())->toBe(['collections', 'max'])
+        ->and(collect($registry->get('link')->settingsSchema())->pluck('handle')->all())->toBe(['collections']);
+});
+
+it('stores entry links under entry_id, accepting the old entry key', function () {
+    $link = app(FieldRegistry::class)->get('link');
+
+    expect($link->normalize(['type' => 'entry', 'entry' => 7, 'label' => 'Go', 'new_tab' => true], []))
+        ->toBe(['type' => 'entry', 'url' => null, 'entry_id' => 7, 'label' => 'Go', 'new_tab' => true]);
+});
+
+it('lets the base type shape a custom field admin schema', function () {
+    $repeater = new class extends CustomField
+    {
+        public static function type(): string
+        {
+            return 'faq';
+        }
+
+        public static function baseType(): string
+        {
+            return 'repeater';
+        }
+    };
+    $base = app(FieldRegistry::class)->get('repeater');
+    $field = ['handle' => 'faq', 'type' => 'faq', 'config' => ['fields' => [['handle' => 'q', 'type' => 'text']]]];
+
+    $schema = $repeater->toAdminSchema($field);
+
+    expect($schema['type'])->toBe('repeater')
+        ->and($schema['display_type'])->toBe('faq')
+        ->and($schema['config'])->toEqual($base->toAdminSchema(['type' => 'repeater'] + $field)['config']);
+});

@@ -40,9 +40,31 @@ with the `title`, `description` and `noindex` props:
 <x-sunrice::seo :entry="$entry ?? null" title="Search results" :noindex="true" />
 ```
 
-Hidden entries are also left out of `/sitemap.xml`. Set
-`SUNRICE_NOINDEX=true` to hide a whole site (e.g. staging), and
-`SUNRICE_TWITTER_SITE=@handle` for `twitter:site`.
+Hidden entries are also left out of `/sitemap.xml`. Hide a whole site
+(e.g. staging) and set the `twitter:site` handle, default description and
+default share image under **Settings** in the admin (or with
+`SUNRICE_NOINDEX=true` / `SUNRICE_TWITTER_SITE=@handle`).
+
+## `<x-sunrice::code>`
+
+Prints the code snippets from **Settings → Code snippets** (analytics, tag
+managers, chat widgets…). Put one of each in your layout:
+
+```blade
+<head>
+    …
+    <x-sunrice::code position="head" />
+</head>
+<body>
+    <x-sunrice::code position="body_start" />
+    …
+    <x-sunrice::code position="body_end" />
+</body>
+```
+
+Snippets are printed as-is, so only give `sunrice.settings.edit` to people
+you trust with the site's scripts. The starter layout and the package's
+fallback views already include all three.
 
 ## `<x-sunrice::form>`
 

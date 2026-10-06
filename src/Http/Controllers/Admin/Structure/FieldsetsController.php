@@ -64,7 +64,11 @@ class FieldsetsController extends Controller
 
     public function destroy(Fieldset $fieldset, DeleteFieldset $delete): RedirectResponse
     {
-        $delete->handle($fieldset);
+        try {
+            $delete->handle($fieldset);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('sunrice.admin.structure.fieldsets.index')
             ->with('success', "Fieldset \"{$fieldset->title}\" deleted.");

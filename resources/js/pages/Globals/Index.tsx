@@ -17,7 +17,7 @@ export default function GlobalsIndex({ globals }: { globals: Row[] }) {
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold tracking-tight">Globals & template parts</h1>
-                {can('sunrice.manage-globals') && (
+                {can('sunrice.globals.create') && (
                     <Button asChild><Link href={adminUrl('globals/create', adminPath)}><Plus className="mr-1 h-4 w-4" /> New global</Link></Button>
                 )}
             </div>
@@ -31,7 +31,7 @@ export default function GlobalsIndex({ globals }: { globals: Row[] }) {
                             <TableCell><Badge variant="secondary">{g.group}</Badge></TableCell>
                             <TableCell>{g.blueprint?.title ?? '—'}</TableCell>
                             <TableCell>
-                                {can('sunrice.manage-globals') && (
+                                {can('sunrice.globals.delete') && (
                                     <Button
                                         variant="ghost" size="sm" className="text-destructive"
                                         onClick={() => window.confirm(`Delete "${g.title}"?`) && router.delete(adminUrl(`globals/${g.id}`, adminPath))}

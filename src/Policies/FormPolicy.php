@@ -21,7 +21,7 @@ class FormPolicy
 
     public function create(mixed $user): bool
     {
-        return $user->can('sunrice.manage-structure');
+        return $user->can('sunrice.forms.create');
     }
 
     public function update(mixed $user, Form $form): bool
@@ -31,7 +31,7 @@ class FormPolicy
 
     public function delete(mixed $user, Form $form): bool
     {
-        return $user->can('sunrice.manage-structure');
+        return $user->can('sunrice.forms.delete');
     }
 
     public function viewSubmissions(mixed $user, Form $form): bool

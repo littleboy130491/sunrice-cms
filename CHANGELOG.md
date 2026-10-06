@@ -2,6 +2,54 @@
 
 ## Unreleased
 
+- **Site settings** — Manage → Settings edits the site name, description,
+  timezone, homepage, languages (main, available, names), site-wide
+  noindex (also empties the sitemap), X/Twitter handle and default share
+  image. Values override the config at boot.
+- **Code snippets** — add tracking or other code to the head, body start
+  or body end from Settings; layouts print them with
+  `<x-sunrice::code position="head|body_start|body_end" />` (already in the
+  starter layout and fallback views).
+- Fixed: the asset field crashed once a single-asset field had a value.
+- Menus: the item editor can now link to a collection archive (it was
+  saved without its target and never showed), pick a term from a taxonomy
+  (instead of typing an id), set a label per language (empty uses the linked
+  title), and edit existing items. Targets are validated for their type.
+- Taxonomies: attach collections from the taxonomy form, and switch term
+  archive pages on there (there was no way to before). Term pages default
+  to one per attached collection at `/{collection}/{taxonomy}/{slug}`,
+  listing that collection's entries; a custom route gives one page across
+  collections. `$term->urlIn($collection)` links to a collection's page.
+- Collections: the route prefix field now takes a prefix (`blog` →
+  `/blog/{slug}`), a full pattern, or `/` for the site root; left empty it
+  follows the handle. Two collections can no longer share a URL pattern.
+  Fixed: a plain prefix like `pages` made entries unreachable, and entry
+  links used `/{slug}` while the router served `/{handle}/{slug}` when no
+  route was set. Taxonomy routes accept prefixes the same way.
+- Collections: choose the sidebar icon in the collection settings.
+- **Granular permissions** — the `sunrice.manage-*` permissions are replaced
+  by view/create/edit/delete permissions per area (collections, blueprints,
+  fieldsets, taxonomies, menus, globals, users, roles), `forms.create` /
+  `forms.delete` and `assets.edit`. `sunrice:sync-permissions` hands the new
+  permissions to every role and user that held the old ones.
+- **Translate permission** — `sunrice.entries.{id}.translate` allows editing
+  an entry's other-language versions only (no main language, publishing or
+  marking Ready).
+- **Default roles** — `php artisan sunrice:seed-roles` (or
+  `sunrice:install --roles`) creates Administrator, Editor, Author and
+  Translator; rerun it after adding collections. Seeder:
+  `Sunrice\Database\Seeders\RolesSeeder`.
+- Fixed: users who could manage users could edit or delete super admins and
+  hand out the super-admin role; role managers could rename or delete the
+  super-admin role. Reordering collections had no permission check, and
+  reordering entries or terms only needed view access (and could touch
+  other collections' entries). The Taxonomies sidebar section never showed
+  for non-super-admins.
+- Fixed: `sunrice:install` failed on a fresh app because the
+  spatie/laravel-permission tables were never created. It now publishes
+  spatie's migration when the tables are missing, before migrating. It also
+  no longer creates a super admin user that can't hold the Super Admin role
+  (user model without `HasRoles`); it warns and skips instead.
 - **Shared layout, translated text** — secondary languages now store only
   their translated text and render inside the main language's layout, so
   adding, reordering or hiding blocks and swapping images happens once for

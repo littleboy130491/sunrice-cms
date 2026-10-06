@@ -13,6 +13,19 @@ class TermPolicy
         return $user->can('sunrice.terms.'.$this->taxonomyId($termOrTaxonomy).'.view');
     }
 
+    public function viewAny(mixed $user, int $taxonomyId): bool
+    {
+        return $user->can("sunrice.terms.{$taxonomyId}.view");
+    }
+
+    /**
+     * Reordering a taxonomy changes every term's position.
+     */
+    public function reorder(mixed $user, int $taxonomyId): bool
+    {
+        return $user->can("sunrice.terms.{$taxonomyId}.edit");
+    }
+
     public function create(mixed $user, int $taxonomyId): bool
     {
         return $user->can("sunrice.terms.{$taxonomyId}.create");

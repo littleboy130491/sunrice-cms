@@ -25,10 +25,25 @@ class AssetPolicy
 
     public function update(mixed $user, Asset $asset): bool
     {
-        return $user->can('sunrice.assets.upload');
+        return $user->can('sunrice.assets.edit');
     }
 
     public function delete(mixed $user, Asset $asset): bool
+    {
+        return $user->can('sunrice.assets.delete');
+    }
+
+    public function createFolder(mixed $user): bool
+    {
+        return $user->can('sunrice.assets.upload');
+    }
+
+    public function updateFolder(mixed $user): bool
+    {
+        return $user->can('sunrice.assets.edit');
+    }
+
+    public function deleteFolder(mixed $user): bool
     {
         return $user->can('sunrice.assets.delete');
     }

@@ -14,9 +14,10 @@ interface Props {
     rows: Paginated<Row>;
     meta: { search: string | null; filters: Record<string, string>; sort: string | null };
     can: { create: boolean };
+    visibleColumns?: string[];
 }
 
-export default function EntriesIndex({ collection, columns, rows, meta, can }: Props) {
+export default function EntriesIndex({ collection, columns, rows, meta, can, visibleColumns }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
 
     const filters: FilterDef[] = [
@@ -51,6 +52,7 @@ export default function EntriesIndex({ collection, columns, rows, meta, can }: P
                 rows={rows}
                 meta={meta}
                 tableKey="entries"
+                visibleColumns={visibleColumns}
                 filters={filters}
                 exportUrl={adminUrl(`collections/${collection.handle}/entries/export`, adminPath)}
                 bulkUrl={adminUrl(`collections/${collection.handle}/entries/bulk`, adminPath)}

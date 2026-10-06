@@ -16,7 +16,45 @@ use Sunrice\Sunrice;
  */
 class PermissionRegistry
 {
-    public const ENTRY_ACTIONS = ['view', 'create', 'edit', 'edit-own', 'delete', 'delete-own', 'publish'];
+    public const ENTRY_ACTIONS = ['view', 'create', 'edit', 'edit-own', 'translate', 'delete', 'delete-own', 'publish'];
+
+    /** Areas with view/create/edit/delete permissions: sunrice.<area>.<action>. */
+    public const CRUD_AREAS = [
+        'collections' => ['Collections', 'Structure'],
+        'blueprints' => ['Blueprints', 'Structure'],
+        'fieldsets' => ['Fieldsets', 'Structure'],
+        'taxonomies' => ['Taxonomies', 'Structure'],
+        'menus' => ['Menus', 'Navigation'],
+        'globals' => ['Globals', 'Globals'],
+        'users' => ['Users', 'Users & roles'],
+        'roles' => ['Roles', 'Users & roles'],
+    ];
+
+    public const CRUD_ACTIONS = ['view', 'create', 'edit', 'delete'];
+
+    /**
+     * Permissions replaced by finer ones. When a replacement is first
+     * created, every role and user holding the old permission gets it,
+     * so upgrading keeps access unchanged. Old names are then removed.
+     *
+     * @var array<string, array<int, string>>
+     */
+    public const LEGACY = [
+        'sunrice.manage-structure' => [
+            'sunrice.collections.view', 'sunrice.collections.create', 'sunrice.collections.edit', 'sunrice.collections.delete',
+            'sunrice.blueprints.view', 'sunrice.blueprints.create', 'sunrice.blueprints.edit', 'sunrice.blueprints.delete',
+            'sunrice.fieldsets.view', 'sunrice.fieldsets.create', 'sunrice.fieldsets.edit', 'sunrice.fieldsets.delete',
+            'sunrice.taxonomies.view', 'sunrice.taxonomies.create', 'sunrice.taxonomies.edit', 'sunrice.taxonomies.delete',
+            'sunrice.forms.create', 'sunrice.forms.delete',
+        ],
+        'sunrice.manage-navigation' => ['sunrice.menus.view', 'sunrice.menus.create', 'sunrice.menus.edit', 'sunrice.menus.delete'],
+        'sunrice.manage-globals' => ['sunrice.globals.view', 'sunrice.globals.create', 'sunrice.globals.edit', 'sunrice.globals.delete'],
+        'sunrice.manage-users' => ['sunrice.users.view', 'sunrice.users.create', 'sunrice.users.edit', 'sunrice.users.delete'],
+        'sunrice.manage-roles' => ['sunrice.roles.view', 'sunrice.roles.create', 'sunrice.roles.edit', 'sunrice.roles.delete'],
+        'sunrice.manage-settings' => ['sunrice.settings.edit'],
+        // Editing asset details used to need the upload permission.
+        'sunrice.assets.upload' => ['sunrice.assets.edit'],
+    ];
 
     public const TERM_ACTIONS = ['view', 'create', 'edit', 'delete'];
 
@@ -75,16 +113,24 @@ class PermissionRegistry
     {
         $defs = [
             ['sunrice.access-admin', 'Access the admin panel', 'Admin'],
-            ['sunrice.manage-structure', 'Manage collections, blueprints, fieldsets and taxonomies', 'Structure'],
-            ['sunrice.manage-navigation', 'Manage menus', 'Structure'],
-            ['sunrice.manage-globals', 'Manage globals', 'Content'],
-            ['sunrice.manage-users', 'Manage users', 'Admin'],
-            ['sunrice.manage-roles', 'Manage roles', 'Admin'],
-            ['sunrice.manage-settings', 'Manage settings', 'Admin'],
+            ['sunrice.settings.edit', 'Edit settings', 'Admin'],
+        ];
+
+        foreach (static::CRUD_AREAS as $area => [$label, $group]) {
+            foreach (static::CRUD_ACTIONS as $action) {
+                $defs[] = ["sunrice.{$area}.{$action}", ucfirst($action).' '.strtolower($label), $group];
+            }
+        }
+
+        array_push(
+            $defs,
+            ['sunrice.forms.create', 'Create forms', 'Forms'],
+            ['sunrice.forms.delete', 'Delete forms', 'Forms'],
             ['sunrice.assets.view', 'View assets', 'Assets'],
             ['sunrice.assets.upload', 'Upload assets', 'Assets'],
+            ['sunrice.assets.edit', 'Edit asset details and replace files', 'Assets'],
             ['sunrice.assets.delete', 'Delete assets', 'Assets'],
-        ];
+        );
 
         return array_map(fn (array $d) => ['name' => $d[0], 'label' => $d[1], 'group' => $d[2]], $defs);
     }
@@ -99,7 +145,9 @@ class PermissionRegistry
             foreach (static::ENTRY_ACTIONS as $action) {
                 $out[] = [
                     'name' => "sunrice.entries.{$collection->id}.{$action}",
-                    'label' => "{$collection->title}: {$action}",
+                    'label' => $action === 'translate'
+                        ? "{$collection->title}: translate (edit other languages only)"
+                        : "{$collection->title}: {$action}",
                     'group' => "Entries — {$collection->title}",
                 ];
             }

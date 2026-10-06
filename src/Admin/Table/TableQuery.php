@@ -23,6 +23,15 @@ class TableQuery
     /** @var array<int, string> fields that may be filtered on */
     protected array $filterable = [];
 
+    /** @var array<string, callable(Builder<Model>, mixed): mixed> filters with their own query logic */
+    protected array $customFilters = [];
+
+    /** @var array<string, callable(Builder<Model>, string): mixed> sorts with their own query logic */
+    protected array $customSorts = [];
+
+    /** @var callable(Builder<Model>, string): mixed|null */
+    protected $customSearch = null;
+
     /** @var array<int, string> fields that may be sorted on */
     protected array $sortable = [];
 
@@ -78,6 +87,42 @@ class TableQuery
     }
 
     /**
+     * A filter that applies itself: `$apply($query, $value)`.
+     *
+     * @param  callable(Builder<Model>, mixed): mixed  $apply
+     */
+    public function filter(string $field, callable $apply): static
+    {
+        $this->customFilters[$field] = $apply;
+
+        return $this;
+    }
+
+    /**
+     * A sortable field that orders itself: `$apply($query, 'asc'|'desc')`.
+     *
+     * @param  callable(Builder<Model>, string): mixed  $apply
+     */
+    public function sortUsing(string $field, callable $apply): static
+    {
+        $this->customSorts[$field] = $apply;
+
+        return $this;
+    }
+
+    /**
+     * Replace the column search with custom logic: `$apply($query, $term)`.
+     *
+     * @param  callable(Builder<Model>, string): mixed  $apply
+     */
+    public function searchUsing(callable $apply): static
+    {
+        $this->customSearch = $apply;
+
+        return $this;
+    }
+
+    /**
      * @param  array<int, string>  $fields
      */
     public function sortable(array $fields): static
@@ -126,7 +171,9 @@ class TableQuery
     {
         $this->search = trim((string) $request->query('search', '')) ?: null;
 
-        if ($this->search !== null && $this->searchable !== []) {
+        if ($this->search !== null && $this->customSearch !== null) {
+            ($this->customSearch)($this->query, $this->search);
+        } elseif ($this->search !== null && $this->searchable !== []) {
             $term = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $this->search).'%';
             $this->query->where(function (Builder $q) use ($term): void {
                 foreach ($this->searchable as $i => $column) {
@@ -160,6 +207,12 @@ class TableQuery
 
                 continue;
             }
+            if (isset($this->customFilters[$field])) {
+                ($this->customFilters[$field])($this->query, $value);
+                $this->activeFilters[$field] = $value;
+
+                continue;
+            }
             if (! in_array($field, $this->filterable, true)) {
                 continue;
             }
@@ -179,7 +232,10 @@ class TableQuery
         if ($sort !== '') {
             $direction = str_starts_with($sort, '-') ? 'desc' : 'asc';
             $field = ltrim($sort, '-');
-            if (in_array($field, $this->sortable, true)) {
+            if (isset($this->customSorts[$field])) {
+                $this->sort = $sort;
+                ($this->customSorts[$field])($this->query, $direction);
+            } elseif (in_array($field, $this->sortable, true)) {
                 $this->sort = $sort;
                 if (array_key_exists($field, $this->jsonColumns)) {
                     JsonField::orderBy($this->query, $this->dataColumn, $field, $this->jsonColumns[$field], $direction);

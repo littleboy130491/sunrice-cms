@@ -8,6 +8,7 @@ use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Form;
 use Sunrice\Models\Taxonomy;
+use Sunrice\Models\Term;
 use Sunrice\Sunrice;
 
 /**
@@ -41,7 +42,7 @@ class Navigation
 
         $taxonomies = [];
         foreach (Taxonomy::query()->orderBy('handle')->get() as $taxonomy) {
-            if ($user->can('view', $taxonomy->id)) {
+            if ($user->can('viewAny', [Term::class, $taxonomy->id])) {
                 $taxonomies[] = ['label' => $taxonomy->title, 'href' => "taxonomies/{$taxonomy->handle}", 'icon' => 'tags'];
             }
         }
@@ -50,20 +51,23 @@ class Navigation
         }
 
         $structure = [];
-        if ($user->can('sunrice.manage-navigation')) {
+        if ($user->can('sunrice.menus.view')) {
             $structure[] = ['label' => 'Menus', 'href' => 'menus', 'icon' => 'list-tree'];
         }
-        if ($user->can('sunrice.manage-globals')) {
+        if ($user->can('sunrice.globals.view')) {
             $structure[] = ['label' => 'Globals', 'href' => 'globals', 'icon' => 'globe'];
         }
-        if ($user->can('viewAny', Form::class) || $user->can('sunrice.manage-structure')) {
-            $forms = Form::query()->orderBy('handle')->get()
-                ->filter(fn (Form $form) => $user->can('view', $form))
-                ->map(fn (Form $form) => ['label' => $form->title, 'href' => "forms/{$form->handle}", 'icon' => 'inbox'])
-                ->values()->all();
-            if ($forms !== []) {
-                $groups[] = ['label' => 'Forms', 'items' => $forms];
-            }
+        $forms = Form::query()->orderBy('handle')->get()
+            ->filter(fn (Form $form) => $user->can('view', $form))
+            // Submissions are what most people come for; editors without
+            // that permission go to the form builder.
+            ->map(fn (Form $form) => ['label' => $form->title, 'href' => $user->can('viewSubmissions', $form) ? "forms/{$form->id}/submissions" : "forms/{$form->handle}", 'icon' => 'inbox'])
+            ->values()->all();
+        if ($forms !== []) {
+            $groups[] = ['label' => 'Forms', 'items' => $forms];
+        }
+        if ($user->can('create', Form::class)) {
+            $structure[] = ['label' => 'Forms', 'href' => 'forms', 'icon' => 'inbox'];
         }
 
         if ($structure !== []) {
@@ -84,17 +88,21 @@ class Navigation
         if ($user->can('sunrice.assets.view')) {
             $admin[] = ['label' => 'Assets', 'href' => 'assets', 'icon' => 'image'];
         }
-        if ($user->can('sunrice.manage-structure')) {
-            $admin[] = ['label' => 'Collections', 'href' => 'structure/collections', 'icon' => 'library'];
-            $admin[] = ['label' => 'Blueprints', 'href' => 'structure/blueprints', 'icon' => 'layout-template'];
-            $admin[] = ['label' => 'Fieldsets', 'href' => 'structure/fieldsets', 'icon' => 'blocks'];
-            $admin[] = ['label' => 'Taxonomies', 'href' => 'structure/taxonomies', 'icon' => 'tags'];
+        $manage = [
+            ['collections', 'Collections', 'structure/collections', 'library'],
+            ['blueprints', 'Blueprints', 'structure/blueprints', 'layout-template'],
+            ['fieldsets', 'Fieldsets', 'structure/fieldsets', 'blocks'],
+            ['taxonomies', 'Taxonomies', 'structure/taxonomies', 'tags'],
+            ['users', 'Users', 'users', 'users'],
+            ['roles', 'Roles', 'roles', 'shield'],
+        ];
+        foreach ($manage as [$area, $label, $href, $icon]) {
+            if ($user->can("sunrice.{$area}.view")) {
+                $admin[] = ['label' => $label, 'href' => $href, 'icon' => $icon];
+            }
         }
-        if ($user->can('sunrice.manage-users')) {
-            $admin[] = ['label' => 'Users', 'href' => 'users', 'icon' => 'users'];
-        }
-        if ($user->can('sunrice.manage-roles')) {
-            $admin[] = ['label' => 'Roles', 'href' => 'roles', 'icon' => 'shield'];
+        if ($user->can('sunrice.settings.edit')) {
+            $admin[] = ['label' => 'Settings', 'href' => 'settings', 'icon' => 'settings'];
         }
         if ($admin !== []) {
             $groups[] = ['label' => 'Manage', 'items' => $admin];

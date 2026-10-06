@@ -46,31 +46,45 @@ interface Props {
     taxonomies: { id: number; handle: string; title: string }[];
     locales: string[];
     mainLocale?: string;
+    /** What the current user may do with this entry (null for a new entry). */
+    can?: { update: boolean; translate: boolean; publish: boolean; delete: boolean; create: boolean } | null;
 }
 
 function flatFields(tabs: AdminTab[] | null): AdminField[] {
     return (tabs ?? []).flatMap((t) => t.fields ?? []);
 }
 
-export default function EntryEdit({ collection, entry, blueprint, blueprints, taxonomies, locales, mainLocale = locales[0] }: Props) {
+export default function EntryEdit({ collection, entry, blueprint, blueprints, taxonomies, locales, mainLocale = locales[0], can: allowed }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
     const isNew = entry === null;
 
     const [locale, setLocale] = React.useState(mainLocale);
+    const perms = allowed ?? { update: true, translate: true, publish: true, delete: true, create: true };
+    // Translate-only users edit other languages; the main language is read-only for them.
+    const canEdit = isNew || (locale === mainLocale ? perms.update : perms.translate);
+    const hasMenuActions = perms.update || perms.publish || perms.create || perms.delete;
     const existing = entry?.translations ?? {};
 
     // Working data for each locale is the draft (data.draft) if present
     // else the live columns. A language without a translation yet starts
     // from the main language's text, laid out exactly like it.
-    const initial = (lc: string): TranslationState => existing[lc] ?? {
-        title: lc === mainLocale ? '' : existing[mainLocale]?.title ?? '',
-        slug: '',
-        data: lc === mainLocale ? {} : existing[mainLocale]?.data ?? {},
-        seo: lc === mainLocale ? {} : existing[mainLocale]?.seo ?? {},
-        is_ready: false, is_outdated: false,
-        has_draft: false, draft_title: '', draft_slug: '', revisions: [],
+    const initialFrom = (translations: Record<string, TranslationState>, lc: string): TranslationState => {
+        const t = translations[lc];
+        if (t) {
+            // The editor works on the draft: data/seo already are, title and slug come separately.
+            return { ...t, title: t.has_draft ? t.draft_title ?? t.title : t.title, slug: t.has_draft ? t.draft_slug ?? t.slug : t.slug };
+        }
+        return {
+            title: lc === mainLocale ? '' : translations[mainLocale]?.title ?? '',
+            slug: '',
+            data: lc === mainLocale ? {} : translations[mainLocale]?.data ?? {},
+            seo: lc === mainLocale ? {} : translations[mainLocale]?.seo ?? {},
+            is_ready: false, is_outdated: false,
+            has_draft: false, draft_title: '', draft_slug: '', revisions: [],
+        };
     };
+    const initial = (lc: string) => initialFrom(existing, lc);
 
     const form = useForm<{
         locale: string;
@@ -103,32 +117,56 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
     const contentTabs = tabs.filter((t) => t.handle !== 'seo');
     const current = initial(locale);
 
+    // After the server changes the draft (restore a revision, return to
+    // draft), load what it now holds into the form.
+    const reloadFromServer = (page: { props: Record<string, unknown> }) => {
+        const fresh = (page.props.entry as Props['entry'])?.translations ?? {};
+        const t = initialFrom(fresh, locale);
+        form.setData((d) => ({ ...d, title: t.title, slug: t.slug, data: t.data, seo: t.seo }));
+        form.setDefaults();
+        form.clearErrors();
+    };
+
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         if (isNew) {
-            router.post(adminUrl(`collections/${collection.handle}/entries`, adminPath), {
-                title: form.data.title,
-                slug: form.data.slug,
-                data: form.data.data,
-                seo: form.data.seo,
-                blueprint_id: form.data.blueprint_id || null,
+            form.transform((d) => ({
+                title: d.title,
+                slug: d.slug,
+                data: d.data,
+                seo: d.seo,
+                blueprint_id: d.blueprint_id || null,
+            }));
+            form.post(adminUrl(`collections/${collection.handle}/entries`, adminPath), {
+                onFinish: () => form.transform((d) => d),
             });
             return;
         }
-        form.put(adminUrl(`entries/${entry.id}`, adminPath));
+        form.put(adminUrl(`entries/${entry.id}`, adminPath), { preserveScroll: true, onSuccess: () => form.setDefaults() });
     };
 
     const publish = () => {
         if (!entry) return;
-        router.post(adminUrl(`entries/${entry.id}/publish`, adminPath), { locale }, { preserveScroll: true });
+        const go = () => router.post(adminUrl(`entries/${entry.id}/publish`, adminPath), { locale }, { preserveScroll: true });
+        // Publishing takes the saved draft, so save unsaved edits first.
+        if (form.isDirty && canEdit) {
+            form.put(adminUrl(`entries/${entry.id}`, adminPath), { preserveScroll: true, onSuccess: () => { form.setDefaults(); go(); } });
+        } else {
+            go();
+        }
     };
 
     const unpublish = () => entry && router.post(adminUrl(`entries/${entry.id}/unpublish`, adminPath), {}, { preserveScroll: true });
-    const duplicate = () => entry && router.post(adminUrl(`entries/${entry.id}/duplicate`, adminPath), {}, { preserveScroll: true });
+    // A different entry: start fresh rather than carrying this form over.
+    const duplicate = () => entry && router.post(adminUrl(`entries/${entry.id}/duplicate`, adminPath), {}, { preserveState: false });
     const trash = () => entry && window.confirm('Move this entry to trash?') && router.delete(adminUrl(`entries/${entry.id}`, adminPath));
     const returnToDraft = () => {
         const tid = existing[locale]?.id;
-        if (tid) router.put(adminUrl(`entry-translations/${tid}/return-to-draft`, adminPath), {}, { preserveScroll: true });
+        if (tid) router.put(adminUrl(`entry-translations/${tid}/return-to-draft`, adminPath), {}, { preserveScroll: true, onSuccess: reloadFromServer });
+    };
+    const restoreRevision = (id: number) => {
+        if (form.isDirty && !window.confirm('Discard your unsaved changes and restore this revision?')) return;
+        router.post(adminUrl(`revisions/${id}/restore`, adminPath), {}, { preserveScroll: true, onSuccess: reloadFromServer });
     };
 
     const markReady = () => {
@@ -173,9 +211,12 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                 </div>
                 {!isNew && (
                     <div className="flex items-center gap-2">
-                        <Button type="button" onClick={publish}>
-                            <Send /> Publish
-                        </Button>
+                        {perms.publish && (
+                            <Button type="button" onClick={publish}>
+                                <Send /> Publish
+                            </Button>
+                        )}
+                        {hasMenuActions && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button type="button" variant="outline" size="icon" aria-label="More actions">
@@ -183,28 +224,37 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem onSelect={markReady}>
-                                    <CheckCircle2 /> {current.is_ready ? 'Unmark ready' : 'Mark ready'}
-                                </DropdownMenuItem>
-                                {locale !== mainLocale && current.is_ready && (
+                                {perms.update && (
+                                    <DropdownMenuItem onSelect={markReady}>
+                                        <CheckCircle2 /> {current.is_ready ? 'Unmark ready' : 'Mark ready'}
+                                    </DropdownMenuItem>
+                                )}
+                                {perms.update && locale !== mainLocale && current.is_ready && (
                                     <DropdownMenuItem onSelect={returnToDraft}>
                                         <Undo2 /> Return to draft
                                     </DropdownMenuItem>
                                 )}
-                                {entry?.status === 'published' && (
+                                {perms.publish && entry?.status === 'published' && (
                                     <DropdownMenuItem onSelect={unpublish}>
                                         <EyeOff /> Unpublish
                                     </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem onSelect={duplicate}>
-                                    <Copy /> Duplicate
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem variant="destructive" onSelect={trash}>
-                                    <Trash2 /> Move to trash
-                                </DropdownMenuItem>
+                                {perms.create && (
+                                    <DropdownMenuItem onSelect={duplicate}>
+                                        <Copy /> Duplicate
+                                    </DropdownMenuItem>
+                                )}
+                                {perms.delete && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem variant="destructive" onSelect={trash}>
+                                            <Trash2 /> Move to trash
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        )}
                     </div>
                 )}
             </div>
@@ -223,8 +273,16 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                 </Tabs>
             )}
 
+            {!canEdit && (
+                <p className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                    {locale === mainLocale && perms.translate
+                        ? 'You can translate this entry. Switch to another language to edit it.'
+                        : 'You can view this version but not edit it.'}
+                </p>
+            )}
+
             <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-                <div className="flex min-w-0 flex-col gap-6">
+                <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-6 disabled:opacity-80">
                     {contentTabs.map((tab, index) => (
                         <Card key={tab.handle}>
                             <CardHeader>
@@ -282,12 +340,13 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                     fields={seoTab.fields}
                                     values={form.data.seo}
                                     errors={form.errors}
+                                    pathPrefix="seo"
                                     onChange={(values) => form.setData('seo', values)}
                                 />
                             </CardContent>
                         </Card>
                     )}
-                </div>
+                </fieldset>
 
                 <div className="flex flex-col gap-6 lg:sticky lg:top-6">
                     <Card>
@@ -327,14 +386,16 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                     </Select>
                                 </div>
                             )}
-                            <Button type="submit" variant={isNew ? 'default' : 'outline'} disabled={form.processing} className="w-full">
-                                {form.processing && <LoaderCircle className="animate-spin" />}
-                                {isNew ? 'Create draft' : 'Save draft'}
-                            </Button>
+                            {canEdit && (
+                                <Button type="submit" variant={isNew ? 'default' : 'outline'} disabled={form.processing} className="w-full">
+                                    {form.processing && <LoaderCircle className="animate-spin" />}
+                                    {isNew ? 'Create draft' : 'Save draft'}
+                                </Button>
+                            )}
                         </CardContent>
                     </Card>
 
-                    {!isNew && current.revisions.length > 0 && (
+                    {!isNew && canEdit && current.revisions.length > 0 && (
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-sm">
@@ -352,7 +413,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                                 variant="ghost"
                                                 size="sm"
                                                 className="h-7"
-                                                onClick={() => router.post(adminUrl(`revisions/${r.id}/restore`, adminPath), {}, { preserveScroll: true })}
+                                                onClick={() => restoreRevision(r.id)}
                                             >
                                                 Restore
                                             </Button>

@@ -6,7 +6,6 @@ namespace Sunrice\Actions\Assets;
 
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Jobs\GenerateImageSizes;
@@ -23,17 +22,23 @@ class ReplaceAsset
      */
     public function handle(Asset $asset, UploadedFile $file): Asset
     {
-        Validator::make(
-            ['file' => $file],
-            ['file' => ['required', 'file', 'max:'.(int) config('sunrice.assets.max_upload_kb', 20480)]],
-        )->validate();
+        UploadAsset::validate($file);
 
         // Remove stale generated sizes; the original path is overwritten.
         foreach ($asset->sizes as $path) {
             Storage::disk($asset->disk)->delete($path);
         }
 
-        Storage::disk($asset->disk)->put($asset->path, $file->getContent());
+        // Same type: overwrite in place so URLs stay valid. Another type
+        // (a JPG replacing a PNG) gets a path with the right extension.
+        $path = $asset->path;
+        $extension = strtolower($file->getClientOriginalExtension());
+        if ($extension !== '' && $extension !== strtolower(pathinfo($path, PATHINFO_EXTENSION))) {
+            Storage::disk($asset->disk)->delete($path);
+            $path = substr($path, 0, -strlen(pathinfo($path, PATHINFO_EXTENSION))).$extension;
+        }
+
+        Storage::disk($asset->disk)->put($path, $file->getContent());
 
         // A backup from sunrice:optimize-images belongs to the replaced file.
         [$backupDisk, $backupPath] = OptimizeImage::backupLocation($asset);
@@ -48,6 +53,8 @@ class ReplaceAsset
         }
 
         $asset->forceFill([
+            'path' => $path,
+            'filename' => $file->getClientOriginalName() ?: $asset->filename,
             'mime_type' => $file->getMimeType() ?: $asset->mime_type,
             'size' => $file->getSize() ?: $asset->size,
             'width' => $width,

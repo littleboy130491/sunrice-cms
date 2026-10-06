@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Http\Controllers\Admin;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Actions\Entries\ChangeBlueprint;
@@ -49,9 +51,29 @@ class EntriesController extends Controller
             ->where('collection_id', $collection->id)
             ->with(['translations' => fn ($q) => $q->where('locale', Locales::main())]);
 
+        $main = Locales::main();
+        $mainTitle = EntryTranslation::query()
+            ->select('title')
+            ->whereColumn('entry_id', (new Entry)->qualifyColumn('id'))
+            ->where('locale', $main)
+            ->limit(1);
+
         $table = TableQuery::for($query)
-            ->searchable(['id'])
-            ->filterable(['status'])
+            ->searchUsing(function (Builder $q, string $term): void {
+                $q->where(function (Builder $q) use ($term): void {
+                    $q->whereHas('translations', fn (Builder $t) => $t->whereLike('title', "%{$term}%"));
+                    if (ctype_digit($term)) {
+                        $q->orWhere('id', (int) $term);
+                    }
+                });
+            })
+            // Scheduled = published with a future date; Published = live now.
+            ->filter('status', fn (Builder $q, mixed $value) => match ($value) {
+                'published' => $q->where('status', 'published')->where(fn (Builder $q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now())),
+                'scheduled' => $q->where('status', 'published')->where('published_at', '>', now()),
+                default => $q->where('status', $value),
+            })
+            ->sortUsing('title', fn (Builder $q, string $direction) => $q->orderBy($mainTitle, $direction))
             ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at'])
             ->apply($request);
 
@@ -73,7 +95,11 @@ class EntriesController extends Controller
                 return [
                     'id' => $e->id,
                     'title' => $t === null ? '—' : $t->title,
-                    'status' => $e->trashed() ? 'trashed' : $e->status,
+                    'status' => match (true) {
+                        $e->trashed() => 'trashed',
+                        $e->status === 'published' && $e->published_at?->isFuture() => 'scheduled',
+                        default => $e->status,
+                    },
                     'updated_at' => $e->updated_at?->diffForHumans(),
                 ];
             }),
@@ -139,7 +165,9 @@ class EntriesController extends Controller
 
     public function update(Request $request, Entry $entry, SaveDraft $saveDraft): RedirectResponse
     {
-        $this->authorize('update', $entry);
+        // The main language needs edit rights; other languages also accept
+        // the translate permission.
+        $this->authorize(Locales::isMain((string) $request->input('locale', Locales::main())) ? 'update' : 'translate', $entry);
 
         $validated = $request->validate([
             'locale' => ['required', 'string', 'max:10'],
@@ -156,6 +184,12 @@ class EntriesController extends Controller
             'seo' => ['array'],
             'is_ready' => ['nullable', 'boolean'],
         ]);
+
+        // Marking a translation Ready puts it live, which translate-only
+        // users can't do.
+        if (! $request->user()->can('update', $entry)) {
+            unset($validated['is_ready']);
+        }
 
         $translation = $this->translationFor($entry, $validated['locale']);
         $saveDraft->handle($translation, $validated);
@@ -232,14 +266,19 @@ class EntriesController extends Controller
     public function returnToDraft(EntryTranslation $translation, ReturnTranslationToDraft $action): RedirectResponse
     {
         $this->authorize('update', $translation->entry);
-        $action->handle($translation);
+        try {
+            $action->handle($translation);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Translation returned to draft.');
     }
 
     public function restoreRevision(Revision $revision, RestoreRevision $action): RedirectResponse
     {
-        $this->authorize('update', $revision->translation->entry);
+        $translation = $revision->translation;
+        $this->authorize(Locales::isMain($translation->locale) ? 'update' : 'translate', $translation->entry);
         $action->handle($revision);
 
         return back()->with('success', 'Revision restored to draft.');
@@ -247,10 +286,13 @@ class EntriesController extends Controller
 
     public function reorder(Request $request, Collection $collection, Reorder $reorder): RedirectResponse
     {
-        $this->authorize('viewAny', [Entry::class, $collection->id]);
+        $this->authorize('reorder', [Entry::class, $collection->id]);
 
         $validated = $request->validate(['items' => ['required', 'array'], 'items.*' => ['integer']]);
-        $reorder->handle(Entry::class, $validated['items']);
+        // Only this collection's entries, in the posted order.
+        $ids = array_map('intval', $validated['items']);
+        $own = Entry::query()->where('collection_id', $collection->id)->whereIn('id', $ids)->pluck('id')->all();
+        $reorder->handle(Entry::class, array_values(array_intersect($ids, $own)));
 
         return back();
     }
@@ -263,26 +305,53 @@ class EntriesController extends Controller
             'ids.*' => ['integer'],
         ]);
 
-        $entries = Entry::withTrashed()->whereIn('id', $validated['ids'])->get();
+        $entries = Entry::withTrashed()
+            ->where('collection_id', $collection->id)
+            ->whereIn('id', $validated['ids'])
+            ->get();
 
         $user = $request->user();
 
+        $done = 0;
         foreach ($entries as $entry) {
-            match ($validated['action']) {
-                'trash' => $user->can('delete', $entry) ? app(TrashEntry::class)->handle($entry) : null,
-                'restore' => $entry->trashed() && $user->can('delete', $entry) ? app(RestoreEntry::class)->handle($entry) : null,
-                'delete' => $entry->trashed() && $user->can('delete', $entry) ? app(ForceDeleteEntry::class)->handle($entry) : null,
-                'publish' => $user->can('publish', $entry) ? app(PublishTranslation::class)->handle($entry->mainTranslation()) : null,
-                default => null,
+            $allowed = match ($validated['action']) {
+                'trash' => ! $entry->trashed() && $user->can('delete', $entry),
+                'restore', 'delete' => $entry->trashed() && $user->can('delete', $entry),
+                'publish' => ! $entry->trashed() && $entry->mainTranslation() !== null && $user->can('publish', $entry),
+                default => false,
             };
+            if (! $allowed) {
+                continue;
+            }
+            switch ($validated['action']) {
+                case 'trash':
+                    app(TrashEntry::class)->handle($entry);
+                    break;
+                case 'restore':
+                    app(RestoreEntry::class)->handle($entry);
+                    break;
+                case 'delete':
+                    app(ForceDeleteEntry::class)->handle($entry);
+                    break;
+                case 'publish':
+                    app(PublishTranslation::class)->handle($entry->mainTranslation());
+                    break;
+            }
+            $done++;
         }
 
-        return back()->with('success', 'Done.');
+        $template = ['trash' => 'Moved %d %s to trash.', 'restore' => 'Restored %d %s.', 'delete' => 'Deleted %d %s permanently.', 'publish' => 'Published %d %s.'][$validated['action']];
+        $message = sprintf($template, $done, $done === 1 ? 'entry' : 'entries');
+        $skipped = count($validated['ids']) - $done;
+
+        return $done === 0
+            ? back()->with('error', 'Nothing changed: you may not have permission for the selected entries.')
+            : back()->with('success', $skipped > 0 ? "{$message} {$skipped} skipped." : $message);
     }
 
     public function preview(Request $request, Entry $entry): RedirectResponse
     {
-        $this->authorize('update', $entry);
+        $this->authorize('view', $entry);
 
         $validated = $request->validate(['locale' => ['required', 'string']]);
 
@@ -316,7 +385,9 @@ class EntriesController extends Controller
 
     protected function translationFor(Entry $entry, string $locale): EntryTranslation
     {
-        abort_unless(Locales::isAvailable($locale), 422, 'Unknown locale.');
+        if (! Locales::isAvailable($locale)) {
+            throw ValidationException::withMessages(['locale' => 'Unknown language. Reload the page and try again.']);
+        }
 
         $main = $entry->mainTranslation();
 
@@ -340,6 +411,7 @@ class EntriesController extends Controller
     protected function editorProps(Collection $collection, ?Entry $entry): array
     {
         $entry?->load(['translations.revisions', 'collection', 'terms']);
+        $user = request()->user();
 
         $blueprint = $entry?->activeBlueprint() ?? $collection->blueprint;
         $translations = [];
@@ -389,6 +461,13 @@ class EntriesController extends Controller
             'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title')),
             'locales' => Locales::available(),
             'mainLocale' => Locales::main(),
+            'can' => $entry === null ? null : [
+                'update' => $user->can('update', $entry),
+                'translate' => $user->can('translate', $entry),
+                'publish' => $user->can('publish', $entry),
+                'delete' => $user->can('delete', $entry),
+                'create' => $user->can('create', [Entry::class, $entry->collection_id]),
+            ],
         ];
     }
 }

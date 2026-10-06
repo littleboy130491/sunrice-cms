@@ -10,7 +10,7 @@ import { adminUrl } from '@/lib/route';
 import type { SharedProps } from '@/types';
 
 export default function Login() {
-    const { adminPath } = usePage<SharedProps>().props;
+    const { adminPath, flash } = usePage<SharedProps>().props;
     const form = useForm({ email: '', password: '', remember: false });
 
     const submit = (e: React.FormEvent) => {
@@ -20,6 +20,8 @@ export default function Login() {
 
     return (
         <form onSubmit={submit} className="flex flex-col gap-6">
+            {flash?.success && <div className="text-center text-sm font-medium text-green-600">{flash.success}</div>}
+            {flash?.error && <div className="text-center text-sm font-medium text-destructive">{flash.error}</div>}
             <div className="grid gap-6">
                 <div className="grid gap-2">
                     <Label htmlFor="email">Email address</Label>

@@ -30,7 +30,7 @@ class AssetsController extends Controller
     {
         $this->authorize('viewAny', Asset::class);
 
-        $query = Asset::query()->with('folder:id,name,path')->latest('id');
+        $query = Asset::query()->with('folder:id,name')->latest('id');
 
         if ($request->filled('folder')) {
             $query->where('folder_id', (int) $request->query('folder'));
@@ -41,6 +41,9 @@ class AssetsController extends Controller
                 ->whereLike('filename', "%{$search}%")
                 ->orWhereLike('title', "%{$search}%")
                 ->orWhereLike('alt', "%{$search}%"));
+        }
+        if ($request->boolean('images')) {
+            $query->where('mime_type', 'like', 'image/%');
         }
         if ($request->filled('type')) {
             match ((string) $request->query('type')) {
@@ -59,16 +62,21 @@ class AssetsController extends Controller
         };
 
         if ($request->wantsJson()) {
+            $page = $query->paginate(min(100, max(1, $request->integer('per_page', 24))))->withQueryString();
+
             return response()->json([
-                'data' => $query->paginate(24)->through($this->serialize(...)),
-                'folders' => AssetFolder::query()->orderBy('name')->get(['id', 'parent_id', 'name']),
+                'data' => array_map($this->serialize(...), $page->items()),
+                'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()],
+                'folders' => static::folderTree(),
             ]);
         }
 
         return Inertia::render('Assets/Index', [
-            'assets' => $query->paginate(24)->through($this->serialize(...)),
-            'folders' => AssetFolder::query()->orderBy('name')->get(['id', 'parent_id', 'name']),
+            'assets' => $query->paginate(24)->withQueryString()->through($this->serialize(...)),
+            'folders' => static::folderTree(),
             'filters' => $request->only(['folder', 'search', 'type', 'trashed']),
+            'maxUploadKb' => UploadAsset::maxKilobytes(),
+            'allowedExtensions' => UploadAsset::allowedExtensions(),
         ]);
     }
 
@@ -79,27 +87,42 @@ class AssetsController extends Controller
         return response()->json($this->serialize($asset) + ['usages' => $asset->usages()]);
     }
 
+    /**
+     * Upload one file (`file`) or several (`files[]`) in one request, so
+     * a multi-file upload isn't cancelled file by file.
+     */
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $this->authorize('create', Asset::class);
 
+        $limit = UploadAsset::maxKilobytes();
+        $failed = 'A file was larger than this server accepts ('.UploadAsset::formatKilobytes($limit).') or did not finish uploading.';
         $validated = $request->validate([
-            'file' => ['required', 'file'],
+            'file' => ['required_without:files', 'file'],
+            'files' => ['required_without:file', 'array', 'max:50'],
+            'files.*' => ['file'],
             'folder_id' => ['nullable', 'integer', 'exists:sunrice_asset_folders,id'],
             'title' => ['nullable', 'string', 'max:255'],
             'alt' => ['nullable', 'string', 'max:255'],
+        ], [
+            'file.uploaded' => $failed,
+            'files.*.uploaded' => $failed,
+            'file.required_without' => 'Choose a file to upload.',
         ]);
 
-        $asset = app(UploadAsset::class)->handle(
-            $request->file('file'),
-            Arr::except($validated, 'file') + ['uploaded_by' => $request->user()?->id],
-        );
+        $files = $request->hasFile('files') ? (array) $request->file('files') : [$request->file('file')];
+        $attributes = Arr::except($validated, ['file', 'files']) + ['uploaded_by' => $request->user()?->getAuthIdentifier()];
 
-        if ($request->wantsJson()) {
-            return response()->json($this->serialize($asset), 201);
+        $assets = [];
+        foreach ($files as $file) {
+            $assets[] = app(UploadAsset::class)->handle($file, $attributes);
         }
 
-        return back();
+        if ($request->wantsJson()) {
+            return response()->json(count($assets) === 1 ? $this->serialize($assets[0]) : array_map($this->serialize(...), $assets), 201);
+        }
+
+        return back()->with('success', count($assets) === 1 ? "Uploaded {$assets[0]->filename}." : 'Uploaded '.count($assets).' files.');
     }
 
     public function update(Request $request, Asset $asset): RedirectResponse
@@ -118,17 +141,19 @@ class AssetsController extends Controller
         }
         app(UpdateAssetMeta::class)->handle($asset, $validated);
 
-        return back();
+        return back()->with('success', 'Asset saved.');
     }
 
     public function replace(Request $request, Asset $asset): RedirectResponse
     {
         $this->authorize('update', $asset);
-        $request->validate(['file' => ['required', 'file']]);
+        $request->validate(['file' => ['required', 'file']], [
+            'file.uploaded' => 'The file was larger than this server accepts ('.UploadAsset::formatKilobytes(UploadAsset::maxKilobytes()).') or did not finish uploading.',
+        ]);
 
         app(ReplaceAsset::class)->handle($asset, $request->file('file'));
 
-        return back();
+        return back()->with('success', 'File replaced.');
     }
 
     public function destroy(Asset $asset): RedirectResponse
@@ -136,7 +161,25 @@ class AssetsController extends Controller
         $this->authorize('delete', $asset);
         app(TrashAsset::class)->handle($asset);
 
-        return back();
+        return back()->with('success', 'Moved to trash.');
+    }
+
+    /**
+     * Trash several assets in one request.
+     */
+    public function bulkTrash(Request $request): RedirectResponse
+    {
+        $validated = $request->validate(['ids' => ['required', 'array'], 'ids.*' => ['integer']]);
+
+        $count = 0;
+        foreach (Asset::query()->whereIn('id', $validated['ids'])->get() as $asset) {
+            if ($request->user()->can('delete', $asset)) {
+                app(TrashAsset::class)->handle($asset);
+                $count++;
+            }
+        }
+
+        return back()->with('success', "Moved {$count} asset(s) to trash.");
     }
 
     public function restore(int $asset): RedirectResponse
@@ -145,7 +188,7 @@ class AssetsController extends Controller
         $this->authorize('delete', $model);
         app(RestoreAsset::class)->handle($model);
 
-        return back();
+        return back()->with('success', 'Asset restored.');
     }
 
     public function forceDelete(Request $request, int $asset): RedirectResponse
@@ -155,7 +198,27 @@ class AssetsController extends Controller
 
         app(ForceDeleteAsset::class)->handle($model, $request->boolean('force'));
 
-        return back();
+        return back()->with('success', 'Asset deleted permanently.');
+    }
+
+    /**
+     * Folders in tree order with their depth, for indented lists.
+     *
+     * @return array<int, array{id: int, parent_id: int|null, name: string, depth: int}>
+     */
+    public static function folderTree(): array
+    {
+        $all = AssetFolder::query()->orderBy('name')->get(['id', 'parent_id', 'name']);
+        $out = [];
+        $walk = function (?int $parent, int $depth) use (&$walk, &$out, $all): void {
+            foreach ($all->where('parent_id', $parent) as $folder) {
+                $out[] = ['id' => $folder->id, 'parent_id' => $folder->parent_id, 'name' => $folder->name, 'depth' => $depth];
+                $walk($folder->id, $depth + 1);
+            }
+        };
+        $walk(null, 0);
+
+        return $out;
     }
 
     /** @return array<string, mixed> */
@@ -174,6 +237,7 @@ class AssetsController extends Controller
             'folder_id' => $asset->folder_id,
             'url' => $asset->url(),
             'thumbnail' => $asset->url('thumbnail'),
+            'is_image' => $asset->isImage(),
             'sizes' => $asset->sizes,
             'version' => $asset->version,
             'trashed' => $asset->trashed(),

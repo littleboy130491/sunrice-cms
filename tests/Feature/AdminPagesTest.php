@@ -54,7 +54,10 @@ it('creates, updates and deletes a collection', function () {
     $collection = Collection::where('handle', 'pages')->first();
     expect($collection)->not->toBeNull()
         ->and($collection->taxonomies)->toHaveCount(1)
-        ->and($collection->settings['dated'])->toBeTrue();
+        ->and($collection->settings['dated'])->toBeTrue()
+        // 'pages' is the handle default, so it isn't stored and follows the handle.
+        ->and($collection->settings)->not->toHaveKey('route')
+        ->and($collection->entryRoute())->toBe('/pages/{slug}');
 
     put("/cms/structure/collections/{$collection->id}", [
         'title' => 'Site pages',
@@ -63,7 +66,8 @@ it('creates, updates and deletes a collection', function () {
     ])->assertRedirect();
 
     expect($collection->refresh()->title)->toBe('Site pages')
-        ->and($collection->settings['route'])->toBe('site');
+        ->and($collection->settings['route'])->toBe('/site/{slug}')
+        ->and($collection->entryRoute())->toBe('/site/{slug}');
 
     delete("/cms/structure/collections/{$collection->id}")->assertRedirect();
     expect(Collection::find($collection->id))->toBeNull();
@@ -135,6 +139,29 @@ it('creates taxonomies and terms via admin routes', function () {
 
     delete("/cms/terms/{$term->id}")->assertRedirect();
     expect(Term::find($term->id))->toBeNull();
+});
+
+it('skips blank optional languages and saves terms all-or-nothing', function () {
+    $taxonomy = Taxonomy::create(['handle' => 'tags', 'title' => 'Tags']);
+
+    post("/cms/taxonomies/{$taxonomy->handle}/terms", [
+        'translations' => ['id' => ['title' => 'Satu', 'slug' => ''], 'en' => ['title' => '', 'slug' => '']],
+    ])->assertSessionHasNoErrors();
+    $first = Term::where('taxonomy_id', $taxonomy->id)->first();
+    expect($first->translations)->toHaveCount(1);
+
+    post("/cms/taxonomies/{$taxonomy->handle}/terms", [
+        'translations' => ['id' => ['title' => '', 'slug' => '']],
+    ])->assertSessionHasErrors('translations.id.title');
+
+    // The English slug clashes: nothing of the new term is kept.
+    post("/cms/taxonomies/{$taxonomy->handle}/terms", [
+        'translations' => ['id' => ['title' => 'Dua'], 'en' => ['title' => 'Two', 'slug' => 'satu']],
+    ])->assertSessionHasNoErrors();
+    post("/cms/taxonomies/{$taxonomy->handle}/terms", [
+        'translations' => ['id' => ['title' => 'Tiga'], 'en' => ['title' => 'Three', 'slug' => 'satu']],
+    ])->assertSessionHasErrors('translations.en.slug');
+    expect(Term::where('taxonomy_id', $taxonomy->id)->count())->toBe(2);
 });
 
 // ---------------- entries ----------------
@@ -368,4 +395,33 @@ it('limits term search to taxonomies the user may use', function () {
     app(PermissionRegistrar::class)->forgetCachedPermissions();
 
     get('/cms/api/terms?taxonomy=cats')->assertOk()->assertJsonPath('data.0.title', 'Berita');
+});
+
+it('searches entries by title, sorts by title and filters scheduled entries', function () {
+    $collection = createCollection('posts');
+    createEntry($collection, 'Banana');
+    createEntry($collection, 'Apple');
+    $later = createEntry($collection, 'Cherry');
+    $later->update(['published_at' => now()->addWeek()]);
+
+    get('/cms/collections/posts/entries?search=ban')->assertInertia(fn (Assert $page) => $page
+        ->has('rows.data', 1)->where('rows.data.0.title', 'Banana'));
+
+    get('/cms/collections/posts/entries?sort=title')->assertInertia(fn (Assert $page) => $page
+        ->where('rows.data.0.title', 'Apple')->where('meta.sort', 'title'));
+
+    get('/cms/collections/posts/entries?filters[status]=scheduled')->assertInertia(fn (Assert $page) => $page
+        ->has('rows.data', 1)->where('rows.data.0.title', 'Cherry')->where('rows.data.0.status', 'scheduled'));
+
+    get('/cms/collections/posts/entries?filters[status]=published')->assertInertia(fn (Assert $page) => $page
+        ->has('rows.data', 2));
+});
+
+it('updates global settings through the meta route', function () {
+    $blueprint = Blueprint::factory()->create();
+    $set = GlobalSet::create(['handle' => 'site', 'title' => 'Site', 'group' => 'global', 'blueprint_id' => $blueprint->id]);
+
+    put("/cms/globals/{$set->id}/meta", ['title' => 'Site info', 'blueprint_id' => $blueprint->id, 'translatable' => true])
+        ->assertSessionHas('success');
+    expect($set->fresh()->title)->toBe('Site info')->and($set->fresh()->translatable)->toBeTrue();
 });

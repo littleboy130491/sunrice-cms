@@ -52,7 +52,8 @@ class BlueprintSchema
         $out = [];
 
         foreach ($fields as $field) {
-            if (($field['type'] ?? null) === 'fieldset' && ($handle = $field['config']['fieldset'] ?? null)) {
+            // Older builders stored the handle at the top level.
+            if (($field['type'] ?? null) === 'fieldset' && ($handle = $field['config']['fieldset'] ?? $field['fieldset'] ?? null)) {
                 if (in_array($handle, $stack, true)) {
                     throw new InvalidArgumentException("Circular fieldset include detected: {$handle}.");
                 }

@@ -59,8 +59,10 @@
         .pagination nav { margin-top: 32px; }
     </style>
     @stack('head')
+    <x-sunrice::code position="head" />
 </head>
 <body>
+    <x-sunrice::code position="body_start" />
     @include('sunrice.partials.header')
 
     <main class="container">
@@ -69,5 +71,6 @@
 
     @include('sunrice.partials.footer')
     @stack('scripts')
+    <x-sunrice::code position="body_end" />
 </body>
 </html>

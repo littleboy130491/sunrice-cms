@@ -22,30 +22,36 @@ class FormsController extends Controller
         Gate::authorize('sunrice.access-admin');
 
         return Inertia::render('Forms/Index', [
-            'forms' => Form::query()->orderBy('handle')->get()
+            'forms' => Form::query()->withCount('submissions')->orderBy('handle')->get()
+                ->filter(fn (Form $form) => request()->user()->can('view', $form))
                 ->map(fn (Form $form) => [
                     'id' => $form->id,
                     'handle' => $form->handle,
                     'title' => $form->title,
-                    'submissions_count' => $form->submissions()->count(),
-                ])->all(),
+                    'submissions_count' => $form->submissions_count,
+                    'can' => [
+                        'edit' => request()->user()->can('update', $form),
+                        'submissions' => request()->user()->can('viewSubmissions', $form),
+                        'delete' => request()->user()->can('delete', $form),
+                    ],
+                ])->values()->all(),
         ]);
     }
 
     public function create(): Response
     {
-        Gate::authorize('sunrice.manage-structure');
+        Gate::authorize('create', Form::class);
 
         return Inertia::render('Forms/Form', ['form' => null, 'fieldTypes' => $this->fieldTypes()]);
     }
 
     public function store(Request $request, SaveForm $save): RedirectResponse
     {
-        Gate::authorize('sunrice.manage-structure');
+        Gate::authorize('create', Form::class);
 
         $form = $save->handle(null, $request->all());
 
-        return redirect("/cms/forms/{$form->handle}");
+        return redirect()->route('sunrice.admin.forms.edit', $form->handle)->with('success', "Form \"{$form->title}\" created.");
     }
 
     public function edit(Form $form): Response
@@ -85,10 +91,10 @@ class FormsController extends Controller
 
     public function destroy(Form $form, DeleteForm $delete): RedirectResponse
     {
-        Gate::authorize('sunrice.manage-structure');
+        Gate::authorize('delete', $form);
 
         $delete->handle($form);
 
-        return redirect('/cms');
+        return redirect()->route('sunrice.admin.forms.index')->with('success', 'Form deleted.');
     }
 }

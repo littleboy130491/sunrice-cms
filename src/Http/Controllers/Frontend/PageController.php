@@ -135,6 +135,8 @@ class PageController extends Controller
 
         $entries = $term->entries()
             ->published()
+            // Per-collection term pages list only that collection's entries.
+            ->when($match->collection !== null, fn ($q) => $q->where('collection_id', $match->collection->id))
             ->with('translations')
             ->paginate((int) $match->taxonomy->setting('per_page', 12))
             ->withQueryString();
@@ -145,11 +147,13 @@ class PageController extends Controller
         return $this->render(new TemplateContext(
             pageType: 'term',
             locale: $locale,
+            collection: $match->collection,
             term: $term,
             taxonomy: $match->taxonomy,
         ), [
             'term' => $term,
             'taxonomy' => $match->taxonomy,
+            'collection' => $match->collection,
             'entries' => $entries,
         ]);
     }

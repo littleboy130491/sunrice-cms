@@ -34,7 +34,8 @@
     "autoload": {
         "psr-4": {
             "Sunrice\\": "src/",
-            "Sunrice\\Database\\Factories\\": "database/factories/"
+            "Sunrice\\Database\\Factories\\": "database/factories/",
+            "Sunrice\\Database\\Seeders\\": "database/seeders/"
         },
         "files": [
             "src/helpers.php"

@@ -28,7 +28,7 @@ class UrlGenerator
             return Locales::prefix($locale) ?: '/';
         }
 
-        $route = $collection->setting('route', '/{slug}');
+        $route = $collection->entryRoute();
         $slug = $this->entrySlug($entry, $locale);
 
         return Locales::prefix($locale).str_replace('{slug}', $slug, $route);
@@ -55,11 +55,14 @@ class UrlGenerator
         return Locales::prefix($locale).$collection->setting('archive_route', '/'.$collection->handle);
     }
 
-    public function term(Term $term, ?string $locale = null): string
+    /**
+     * Term archive URL; with a collection, the archive listing that
+     * collection's entries (when the taxonomy has per-collection pages).
+     */
+    public function term(Term $term, ?string $locale = null, ?Collection $collection = null): string
     {
         $locale ??= Locales::current();
-        $taxonomy = $term->taxonomy;
-        $route = $taxonomy->setting('route', '/'.$taxonomy->handle.'/{slug}');
+        $route = $term->taxonomy->termRoute($collection);
 
         $main = $term->mainTranslation();
         $slug = $main === null ? '' : $main->slug;

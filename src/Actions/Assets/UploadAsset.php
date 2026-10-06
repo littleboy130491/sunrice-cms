@@ -27,10 +27,7 @@ class UploadAsset
      */
     public function handle(UploadedFile $file, array $attributes = []): Asset
     {
-        Validator::make(
-            ['file' => $file],
-            ['file' => ['required', 'file', 'max:'.(int) config('sunrice.assets.max_upload_kb', 20480)]],
-        )->validate();
+        static::validate($file);
 
         $disk = (string) config('sunrice.assets.disk', 'public');
         $directory = trim((string) config('sunrice.assets.directory', 'sunrice'), '/');
@@ -84,5 +81,59 @@ class UploadAsset
         if ($asset->isImage() && ! str_contains((string) $asset->mime_type, 'svg')) {
             app(GenerateImageSizes::class)->handle($asset);
         }
+    }
+
+    /** Never stored, whatever the allowlist says: they could run on the server or in the browser. */
+    public const BLOCKED_EXTENSIONS = [
+        'php', 'php3', 'php4', 'php5', 'php7', 'php8', 'phtml', 'phar', 'pht', 'phps', 'shtml',
+        'html', 'htm', 'xhtml', 'js', 'mjs', 'cgi', 'pl', 'py', 'sh', 'bash', 'exe', 'bat', 'cmd', 'com',
+        'jsp', 'asp', 'aspx', 'htaccess', 'htpasswd',
+    ];
+
+    /**
+     * Size, type and extension checks shared by upload and replace.
+     *
+     * @throws ValidationException
+     */
+    public static function validate(UploadedFile $file): void
+    {
+        Validator::make(['file' => $file], ['file' => ['required', 'file', 'max:'.static::maxKilobytes()]], [
+            'file.max' => 'The file is larger than the '.static::formatKilobytes(static::maxKilobytes()).' limit.',
+            'file.uploaded' => 'The file is larger than this server accepts ('.static::formatKilobytes(static::maxKilobytes()).') or did not finish uploading.',
+        ])->validate();
+
+        $extension = strtolower($file->getClientOriginalExtension());
+        if (in_array($extension, static::BLOCKED_EXTENSIONS, true) || ! in_array($extension, static::allowedExtensions(), true)) {
+            throw ValidationException::withMessages([
+                'file' => ".{$extension} files can't be uploaded. Allowed: ".implode(', ', static::allowedExtensions()).'.',
+            ]);
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function allowedExtensions(): array
+    {
+        $allowed = array_map('strtolower', (array) config('sunrice.assets.allowed_extensions', []));
+
+        return array_values(array_diff($allowed, static::BLOCKED_EXTENSIONS));
+    }
+
+    /**
+     * The real upload limit: Sunrice's setting, capped by PHP's
+     * upload_max_filesize / post_max_size.
+     */
+    public static function maxKilobytes(): int
+    {
+        $config = (int) config('sunrice.assets.max_upload_kb', 20480);
+        $php = (int) floor(UploadedFile::getMaxFilesize() / 1024);
+
+        return $php > 0 ? min($config, $php) : $config;
+    }
+
+    public static function formatKilobytes(int $kb): string
+    {
+        return $kb >= 1024 ? round($kb / 1024, 1).' MB' : $kb.' KB';
     }
 }

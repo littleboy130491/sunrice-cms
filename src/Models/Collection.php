@@ -73,6 +73,36 @@ class Collection extends Model
         return data_get($this->settings, $key, $default);
     }
 
+    /**
+     * URL pattern of single entries, e.g. '/blog/{slug}'. Without a
+     * custom route it follows the handle: '/{handle}/{slug}'.
+     */
+    public function entryRoute(): string
+    {
+        $route = static::normalizeRoute($this->setting('route'));
+
+        return $route ?? '/'.$this->handle.'/{slug}';
+    }
+
+    /**
+     * Turns what an editor typed into a URL pattern: 'blog' and '/blog/'
+     * become '/blog/{slug}', '/' becomes '/{slug}' (site root), patterns
+     * with {slug} are kept. Empty means "follow the handle" (null).
+     */
+    public static function normalizeRoute(mixed $route): ?string
+    {
+        if (! is_string($route) || trim($route) === '') {
+            return null;
+        }
+
+        $route = '/'.trim(preg_replace('#/+#', '/', trim($route)) ?? '', '/');
+        if (! str_contains($route, '{slug}')) {
+            $route = rtrim($route, '/').'/{slug}';
+        }
+
+        return $route;
+    }
+
     public function archiveSchema(): ?BlueprintSchema
     {
         $id = $this->setting('archive_blueprint_id');

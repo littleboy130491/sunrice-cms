@@ -79,10 +79,12 @@ abstract class CustomField extends FieldType
 
     public function toAdminSchema(array $field): array
     {
-        $schema = $this->withPreset($field);
+        $preset = $this->withPreset($field);
+        // Let the base type shape it too (containers expand children, etc.).
+        $schema = $this->base()->toAdminSchema($preset);
         // The admin renders the base type's component; keep the custom
         // type for display purposes.
-        $schema['display_type'] = $schema['type'];
+        $schema['display_type'] = $preset['type'];
         $schema['type'] = static::baseType();
 
         return $schema;

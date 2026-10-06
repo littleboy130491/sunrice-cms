@@ -82,7 +82,7 @@ class GlobalsController extends Controller
         if (! $globalSet->translatable) {
             $validated['locale'] = null;
         } elseif (! Locales::isAvailable($validated['locale'] ?? '')) {
-            abort(422, 'Unknown locale.');
+            return back()->with('error', 'Unknown language. Reload the page and try again.');
         }
 
         app(SaveGlobalValues::class)->handle($globalSet, $validated);
@@ -102,8 +102,9 @@ class GlobalsController extends Controller
         ]);
 
         $globalSet->update($validated);
+        ContentChanged::dispatch('global_saved');
 
-        return back()->with('success', 'Saved.');
+        return back()->with('success', 'Global settings saved.');
     }
 
     public function destroy(GlobalSet $globalSet): RedirectResponse
@@ -124,6 +125,7 @@ class GlobalsController extends Controller
             'values' => $set?->values->keyBy(fn ($v) => $v->locale ?? '_shared')->map->data,
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
             'locales' => Locales::available(),
+            'mainLocale' => Locales::main(),
         ]);
     }
 }

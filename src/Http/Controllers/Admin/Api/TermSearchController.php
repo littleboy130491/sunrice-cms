@@ -41,7 +41,8 @@ class TermSearchController extends Controller
     /**
      * Taxonomies whose terms the user may list: those they can view, plus
      * those attached to a collection whose entries they can create or edit
-     * (so entry editors can tag without term-management permissions).
+     * (so entry editors can tag without term-management permissions), or
+     * every taxonomy for menu editors.
      *
      * @return array<int, int>
      */
@@ -51,6 +52,11 @@ class TermSearchController extends Controller
 
         if ($user === null) {
             return [];
+        }
+
+        // Menu editors link to any term.
+        if ($user->can('sunrice.menus.edit')) {
+            return Taxonomy::query()->pluck('id')->all();
         }
 
         return Taxonomy::query()

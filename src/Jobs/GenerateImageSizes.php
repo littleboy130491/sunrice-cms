@@ -12,7 +12,8 @@ use Intervention\Image\ImageManager;
 use Sunrice\Models\Asset;
 
 /**
- * Generates the configured image sizes for an asset. Each
+ * Generates the configured image sizes for an asset (decoding the
+ * original once). Each
  * sunrice.assets.image_sizes entry is [width, height, mode]:
  * 'crop' = center cover crop, 'fit' = scale down keeping ratio.
  * Output is written to {path-without-ext}-{name}.{ext} and recorded
@@ -36,7 +37,20 @@ class GenerateImageSizes
             return;
         }
 
-        $manager = new ImageManager(extension_loaded('imagick') ? new ImagickDriver : new GdDriver);
+        // Without an image library (or with an image it can't read) the
+        // asset keeps working with its original file only.
+        try {
+            if (! extension_loaded('imagick') && ! extension_loaded('gd')) {
+                throw new \RuntimeException('Neither the GD nor the Imagick PHP extension is installed.');
+            }
+            $manager = new ImageManager(extension_loaded('imagick') ? new ImagickDriver : new GdDriver);
+            $source = $manager->decode($original);
+        } catch (\Throwable $e) {
+            Log::warning('sunrice: cannot generate image sizes', ['asset' => $asset->id, 'error' => $e->getMessage()]);
+
+            return;
+        }
+        unset($original);
         $extension = pathinfo($asset->path, PATHINFO_EXTENSION) ?: 'jpg';
         $base = substr($asset->path, 0, -(strlen($extension) + 1));
 
@@ -46,7 +60,7 @@ class GenerateImageSizes
         $sizes = [];
         foreach ($sizeConfig as $name => [$width, $height, $mode]) {
             try {
-                $image = $manager->decode($original);
+                $image = clone $source;
                 if ($mode === 'crop') {
                     $image->cover((int) ($width ?? 0) ?: 1, (int) ($height ?? 0) ?: 1);
                 } else {

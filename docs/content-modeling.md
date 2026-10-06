@@ -5,7 +5,10 @@
 A **collection** is a content type (`pages`, `articles`, `products`).
 Settings:
 
-- `route` — public URL template, e.g. `/articles/{slug}`.
+- `route` — public URL of entries. Type a prefix (`blog` → `/blog/{slug}`),
+  a full pattern (`/news/{slug}`) or `/` for the site root; empty follows
+  the handle (`/{handle}/{slug}`). Each collection needs its own.
+- `icon` — sidebar icon in the admin.
 - `archive_route` — archive URL when `has_archive` is on.
 - `has_single`, `has_archive` — toggle detail/archive pages.
 - `translatable`, `sluggable`, `dated`, `archivable`.
@@ -50,8 +53,25 @@ switch in the editor; templates read keyed items with `->byKey('key')`.
 ## Taxonomies
 
 Hierarchical (optional) terms with per-locale `name` + `slug`; terms can
-have their own blueprint, and a taxonomy `route` exposes term archive
-pages. `EntryQuery::whereTerm()` optionally includes child terms.
+have their own blueprint. `EntryQuery::whereTerm()` optionally includes
+child terms.
+
+Attach a taxonomy to collections from either side: the taxonomy form's
+**Collections** list or the collection form's **Taxonomies** list (one
+taxonomy can serve several collections).
+
+With **Term archive pages** (`has_archive`) on, each term gets a page
+listing its entries:
+
+- by default one page per attached collection, at
+  `/{collection}/{taxonomy}/{slug}` (e.g. `/blog/category/news`), listing
+  only that collection's entries;
+- with a `route` (a prefix like `topics` or a pattern like
+  `/topics/{slug}`), one page per term across all collections;
+- attached to no collection: `/{taxonomy}/{slug}`.
+
+In templates, `$term->url` links to the first collection's page and
+`$term->urlIn($collection)` to a specific one.
 
 ## Menus
 

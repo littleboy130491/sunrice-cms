@@ -3,6 +3,16 @@
 All options live in `config/sunrice.php` (publish with
 `php artisan vendor:publish --tag=sunrice-config`).
 
+## Site settings (admin)
+
+**Manage → Settings** (permission `sunrice.settings.edit`) edits the site
+name, description, timezone, homepage, languages, search-engine options,
+default share image and code snippets. Saved values override the config
+below at boot (`app.name`, `app.timezone`, `sunrice.locales.*`,
+`sunrice.seo.*`, `sunrice.code.*`), so config/`.env` act as defaults. They
+are stored in `sunrice_settings` (`site` key) and cached until saved again.
+The main language can only be changed before any content exists.
+
 | Key | Default | Description |
 | --- | --- | --- |
 | `sunrice.admin.path` | `cms` | URL prefix of the admin panel (`SUNRICE_ADMIN_PATH`). |
@@ -23,6 +33,9 @@ All options live in `config/sunrice.php` (publish with
 | `sunrice.translation.*` | see [translation](translation.md) | Driver, model and API keys for `sunrice:translate` (`SUNRICE_TRANSLATE_DRIVER`, `SUNRICE_TRANSLATE_MODEL`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`). |
 | `sunrice.seo.noindex` | `env('SUNRICE_NOINDEX', false)` | Add `noindex, follow` to every page (e.g. staging). |
 | `sunrice.seo.twitter_site` | `env('SUNRICE_TWITTER_SITE')` | X/Twitter handle for `twitter:site`. |
+| `sunrice.seo.description` | `null` | Default meta description. |
+| `sunrice.seo.image` | `null` | Default share image (asset id). |
+| `sunrice.code.head` / `body_start` / `body_end` | `null` | HTML snippets printed by `<x-sunrice::code>`. |
 | `sunrice.assets.disk` | `public` | Filesystem disk for the asset library. |
 | `sunrice.assets.directory` | `sunrice` | Root directory inside the disk. |
 | `sunrice.assets.max_upload_kb` | `20480` | Upload size limit in KB. |

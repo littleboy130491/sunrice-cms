@@ -9,7 +9,14 @@ import type { FieldProps } from './types';
 
 export default function DateField({ field, value, onChange }: FieldProps) {
     const withTime = !!field.config?.time;
-    const date = value ? new Date(value as string) : undefined;
+    // Stored as 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:mm[:ss]', a wall-clock value.
+    // Read the parts directly: new Date('YYYY-MM-DD') is UTC midnight and
+    // shows as the previous day west of Greenwich.
+    const raw = typeof value === 'string' ? value : '';
+    const day = /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : '';
+    const time = raw.length > 10 ? raw.slice(11, 16) : '';
+    const date = day ? new Date(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10))) : undefined;
+    const emit = (d: string, t: string) => onChange(withTime && t ? `${d}T${t}` : d);
 
     return (
         <div className="flex gap-2">
@@ -24,7 +31,7 @@ export default function DateField({ field, value, onChange }: FieldProps) {
                     <Calendar
                         mode="single"
                         selected={date}
-                        onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : null)}
+                        onSelect={(d) => (d ? emit(format(d, 'yyyy-MM-dd'), time) : onChange(null))}
                         autoFocus
                     />
                 </PopoverContent>
@@ -33,11 +40,8 @@ export default function DateField({ field, value, onChange }: FieldProps) {
                 <Input
                     type="time"
                     className="w-32"
-                    value={typeof value === 'string' && value.includes('T') ? value.split('T')[1]?.slice(0, 5) : ''}
-                    onChange={(e) => {
-                        const day = date ? format(date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
-                        onChange(`${day}T${e.target.value}`);
-                    }}
+                    value={time}
+                    onChange={(e) => emit(day || format(new Date(), 'yyyy-MM-dd'), e.target.value)}
                 />
             )}
         </div>
