@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/sonner';
@@ -23,7 +23,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     React.useEffect(() => {
         if (flash?.success) toast.success(flash.success);
         if (flash?.error) toast.error(flash.error);
-    }, [flash?.success, flash?.error]);
+    }, [flash?.id, flash?.success, flash?.error]);
+
+    // A rejected save is never silent: pages show field errors inline where
+    // they can, and this toast covers the rest (hidden fields, dialogs…).
+    React.useEffect(
+        () =>
+            router.on('error', (event) => {
+                const messages = Object.values(event.detail.errors ?? {}).filter(Boolean) as string[];
+                if (messages.length === 0) return;
+                toast.error(messages.length === 1 ? messages[0] : `${messages[0]} (+${messages.length - 1} more)`);
+            }),
+        [],
+    );
 
     return (
         <TooltipProvider delayDuration={0}>

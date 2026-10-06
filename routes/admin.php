@@ -125,6 +125,7 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     // Assets (T9.3)
     Route::get('assets', [Admin\AssetsController::class, 'index'])->name('assets.index');
     Route::post('assets', [Admin\AssetsController::class, 'store'])->name('assets.store');
+    Route::post('assets/bulk-trash', [Admin\AssetsController::class, 'bulkTrash'])->name('assets.bulk-trash');
     Route::get('assets/{asset}', [Admin\AssetsController::class, 'show'])->name('assets.show');
     Route::put('assets/{asset}', [Admin\AssetsController::class, 'update'])->name('assets.update');
     Route::post('assets/{asset}/replace', [Admin\AssetsController::class, 'replace'])->name('assets.replace');

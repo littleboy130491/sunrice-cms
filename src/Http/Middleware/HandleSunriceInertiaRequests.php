@@ -55,6 +55,11 @@ class HandleSunriceInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
+                // Changes on every flashed message, so saving twice with the
+                // same text still shows a toast each time.
+                'id' => fn () => $request->session()->has('success') || $request->session()->has('error')
+                    ? bin2hex(random_bytes(4))
+                    : null,
             ],
             'adminPath' => config('sunrice.admin.path', 'cms'),
         ]);

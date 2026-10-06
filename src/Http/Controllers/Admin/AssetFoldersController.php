@@ -20,7 +20,7 @@ class AssetFoldersController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $this->authorize('create', Asset::class);
+        $this->authorize('createFolder', Asset::class);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -29,24 +29,24 @@ class AssetFoldersController extends Controller
 
         app(CreateFolder::class)->handle($validated['name'], $validated['parent_id'] ?? null);
 
-        return back();
+        return back()->with('success', "Folder \"{$validated['name']}\" created.");
     }
 
     public function update(Request $request, AssetFolder $folder): RedirectResponse
     {
-        $this->authorize('create', Asset::class);
+        $this->authorize('updateFolder', Asset::class);
 
         $validated = $request->validate(['name' => ['required', 'string', 'max:255']]);
         app(RenameFolder::class)->handle($folder, $validated['name']);
 
-        return back();
+        return back()->with('success', 'Folder renamed.');
     }
 
     public function destroy(AssetFolder $folder): RedirectResponse
     {
-        $this->authorize('delete', Asset::class);
+        $this->authorize('deleteFolder', Asset::class);
         app(DeleteFolder::class)->handle($folder);
 
-        return back();
+        return back()->with('success', 'Folder deleted.');
     }
 }

@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { usePage } from '@inertiajs/react';
 import { Folder, Image as ImageIcon, Search, Upload } from 'lucide-react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,7 +27,10 @@ interface ApiAsset {
     filename: string;
     mime_type: string;
     url: string;
+    thumbnail: string;
 }
+
+const xsrf = () => decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '');
 
 /**
  * Asset library dialog: folder navigation, search, upload. Returns
@@ -36,7 +40,8 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
     const { adminPath } = usePage<SharedProps>().props;
     const [open, setOpen] = React.useState(false);
     const [assets, setAssets] = React.useState<ApiAsset[]>([]);
-    const [folders, setFolders] = React.useState<{ id: number; name: string }[]>([]);
+    const [folders, setFolders] = React.useState<{ id: number; name: string; depth?: number }[]>([]);
+    const [uploading, setUploading] = React.useState(false);
     const [folderId, setFolderId] = React.useState<number | null>(null);
     const [search, setSearch] = React.useState('');
     const [selected, setSelected] = React.useState<Set<number>>(new Set());
@@ -48,10 +53,15 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
         if (search) params.set('search', search);
         if (imageOnly) params.set('images', '1');
         params.set('per_page', '60');
-        const res = await fetch(`${adminUrl('assets', adminPath)}?${params}`, { headers: { Accept: 'application/json' } });
-        const json = await res.json();
-        setAssets(json.data ?? json.assets ?? []);
-        setFolders(json.folders ?? []);
+        try {
+            const res = await fetch(`${adminUrl('assets', adminPath)}?${params}`, { headers: { Accept: 'application/json' } });
+            if (!res.ok) throw new Error(res.status === 403 ? "You don't have access to the asset library." : 'Could not load assets.');
+            const json = await res.json();
+            setAssets(Array.isArray(json.data) ? json.data : []);
+            setFolders(json.folders ?? []);
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Could not load assets.');
+        }
     }, [adminPath, folderId, search, imageOnly]);
 
     React.useEffect(() => {
@@ -65,12 +75,27 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
         const form = new FormData();
         form.append('file', file);
         if (folderId) form.append('folder_id', String(folderId));
-        const res = await fetch(adminUrl('assets', adminPath), {
-            method: 'POST',
-            body: form,
-            headers: { 'X-XSRF-TOKEN': decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '') },
-        });
-        if (res.ok) load();
+        setUploading(true);
+        try {
+            const res = await fetch(adminUrl('assets', adminPath), {
+                method: 'POST',
+                body: form,
+                headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-XSRF-TOKEN': xsrf() },
+            });
+            const json = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                const message = json.errors ? (Object.values(json.errors).flat()[0] as string) : json.message;
+                const fallback = res.status === 413 ? 'The file is too large for this server.' : res.status === 419 ? 'Your session expired. Reload the page.' : 'Upload failed.';
+                toast.error(message || fallback);
+                return;
+            }
+            toast.success(`Uploaded ${json.filename ?? file.name}.`);
+            // Select what was just uploaded.
+            setSelected((s) => (multiple ? new Set([...s, json.id]) : new Set([json.id])));
+            await load();
+        } finally {
+            setUploading(false);
+        }
     };
 
     const choose = () => {
@@ -93,17 +118,22 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input className="pl-8" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />
                     </div>
-                    <Button variant="outline" onClick={() => fileRef.current?.click()}>
-                        <Upload className="mr-1 h-4 w-4" /> Upload
+                    <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                        <Upload className="mr-1 h-4 w-4" /> {uploading ? 'Uploading…' : 'Upload'}
                     </Button>
                     <input
                         ref={fileRef}
                         type="file"
+                        accept={imageOnly ? 'image/*' : undefined}
                         className="hidden"
-                        onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])}
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = '';
+                            if (file) upload(file);
+                        }}
                     />
                 </div>
-                <div className="flex gap-2 text-sm">
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
                     <button className={!folderId ? 'font-medium' : 'text-muted-foreground'} onClick={() => setFolderId(null)}>
                         All
                     </button>
@@ -138,7 +168,7 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
                                 }}
                             >
                                 {isImage ? (
-                                    <img src={a.url} alt={a.filename} className="h-16 w-full rounded object-cover" />
+                                    <img src={a.thumbnail || a.url} alt={a.filename} className="h-16 w-full rounded object-cover" />
                                 ) : (
                                     <div className="flex h-16 w-full items-center justify-center rounded bg-muted">
                                         <ImageIcon className="h-6 w-6 text-muted-foreground" />

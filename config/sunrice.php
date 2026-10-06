@@ -182,6 +182,12 @@ return [
         'disk' => 'public',
         'directory' => 'sunrice',
         'max_upload_kb' => 20480,
+        // File types editors may upload. Scripts and HTML are always refused.
+        'allowed_extensions' => [
+            'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg', 'ico',
+            'pdf', 'txt', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp', 'rtf',
+            'zip', 'mp4', 'webm', 'mov', 'm4v', 'mp3', 'wav', 'ogg', 'm4a', 'woff', 'woff2', 'json',
+        ],
         'image_sizes' => [
             'thumbnail' => [300, 300, 'crop'],
             'medium' => [800, null, 'fit'],
