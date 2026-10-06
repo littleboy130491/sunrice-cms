@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Collections: the route prefix field now takes a prefix (`blog` →
+  `/blog/{slug}`), a full pattern, or `/` for the site root; left empty it
+  follows the handle. Two collections can no longer share a URL pattern.
+  Fixed: a plain prefix like `pages` made entries unreachable, and entry
+  links used `/{slug}` while the router served `/{handle}/{slug}` when no
+  route was set. Taxonomy routes accept prefixes the same way.
+- Collections: choose the sidebar icon in the collection settings.
 - **Granular permissions** — the `sunrice.manage-*` permissions are replaced
   by view/create/edit/delete permissions per area (collections, blueprints,
   fieldsets, taxonomies, menus, globals, users, roles), `forms.create` /

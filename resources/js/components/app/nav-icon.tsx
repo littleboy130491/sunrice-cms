@@ -34,6 +34,9 @@ const icons: Record<string, LucideIcon> = {
     users: Users,
 };
 
+/** Icon names a collection can pick in its settings. */
+export const navIconNames = Object.keys(icons);
+
 export function navIcon(name?: string): LucideIcon {
     return (name && icons[name]) || Circle;
 }

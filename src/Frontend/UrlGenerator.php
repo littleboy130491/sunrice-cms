@@ -28,7 +28,7 @@ class UrlGenerator
             return Locales::prefix($locale) ?: '/';
         }
 
-        $route = $collection->setting('route', '/{slug}');
+        $route = $collection->entryRoute();
         $slug = $this->entrySlug($entry, $locale);
 
         return Locales::prefix($locale).str_replace('{slug}', $slug, $route);
@@ -59,7 +59,7 @@ class UrlGenerator
     {
         $locale ??= Locales::current();
         $taxonomy = $term->taxonomy;
-        $route = $taxonomy->setting('route', '/'.$taxonomy->handle.'/{slug}');
+        $route = Collection::normalizeRoute($taxonomy->setting('route')) ?? '/'.$taxonomy->handle.'/{slug}';
 
         $main = $term->mainTranslation();
         $slug = $main === null ? '' : $main->slug;

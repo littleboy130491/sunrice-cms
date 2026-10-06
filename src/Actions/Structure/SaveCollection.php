@@ -6,6 +6,7 @@ namespace Sunrice\Actions\Structure;
 
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Collection;
 use Sunrice\Permissions\SyncPermissions;
@@ -31,18 +32,24 @@ class SaveCollection
             'settings.translatable' => ['boolean'],
             'settings.sluggable' => ['boolean'],
             'settings.archivable' => ['boolean'],
-            'settings.route' => ['nullable', 'string', 'max:255'],
+            'settings.route' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9/_{}.-]*$#'],
+            'settings.icon' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/'],
             'settings.archive_entries_in' => ['nullable', 'string', 'max:100'],
             'taxonomy_ids' => ['array'],
             'taxonomy_ids.*' => ['integer', Rule::exists('sunrice_taxonomies', 'id')],
         ])->validate();
+
+        $settings = Arr::get($validated, 'settings', $collection->settings ?? []);
+        $handle = $validated['handle'] ?? $collection?->handle;
+        $settings = $this->normalizeRoute($settings, (string) $handle);
+        $this->ensureUniqueRoute($settings, (string) $handle, $collection);
 
         $collection ??= new Collection;
         $collection->fill([
             'handle' => $validated['handle'] ?? $collection->handle,
             'title' => $validated['title'],
             'blueprint_id' => Arr::get($validated, 'blueprint_id', $collection->blueprint_id),
-            'settings' => Arr::get($validated, 'settings', $collection->settings ?? []),
+            'settings' => $settings,
         ]);
         $collection->save();
 
@@ -54,5 +61,53 @@ class SaveCollection
         ContentChanged::dispatch('collection_saved');
 
         return $collection->refresh();
+    }
+
+    /**
+     * Store the route as a URL pattern ('blog' → '/blog/{slug}'). A route
+     * equal to the handle default is dropped, so it keeps following the
+     * handle if that changes.
+     *
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>
+     */
+    protected function normalizeRoute(array $settings, string $handle): array
+    {
+        $route = Collection::normalizeRoute($settings['route'] ?? null);
+
+        if ($route === null || $route === '/'.$handle.'/{slug}') {
+            unset($settings['route']);
+        } else {
+            $settings['route'] = $route;
+        }
+
+        return $settings;
+    }
+
+    /**
+     * Two collections can't serve entries from the same URL pattern.
+     *
+     * @param  array<string, mixed>  $settings
+     *
+     * @throws ValidationException
+     */
+    protected function ensureUniqueRoute(array $settings, string $handle, ?Collection $collection): void
+    {
+        if (($settings['has_single'] ?? true) === false) {
+            return;
+        }
+
+        $route = (new Collection(['handle' => $handle, 'settings' => $settings]))->entryRoute();
+
+        $taken = Collection::query()
+            ->when($collection !== null, fn ($q) => $q->whereKeyNot($collection->getKey()))
+            ->get()
+            ->first(fn (Collection $other) => $other->setting('has_single', true) !== false && $other->entryRoute() === $route);
+
+        if ($taken !== null) {
+            throw ValidationException::withMessages([
+                'settings.route' => "The URL {$route} is already used by the \"{$taken->title}\" collection. Choose another route prefix.",
+            ]);
+        }
     }
 }

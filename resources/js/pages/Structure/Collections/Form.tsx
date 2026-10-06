@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { adminUrl } from '@/lib/route';
+import { navIcon, navIconNames } from '@/components/app/nav-icon';
 import type { SharedProps } from '@/types'; import type { Json } from '@/types';
 
 interface CollectionShape {
@@ -35,6 +36,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             sluggable: collection?.settings?.sluggable !== false,
             archivable: !!collection?.settings?.archivable,
             route: (collection?.settings?.route as string) ?? '',
+            icon: (collection?.settings?.icon as string) ?? 'file-text',
         },
         taxonomy_ids: collection?.taxonomy_ids ?? [],
     });
@@ -68,6 +70,25 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                         <Label htmlFor="handle">Handle</Label>
                         <Input id="handle" value={form.data.handle} onChange={(e) => form.setData('handle', e.target.value)} required />
                         {form.errors.handle && <p className="text-sm text-destructive">{form.errors.handle}</p>}
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Sidebar icon</Label>
+                        <Select value={form.data.settings.icon} onValueChange={(v) => form.setData('settings', { ...form.data.settings, icon: v })}>
+                            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {navIconNames.map((name) => {
+                                    const Icon = navIcon(name);
+                                    return (
+                                        <SelectItem key={name} value={name}>
+                                            <Icon className="size-4" /> {name.replace(/-/g, ' ')}
+                                        </SelectItem>
+                                    );
+                                })}
+                            </SelectContent>
+                        </Select>
+                        {form.errors['settings.icon' as keyof typeof form.errors] && (
+                            <p className="text-sm text-destructive">{form.errors['settings.icon' as keyof typeof form.errors]}</p>
+                        )}
                     </div>
                     <div className="grid gap-2">
                         <Label>Blueprint</Label>
@@ -107,8 +128,21 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                         </label>
                     ))}
                     <div className="grid gap-2">
-                        <Label htmlFor="route">Route prefix (e.g. blog/…)</Label>
-                        <Input id="route" value={form.data.settings.route} onChange={(e) => form.setData('settings', { ...form.data.settings, route: e.target.value })} />
+                        <Label htmlFor="route">Route prefix</Label>
+                        <Input
+                            id="route"
+                            className="font-mono text-sm"
+                            value={form.data.settings.route}
+                            placeholder={`/${form.data.handle || 'handle'}/{slug}`}
+                            onChange={(e) => form.setData('settings', { ...form.data.settings, route: e.target.value })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Leave empty to use the handle (<code>/{form.data.handle || 'handle'}/&#123;slug&#125;</code>). Type a prefix such as{' '}
+                            <code>blog</code>, a full pattern such as <code>/news/&#123;slug&#125;</code>, or <code>/</code> for the site root. Each collection needs its own.
+                        </p>
+                        {form.errors['settings.route' as keyof typeof form.errors] && (
+                            <p className="text-sm text-destructive">{form.errors['settings.route' as keyof typeof form.errors]}</p>
+                        )}
                     </div>
                 </CardContent>
             </Card>

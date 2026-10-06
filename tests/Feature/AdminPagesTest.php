@@ -54,7 +54,10 @@ it('creates, updates and deletes a collection', function () {
     $collection = Collection::where('handle', 'pages')->first();
     expect($collection)->not->toBeNull()
         ->and($collection->taxonomies)->toHaveCount(1)
-        ->and($collection->settings['dated'])->toBeTrue();
+        ->and($collection->settings['dated'])->toBeTrue()
+        // 'pages' is the handle default, so it isn't stored and follows the handle.
+        ->and($collection->settings)->not->toHaveKey('route')
+        ->and($collection->entryRoute())->toBe('/pages/{slug}');
 
     put("/cms/structure/collections/{$collection->id}", [
         'title' => 'Site pages',
@@ -63,7 +66,8 @@ it('creates, updates and deletes a collection', function () {
     ])->assertRedirect();
 
     expect($collection->refresh()->title)->toBe('Site pages')
-        ->and($collection->settings['route'])->toBe('site');
+        ->and($collection->settings['route'])->toBe('/site/{slug}')
+        ->and($collection->entryRoute())->toBe('/site/{slug}');
 
     delete("/cms/structure/collections/{$collection->id}")->assertRedirect();
     expect(Collection::find($collection->id))->toBeNull();
