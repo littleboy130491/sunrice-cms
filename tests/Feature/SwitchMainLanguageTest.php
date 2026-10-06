@@ -177,7 +177,7 @@ it('swaps titles and menu labels and fills missing global values', function () {
     $pages = $this->pages->refresh();
     expect($pages->title)->toBe('Pages')
         ->and($pages->settings['titles'])->toBe(['id' => 'Halaman'])
-        ->and($item->refresh()->labels)->toBe(['id' => 'Beranda', 'en' => 'Beranda'])
+        ->and($item->refresh()->labels)->toEqual(['id' => 'Beranda', 'en' => 'Beranda'])
         ->and($set->refresh()->valuesFor('en'))->toBe(['phone' => '123']);
 });
 
