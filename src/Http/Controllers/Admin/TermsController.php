@@ -13,6 +13,7 @@ use Inertia\Response;
 use Sunrice\Actions\Support\Reorder;
 use Sunrice\Actions\Taxonomies\SaveTerm;
 use Sunrice\Actions\Taxonomies\TrashTerm;
+use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Models\TermTranslation;
@@ -47,6 +48,8 @@ class TermsController extends Controller
                     'data' => $tr->data,
                 ]),
                 'count' => $t->entries()->count(),
+                // The term's page, when the taxonomy has term pages.
+                'url' => $taxonomy->setting('has_archive') ? app(UrlGenerator::class)->term($t->setRelation('taxonomy', $taxonomy), Locales::main()) : null,
             ]),
             'locales' => Locales::available(),
             'mainLocale' => Locales::main(),

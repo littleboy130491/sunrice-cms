@@ -51,6 +51,13 @@ class PageController extends Controller
         $entryId = (int) Setting::get('homepage_entry_id', 0);
         $entry = $entryId === 0 ? null : Entry::query()->published()->with('translations')->find($entryId);
 
+        if ($entry === null && $entryId !== 0 && $this->canViewDrafts()) {
+            $draft = Entry::query()->with('translations')->find($entryId);
+            if ($draft !== null) {
+                return $this->renderDraft($draft, $locale);
+            }
+        }
+
         abort_if($entry === null, 404);
 
         $entry->resolveFor($locale);
@@ -79,6 +86,21 @@ class PageController extends Controller
             ->whereHas('entry', fn ($q) => $q->published())
             ->orderByRaw('(locale = ?) desc', [$locale])
             ->first();
+
+        if ($translation === null && $this->canViewDrafts()) {
+            // Signed in with sunrice.view-drafts: unpublished entries and
+            // translations not yet Ready open as drafts, behind a banner.
+            $draft = EntryTranslation::query()
+                ->where('collection_id', $match->collection->id)
+                ->where('slug', $match->slug)
+                ->whereIn('locale', array_unique([$locale, Locales::main()]))
+                ->whereHas('entry')
+                ->orderByRaw('(locale = ?) desc', [$locale])
+                ->first();
+            if ($draft !== null) {
+                return $this->renderDraft($draft->entry, $locale);
+            }
+        }
 
         if ($translation === null) {
             return $this->otherLanguageEntry($match, $locale) ?? $this->redirectOr404($path, $locale);
@@ -217,6 +239,57 @@ class PageController extends Controller
         }
 
         abort(404);
+    }
+
+    protected function canViewDrafts(): bool
+    {
+        $user = auth(config('sunrice.auth.guard', 'web'))->user();
+
+        return $user !== null && $user->can('sunrice.view-drafts');
+    }
+
+    /**
+     * An entry the public can't see yet, rendered from its drafts for a
+     * signed-in editor, with a banner saying so. Never cached or indexed.
+     */
+    protected function renderDraft(Entry $entry, string $locale): Response
+    {
+        PreviewController::applyDraft($entry, $locale);
+
+        $response = $this->render(new TemplateContext(
+            pageType: 'entry',
+            locale: $locale,
+            entry: $entry,
+            collection: $entry->collection,
+        ), ['entry' => $entry, 'collection' => $entry->collection]);
+
+        $content = (string) $response->getContent();
+        $banner = view('sunrice::defaults.draft-banner', [
+            'entry' => $entry,
+            'locale' => $locale,
+            'reason' => $this->draftReason($entry, $locale),
+        ])->render();
+        $content = preg_match('/<body\b[^>]*>/i', $content) === 1
+            ? (string) preg_replace_callback('/<body\b[^>]*>/i', fn (array $m) => $m[0].$banner, $content, 1)
+            : $banner.$content;
+
+        $response->setContent($content);
+        $response->headers->set('X-Robots-Tag', 'noindex');
+        $response->headers->set('Cache-Control', 'private, no-store');
+
+        return $response;
+    }
+
+    protected function draftReason(Entry $entry, string $locale): string
+    {
+        if ($entry->status === 'published' && $entry->published_at?->isFuture()) {
+            return 'This entry is scheduled for '.$entry->published_at->toDayDateTimeString().' and isn\'t visible to the public yet.';
+        }
+        if ($entry->status !== 'published') {
+            return 'This entry is a draft and isn\'t visible to the public.';
+        }
+
+        return 'This translation isn\'t marked Ready, so the public sees the '.Locales::name(Locales::main()).' version.';
     }
 
     /** @param array<string, mixed> $viewData */

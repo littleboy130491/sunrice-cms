@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ interface TermRow {
     parent_id: number | null;
     translations: Record<string, { title: string; slug: string; data: Record<string, Json> }>;
     count: number;
+    url?: string | null;
 }
 
 interface Props {
@@ -144,6 +145,13 @@ export default function TermsPage({ taxonomy, terms, locales, mainLocale, bluepr
                                 <span className="shrink-0 text-xs text-muted-foreground">{t.count} {t.count === 1 ? 'entry' : 'entries'}</span>
                             </button>
                             <span className="flex shrink-0 items-center gap-1">
+                                {t.url && (
+                                    <Button variant="ghost" size="sm" asChild>
+                                        <a href={t.url} target="_blank" rel="noopener" aria-label="Visit term page" title="Visit term page">
+                                            <ExternalLink className="h-3.5 w-3.5" />
+                                        </a>
+                                    </Button>
+                                )}
                                 {canEditTerms && (
                                     <>
                                         <Button variant="ghost" size="sm" onClick={() => move(t, -1)} disabled={position <= 0} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></Button>

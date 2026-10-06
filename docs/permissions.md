@@ -28,6 +28,7 @@ so nobody loses access.
 | `sunrice.users.{view,create,edit,delete}` | Users. |
 | `sunrice.roles.{view,create,edit,delete}` | Roles. |
 | `sunrice.settings.edit` | Settings. |
+| `sunrice.view-drafts` | While signed in, open unpublished and scheduled entries (and translations not yet Ready) on the site, under a "Draft" banner. Given to Editor, Author and Translator. |
 
 Super admins are protected: only another super admin can edit or delete a
 super-admin user, give or remove the super-admin role, or change that role.

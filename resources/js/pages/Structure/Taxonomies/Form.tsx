@@ -137,8 +137,9 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
                                     A URL pattern. <code className="text-foreground">&#123;collection&#125;</code> gives each attached collection its own page per term,
                                     listing only that collection's entries; without it there is one page per term across all collections.{' '}
                                     <code className="text-foreground">&#123;taxonomy&#125;</code> is this taxonomy's handle and{' '}
-                                    <code className="text-foreground">&#123;slug&#125;</code> the term's slug. Examples: <code>&#123;collection&#125;/topik/&#123;slug&#125;</code>,{' '}
-                                    <code>topik/&#123;slug&#125;</code>.
+                                    <code className="text-foreground">&#123;slug&#125;</code> the term's slug. Examples:{' '}
+                                    <code>&#123;collection&#125;/{handle}/&#123;slug&#125;</code> (the default),{' '}
+                                    <code>blog/{handle}/&#123;slug&#125;</code> (one page per term across all collections).
                                 </p>
                                 <p>
                                     {form.data.settings.route ? 'Term pages:' : 'Leave empty for the default. Term pages:'}{' '}

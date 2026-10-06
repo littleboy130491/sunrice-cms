@@ -25,6 +25,35 @@ class PreviewController extends Controller
         // Menus, globals, dates and interface text in the previewed language.
         app()->setLocale($locale);
 
+        static::applyDraft($entry, $locale);
+
+        $ctx = new TemplateContext(
+            pageType: 'entry',
+            locale: $locale,
+            entry: $entry,
+            collection: $entry->collection,
+        );
+
+        $view = app(TemplateResolver::class)->resolve($ctx);
+
+        return response()
+            ->view($view, [
+                'entry' => $entry,
+                'collection' => $entry->collection,
+                'locale' => $locale,
+                'pageType' => 'entry',
+                'sunricePage' => $ctx,
+            ])
+            ->header('X-Robots-Tag', 'noindex');
+    }
+
+    /**
+     * Resolve the entry for $locale from its drafts (live data as
+     * fallback), showing that locale's translation even before it is
+     * Ready. A secondary locale is laid over the main language's draft.
+     */
+    public static function applyDraft(Entry $entry, string $locale): void
+    {
         $entry->load('translations');
         $entry->resolveFor($locale);
         $entry->hydrationContext = new HydrationContext($locale, preview: true);
@@ -49,24 +78,5 @@ class PreviewController extends Controller
             $resolved->title = (string) ($resolved->draft['title'] ?? $resolved->title);
             $resolved->seo = (array) ($resolved->draft['seo'] ?? $resolved->seo ?? []);
         }
-
-        $ctx = new TemplateContext(
-            pageType: 'entry',
-            locale: $locale,
-            entry: $entry,
-            collection: $entry->collection,
-        );
-
-        $view = app(TemplateResolver::class)->resolve($ctx);
-
-        return response()
-            ->view($view, [
-                'entry' => $entry,
-                'collection' => $entry->collection,
-                'locale' => $locale,
-                'pageType' => 'entry',
-                'sunricePage' => $ctx,
-            ])
-            ->header('X-Robots-Tag', 'noindex');
     }
 }

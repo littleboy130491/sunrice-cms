@@ -32,6 +32,7 @@ use Sunrice\Admin\Export\CsvExporter;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Admin\Table\TableQuery;
 use Sunrice\Events\ContentChanged;
+use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
@@ -533,6 +534,11 @@ class EntriesController extends Controller
                     'has_draft' => $t->draft !== null,
                     'draft_title' => $t->draft['title'] ?? $t->title,
                     'draft_slug' => $t->draft['slug'] ?? $t->slug,
+                    // Public address (null without single pages); live only when
+                    // published and Ready, otherwise a signed-in draft view.
+                    'url' => app(UrlGenerator::class)->translationUrl($entry, $t),
+                    'is_live' => $entry->status === 'published' && $entry->published_at?->isPast() === true
+                        && (Locales::isMain($t->locale) || $t->is_ready),
                     'can_undo_restore' => session()->has(static::undoKey($t)),
                     'revisions' => $t->revisions->map(fn (Revision $r) => [
                         'id' => $r->id,
@@ -569,6 +575,7 @@ class EntriesController extends Controller
                 'publish' => $user->can('publish', $entry),
                 'delete' => $user->can('delete', $entry),
                 'create' => $user->can('create', [Entry::class, $entry->collection_id]),
+                'view_drafts' => $user->can('sunrice.view-drafts'),
             ],
         ];
     }

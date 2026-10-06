@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useForm, usePage, router, Link } from '@inertiajs/react';
-import { ArrowLeft, CheckCircle2, Copy, EyeOff, History, Languages, LoaderCircle, MoreHorizontal, Send, Trash2, Undo2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Copy, ExternalLink, EyeOff, History, Languages, LoaderCircle, MoreHorizontal, Send, Trash2, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +35,10 @@ interface TranslationState {
     can_undo_restore?: boolean;
     draft_title: string;
     draft_slug: string;
+    /** Public address of this translation; null when the collection has no single pages. */
+    url?: string | null;
+    /** Whether the public can see it (published and, for other languages, Ready). */
+    is_live?: boolean;
     revisions: RevisionRow[];
 }
 
@@ -50,7 +54,7 @@ interface Props {
     locales: string[];
     mainLocale?: string;
     /** What the current user may do with this entry (null for a new entry). */
-    can?: { update: boolean; translate: boolean; publish: boolean; delete: boolean; create: boolean } | null;
+    can?: { update: boolean; translate: boolean; publish: boolean; delete: boolean; create: boolean; view_drafts?: boolean } | null;
 }
 
 /** A readable local date and time, e.g. "6 Oct 2026, 16:49". */
@@ -259,6 +263,18 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                 </div>
                 {!isNew && (
                     <div className="flex items-center gap-2">
+                        {current.url && (current.is_live || allowed?.view_drafts) && (
+                            <Button type="button" variant="outline" asChild>
+                                <a
+                                    href={current.url}
+                                    target="_blank"
+                                    rel="noopener"
+                                    title={current.is_live ? 'Open the public page' : 'Only you and other editors can see this draft while signed in'}
+                                >
+                                    <ExternalLink /> {current.is_live ? 'View page' : 'View draft'}
+                                </a>
+                            </Button>
+                        )}
                         {perms.publish && (
                             <Button type="button" onClick={() => publish()}>
                                 <Send /> Publish
