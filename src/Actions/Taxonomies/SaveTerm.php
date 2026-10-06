@@ -44,12 +44,14 @@ class SaveTerm
             'parent_id' => [
                 'nullable', 'integer',
                 Rule::exists('sunrice_terms', 'id')->where('taxonomy_id', $taxonomy->id),
+                // A term can't sit under itself or one of its own children.
+                Rule::notIn($term?->exists ? $term->descendantIds() : []),
             ],
             'translations' => ['required', 'array'],
             'translations.*.title' => ['required', 'string', 'max:255'],
             'translations.*.slug' => ['nullable', 'string', 'max:255'],
             'translations.*.data' => ['array'],
-        ], [], ['translations.*.title' => 'title', 'translations.*.slug' => 'slug'])->after(function ($v) {
+        ], ['parent_id.not_in' => 'A term can\'t be placed under itself or one of its own children.'], ['translations.*.title' => 'title', 'translations.*.slug' => 'slug'])->after(function ($v) {
             foreach ($v->safe()?->toArray()['translations'] ?? [] as $locale => $t) {
                 if (! Locales::isAvailable($locale)) {
                     $v->errors()->add("translations.{$locale}", 'Unknown locale.');

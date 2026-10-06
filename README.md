@@ -41,6 +41,22 @@ The full product contract lives in [`SPEC.md`](SPEC.md); the build plan
 in [`EXECUTION_PLAN.md`](EXECUTION_PLAN.md); contributor/agent rules in
 [`AGENTS.md`](AGENTS.md).
 
+## Developing the package
+
+The repository includes a Testbench workbench app for trying the admin
+without a host application:
+
+```bash
+composer install
+npm install && npm run build          # admin assets into dist/
+vendor/bin/testbench workbench:build  # publish assets, fresh sqlite DB, seed
+vendor/bin/testbench serve            # http://127.0.0.1:8000/cms
+```
+
+Sign in as `admin@example.com` / `password`. `workbench:build` resets
+the database; re-run it (or `vendor/bin/testbench sunrice:publish-assets`)
+after `npm run build`. Tests: `vendor/bin/pest`; code style: `vendor/bin/pint`.
+
 ## License
 
 MIT.

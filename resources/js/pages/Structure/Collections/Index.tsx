@@ -38,9 +38,9 @@ export default function CollectionsIndex({ collections }: { collections: Collect
                 <TableHeader>
                     <TableRow>
                         <TableHead>Title</TableHead>
-                        <TableHead>Handle</TableHead>
-                        <TableHead>Blueprint</TableHead>
-                        <TableHead>Taxonomies</TableHead>
+                        <TableHead className="max-md:hidden">Handle</TableHead>
+                        <TableHead className="max-md:hidden">Blueprint</TableHead>
+                        <TableHead className="max-md:hidden">Taxonomies</TableHead>
                         <TableHead>Entries</TableHead>
                         <TableHead className="w-24" />
                     </TableRow>
@@ -49,13 +49,13 @@ export default function CollectionsIndex({ collections }: { collections: Collect
                     {collections.map((c) => (
                         <TableRow key={c.id}>
                             <TableCell>
-                                <Link className="font-medium hover:underline" href={adminUrl(`structure/collections/${c.id}/edit`, adminPath)}>
-                                    {c.title}
-                                </Link>
+                                {can('sunrice.collections.edit') ? (
+                                    <Link className="font-medium hover:underline" href={adminUrl(`structure/collections/${c.id}/edit`, adminPath)}>{c.title}</Link>
+                                ) : <span className="font-medium">{c.title}</span>}
                             </TableCell>
-                            <TableCell><code className="text-xs">{c.handle}</code></TableCell>
-                            <TableCell>{c.blueprint?.title ?? '—'}</TableCell>
-                            <TableCell>
+                            <TableCell className="max-md:hidden"><code className="text-xs">{c.handle}</code></TableCell>
+                            <TableCell className="max-md:hidden">{c.blueprint?.title ?? '—'}</TableCell>
+                            <TableCell className="max-md:hidden">
                                 <div className="flex flex-wrap gap-1">
                                     {c.taxonomies.map((t) => <Badge key={t.id} variant="secondary">{t.title}</Badge>)}
                                 </div>

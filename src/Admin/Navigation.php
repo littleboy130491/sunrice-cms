@@ -57,16 +57,10 @@ class Navigation
         if ($user->can('sunrice.globals.view')) {
             $structure[] = ['label' => 'Globals', 'href' => 'globals', 'icon' => 'globe'];
         }
-        $forms = Form::query()->orderBy('handle')->get()
-            ->filter(fn (Form $form) => $user->can('view', $form))
-            // Submissions are what most people come for; editors without
-            // that permission go to the form builder.
-            ->map(fn (Form $form) => ['label' => $form->title, 'href' => $user->can('viewSubmissions', $form) ? "forms/{$form->id}/submissions" : "forms/{$form->handle}", 'icon' => 'inbox'])
-            ->values()->all();
-        if ($forms !== []) {
-            $groups[] = ['label' => 'Forms', 'items' => $forms];
-        }
-        if ($user->can('create', Form::class)) {
+        // One Forms entry: the forms list links each form's submissions and builder.
+        $canSeeForms = $user->can('create', Form::class)
+            || Form::query()->get()->contains(fn (Form $form) => $user->can('view', $form));
+        if ($canSeeForms) {
             $structure[] = ['label' => 'Forms', 'href' => 'forms', 'icon' => 'inbox'];
         }
 

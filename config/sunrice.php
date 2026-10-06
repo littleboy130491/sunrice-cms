@@ -33,7 +33,7 @@ return [
     */
     'auth' => [
         'guard' => 'web',
-        'user_model' => User::class,
+        'user_model' => env('SUNRICE_USER_MODEL', User::class),
     ],
 
     /*

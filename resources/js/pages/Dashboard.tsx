@@ -9,7 +9,7 @@ import type { SharedProps } from '@/types';
 interface Props {
     collections: { handle: string; title: string; entries: number }[];
     recentEdits: { id: number; title: string; collection: string | null; collection_handle: string | null; status: string; updated_at: string | null }[];
-    recentSubmissions: { id: number; form: string | null; created_at: string | null }[];
+    recentSubmissions: { id: number; form_id: number; form: string | null; summary: string | null; created_at: string | null }[];
 }
 
 function EmptyState({ icon: Icon, children }: { icon: typeof FileText; children: React.ReactNode }) {
@@ -103,11 +103,19 @@ export default function Dashboard({ collections, recentEdits, recentSubmissions 
                         {recentSubmissions.length === 0 ? (
                             <EmptyState icon={Inbox}>No submissions yet.</EmptyState>
                         ) : (
-                            <ul className="divide-y">
+                            <ul className="flex flex-col">
                                 {recentSubmissions.map((s) => (
-                                    <li key={s.id} className="flex items-center justify-between gap-2 py-2.5 text-sm">
-                                        <span className="font-medium">{s.form ?? 'Form'}</span>
-                                        <span className="text-xs text-muted-foreground">{s.created_at}</span>
+                                    <li key={s.id}>
+                                        <Link
+                                            href={adminUrl(`forms/${s.form_id}/submissions`, adminPath)}
+                                            className="-mx-2 flex items-center justify-between gap-3 rounded-md px-2 py-2.5 text-sm hover:bg-accent"
+                                        >
+                                            <span className="min-w-0">
+                                                <span className="block truncate font-medium">{s.summary ?? 'New submission'}</span>
+                                                <span className="block text-xs text-muted-foreground">{s.form ?? 'Form'}</span>
+                                            </span>
+                                            <span className="shrink-0 text-xs text-muted-foreground">{s.created_at}</span>
+                                        </Link>
                                     </li>
                                 ))}
                             </ul>

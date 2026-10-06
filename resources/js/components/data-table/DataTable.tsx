@@ -56,7 +56,8 @@ interface Props<T extends { id: number | string }> {
     reorderable?: boolean;
     reorderUrl?: string;
     searchPlaceholder?: string;
-    rowHref?: (row: T) => string;
+    /** Where a row links to; null for rows that can't be opened. */
+    rowHref?: (row: T) => string | null;
     renderCell?: (row: T, column: ColumnDef) => React.ReactNode;
 }
 
@@ -204,6 +205,7 @@ export function DataTable<T extends { id: number | string }>({
                     <Input
                         className="h-8 pl-8"
                         placeholder={searchPlaceholder}
+                        aria-label="Search"
                         value={state.search}
                         onChange={(e) => update({ search: e.target.value }, true)}
                     />
@@ -278,6 +280,7 @@ export function DataTable<T extends { id: number | string }>({
                             {reorderable && <TableHead className="w-8" />}
                             <TableHead className="w-8">
                                 <Checkbox
+                                    aria-label="Select all rows"
                                     checked={allSelected}
                                     onCheckedChange={(checked) =>
                                         setSelection(
@@ -319,6 +322,7 @@ export function DataTable<T extends { id: number | string }>({
                                     <>
                                         <TableCell>
                                             <Checkbox
+                                                aria-label="Select row"
                                                 checked={!!selection[String(row.id)]}
                                                 onCheckedChange={(checked) =>
                                                     setSelection((s) => ({ ...s, [String(row.id)]: !!checked }))
@@ -327,8 +331,8 @@ export function DataTable<T extends { id: number | string }>({
                                         </TableCell>
                                         {visibleColumns.map((c) => (
                                             <TableCell key={c.key}>
-                                                {rowHref ? (
-                                                    <Link href={rowHref(row)} className="font-medium underline-offset-4 hover:underline">
+                                                {rowHref?.(row) ? (
+                                                    <Link href={rowHref(row) as string} className="font-medium underline-offset-4 hover:underline">
                                                         {cellValue(row, c)}
                                                     </Link>
                                                 ) : (

@@ -11,7 +11,7 @@ import { useCan } from '@/lib/can';
 import { InputError } from '@/components/app/input-error';
 import type { SharedProps } from '@/types';
 
-interface Row { id: number; name: string; permissions_count: number }
+interface Row { id: number; name: string; permissions_count: number; deletable?: boolean }
 
 export default function RolesIndex({ roles }: { roles: Row[] }) {
     const { adminPath } = usePage<SharedProps>().props;
@@ -42,8 +42,8 @@ export default function RolesIndex({ roles }: { roles: Row[] }) {
                             <DialogHeader><DialogTitle>New role</DialogTitle></DialogHeader>
                             <form onSubmit={submit} className="flex flex-col gap-3">
                                 <div className="grid gap-2">
-                                    <Label>Name</Label>
-                                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="editor" autoFocus />
+                                    <Label htmlFor="role-name">Name</Label>
+                                    <Input id="role-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="editor" autoFocus />
                                     <InputError message={error} />
                                 </div>
                                 <Button type="submit" disabled={processing}>Create</Button>
@@ -60,7 +60,7 @@ export default function RolesIndex({ roles }: { roles: Row[] }) {
                             <TableCell><Link className="font-medium hover:underline" href={adminUrl(`roles/${r.id}/edit`, adminPath)}>{r.name}</Link></TableCell>
                             <TableCell>{r.permissions_count}</TableCell>
                             <TableCell>
-                                {can('sunrice.roles.delete') && (
+                                {(r.deletable ?? can('sunrice.roles.delete')) && (
                                     <Button
                                         variant="ghost" size="sm" className="text-destructive"
                                         onClick={() => window.confirm(`Delete role "${r.name}"?`) && router.delete(adminUrl(`roles/${r.id}`, adminPath), { preserveScroll: true })}

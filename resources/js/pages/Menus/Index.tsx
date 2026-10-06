@@ -42,16 +42,16 @@ export default function MenusIndex({ menus }: { menus: Row[] }) {
                             <DialogHeader><DialogTitle>New menu</DialogTitle></DialogHeader>
                             <form onSubmit={submit} className="flex flex-col gap-3">
                                 <div className="grid gap-2">
-                                    <Label>Title</Label>
-                                    <Input value={form.title} onChange={(e) => setForm({
+                                    <Label htmlFor="menu-title">Title</Label>
+                                    <Input id="menu-title" value={form.title} onChange={(e) => setForm({
                                         title: e.target.value,
                                         handle: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''),
                                     })} />
                                     <InputError message={errors.title} />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label>Handle</Label>
-                                    <Input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} />
+                                    <Label htmlFor="menu-handle">Handle</Label>
+                                    <Input id="menu-handle" value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} />
                                     <InputError message={errors.handle} />
                                 </div>
                                 <Button type="submit" disabled={processing}>Create</Button>
@@ -61,12 +61,12 @@ export default function MenusIndex({ menus }: { menus: Row[] }) {
                 )}
             </div>
             <Table>
-                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Handle</TableHead><TableHead>Items</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead className="max-md:hidden">Handle</TableHead><TableHead>Items</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
                 <TableBody>
                     {menus.map((m) => (
                         <TableRow key={m.id}>
                             <TableCell><Link className="font-medium hover:underline" href={adminUrl(`menus/${m.id}`, adminPath)}>{m.title}</Link></TableCell>
-                            <TableCell><code className="text-xs">{m.handle}</code></TableCell>
+                            <TableCell className="max-md:hidden"><code className="text-xs">{m.handle}</code></TableCell>
                             <TableCell>{m.items_count}</TableCell>
                             <TableCell>
                                 {can('sunrice.menus.delete') && (

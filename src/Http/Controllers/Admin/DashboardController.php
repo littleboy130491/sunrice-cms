@@ -9,13 +9,21 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
+use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
 
 class DashboardController extends Controller
 {
     public function __invoke(): Response
     {
+        $user = request()->user();
+        // Only collections this user may open.
+        $visible = Collection::query()->get()
+            ->filter(fn (Collection $c) => $user->can('viewAny', [Entry::class, $c->id]))
+            ->pluck('id');
+
         $collections = Collection::query()
+            ->whereIn('id', $visible)
             ->withCount('entries')
             ->orderBy('title')
             ->get()
@@ -27,10 +35,14 @@ class DashboardController extends Controller
             ->all();
 
         $recentEdits = Entry::query()
+            ->whereIn('collection_id', $visible)
             ->with(['collection:id,title,handle', 'translations'])
             ->latest('updated_at')
-            ->limit(8)
+            ->limit(20)
             ->get()
+            ->filter(fn (Entry $e) => $user->can('view', $e))
+            ->take(8)
+            ->values()
             ->map(fn (Entry $e) => [
                 'id' => $e->id,
                 'title' => $e->translations->first()->title ?? '#'.$e->id,
@@ -44,14 +56,19 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'collections' => $collections,
             'recentEdits' => $recentEdits,
+            // Only forms whose submissions this user may read.
             'recentSubmissions' => FormSubmission::query()
-                ->with('form:id,title')
+                ->whereIn('form_id', Form::query()->get()->filter(fn (Form $f) => request()->user()->can('viewSubmissions', $f))->pluck('id'))
+                ->with('form:id,title,fields')
                 ->latest()
                 ->limit(8)
                 ->get()
                 ->map(fn (FormSubmission $s) => [
                     'id' => $s->id,
+                    'form_id' => $s->form_id,
                     'form' => $s->form?->title,
+                    // A one-line summary: the first filled-in field.
+                    'summary' => collect((array) $s->data)->first(fn ($v) => is_string($v) && trim($v) !== ''),
                     'created_at' => $s->created_at?->diffForHumans(),
                 ])
                 ->all(),

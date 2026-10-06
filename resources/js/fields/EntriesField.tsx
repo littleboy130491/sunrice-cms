@@ -15,7 +15,7 @@ export default function EntriesField({ field, value, onChange }: FieldProps) {
                 {ids.map((id) => (
                     <span key={id} className="flex items-center gap-1 rounded-md border px-2 py-1 text-sm">
                         {titles[id] ?? `Entry #${id}`}
-                        <button type="button" onClick={() => onChange(ids.filter((v) => v !== id))}>
+                        <button type="button" aria-label={`Remove ${titles[id] ?? 'entry'}`} onClick={() => onChange(ids.filter((v) => v !== id))}>
                             <X className="h-3 w-3" />
                         </button>
                     </span>

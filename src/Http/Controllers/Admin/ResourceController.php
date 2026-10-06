@@ -80,6 +80,7 @@ class ResourceController extends Controller
             ),
             'can' => [
                 'create' => $request->user()->can("sunrice.resources.{$resource}.create"),
+                'delete' => $request->user()->can("sunrice.resources.{$resource}.delete"),
             ],
         ]);
     }
@@ -156,9 +157,13 @@ class ResourceController extends Controller
         $class = $this->resource($resource);
         $ids = (array) $request->input('ids', []);
 
-        $count = 0;
-        foreach ($class::model()::query()->whereIn('id', $ids)->get() as $model) {
+        // Check every record first, so a refusal never leaves a half-done delete.
+        $models = $class::model()::query()->whereIn('id', $ids)->get();
+        foreach ($models as $model) {
             $this->checkAbility($request, $resource, 'delete', $model);
+        }
+        $count = 0;
+        foreach ($models as $model) {
             $model->delete();
             $count++;
         }

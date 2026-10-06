@@ -52,43 +52,10 @@ class EntriesController extends Controller
         $query = Entry::query()
             ->where('collection_id', $collection->id)
             ->with(['translations' => fn ($q) => $q->where('locale', Locales::main())]);
-
-        $main = Locales::main();
-        $mainTitle = EntryTranslation::query()
-            ->select('title')
-            ->whereColumn('entry_id', (new Entry)->qualifyColumn('id'))
-            ->where('locale', $main)
-            ->limit(1);
-
-        $table = TableQuery::for($query)
-            ->searchUsing(function (Builder $q, string $term): void {
-                $q->where(function (Builder $q) use ($term): void {
-                    $q->whereHas('translations', fn (Builder $t) => $t->whereLike('title', "%{$term}%"));
-                    if (ctype_digit($term)) {
-                        $q->orWhere('id', (int) $term);
-                    }
-                });
-            })
-            // Scheduled = published with a future date; Published = live now.
-            ->filter('status', fn (Builder $q, mixed $value) => match ($value) {
-                'published' => $q->where('status', 'published')->where(fn (Builder $q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now())),
-                'scheduled' => $q->where('status', 'published')->where('published_at', '>', now()),
-                default => $q->where('status', $value),
-            })
-            ->sortUsing('title', fn (Builder $q, string $direction) => $q->orderBy($mainTitle, $direction))
-            ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at'])
-            ->apply($request);
-
-        // No column clicked: the collection's own order (Structure →
-        // Collections → Order).
-        [$defaultColumn, $defaultDirection] = $collection->defaultSort();
+        $table = $this->entriesTable($request, $collection, $query);
         $meta = $table->meta();
-        if ($meta['sort'] === null) {
-            $defaultColumn === 'title'
-                ? $query->orderBy($mainTitle, $defaultDirection)
-                : $query->orderBy($defaultColumn, $defaultDirection);
-            $query->orderBy('id', $defaultColumn === 'sort_order' ? 'asc' : 'desc');
-        }
+        [$defaultColumn] = $collection->defaultSort();
+
         // Drag-and-drop when the collection is ordered manually and the
         // list shows that order unfiltered.
         $manual = $defaultColumn === 'sort_order';
@@ -138,13 +105,60 @@ class EntriesController extends Controller
         ]);
     }
 
+    /**
+     * The entries list query: search, status filter and sorting from the
+     * request, else the collection's own order. Shared by the list and
+     * its CSV export so both show the same entries.
+     *
+     * @param  Builder<Entry>  $query
+     */
+    protected function entriesTable(Request $request, Collection $collection, Builder $query): TableQuery
+    {
+        $main = Locales::main();
+        $mainTitle = EntryTranslation::query()
+            ->select('title')
+            ->whereColumn('entry_id', (new Entry)->qualifyColumn('id'))
+            ->where('locale', $main)
+            ->limit(1);
+
+        $table = TableQuery::for($query)
+            ->searchUsing(function (Builder $q, string $term): void {
+                $q->where(function (Builder $q) use ($term): void {
+                    $q->whereHas('translations', fn (Builder $t) => $t->whereLike('title', "%{$term}%"));
+                    if (ctype_digit($term)) {
+                        $q->orWhere('id', (int) $term);
+                    }
+                });
+            })
+            // Scheduled = published with a future date; Published = live now.
+            ->filter('status', fn (Builder $q, mixed $value) => match ($value) {
+                'published' => $q->where('status', 'published')->where(fn (Builder $q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now())),
+                'scheduled' => $q->where('status', 'published')->where('published_at', '>', now()),
+                default => $q->where('status', $value),
+            })
+            ->sortUsing('title', fn (Builder $q, string $direction) => $q->orderBy($mainTitle, $direction))
+            ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at'])
+            ->apply($request);
+
+        // No column clicked: the collection's own order (Structure →
+        // Collections → Order).
+        [$defaultColumn, $defaultDirection] = $collection->defaultSort();
+        $meta = $table->meta();
+        if ($meta['sort'] === null) {
+            $defaultColumn === 'title'
+                ? $query->orderBy($mainTitle, $defaultDirection)
+                : $query->orderBy($defaultColumn, $defaultDirection);
+            $query->orderBy('id', $defaultColumn === 'sort_order' ? 'asc' : 'desc');
+        }
+
+        return $table;
+    }
+
     public function export(Request $request, Collection $collection, CsvExporter $csv): StreamedResponse
     {
         $this->authorize('viewAny', [Entry::class, $collection->id]);
 
-        $table = TableQuery::for(
-            Entry::query()->where('collection_id', $collection->id)->with('translations')
-        )->filterable(['status'])->apply($request);
+        $table = $this->entriesTable($request, $collection, Entry::query()->where('collection_id', $collection->id)->with('translations'));
 
         return $csv->download($table, [
             new Column('id', 'ID'),
@@ -229,7 +243,8 @@ class EntriesController extends Controller
         $this->authorize('delete', $entry);
         $trash->handle($entry);
 
-        return back()->with('success', 'Entry moved to trash.');
+        // The editor can't show a trashed entry: go back to the list.
+        return redirect()->route('sunrice.admin.entries.index', $entry->collection)->with('success', 'Entry moved to trash.');
     }
 
     public function restore(Entry $entry, RestoreEntry $restore): RedirectResponse

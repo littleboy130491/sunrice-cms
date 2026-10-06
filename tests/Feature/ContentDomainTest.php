@@ -63,6 +63,28 @@ it('enforces term slug uniqueness per taxonomy and locale including trashed', fu
     }
 });
 
+it('rejects placing a term under itself or one of its descendants', function () {
+    $taxonomy = Taxonomy::factory()->create();
+    $parent = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
+    $child = Term::factory()->create(['taxonomy_id' => $taxonomy->id, 'parent_id' => $parent->id]);
+    $main = Locales::main();
+    $translation = ['title' => 'Parent', 'slug' => $parent->translations()->first()->slug];
+
+    foreach ([$parent->id, $child->id] as $target) {
+        try {
+            app(SaveTerm::class)->handle($taxonomy, [
+                'parent_id' => $target,
+                'translations' => [$main => $translation],
+            ], $parent);
+            $this->fail('expected ValidationException');
+        } catch (ValidationException $e) {
+            expect($e->errors())->toHaveKey('parent_id');
+        }
+    }
+
+    expect($parent->fresh()->parent_id)->toBeNull();
+});
+
 it('deletes a taxonomy with its terms', function () {
     $taxonomy = Taxonomy::factory()->create();
     $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);

@@ -21,13 +21,15 @@ export default function FieldsetsIndex({ fieldsets }: { fieldsets: Row[] }) {
                 )}
             </div>
             <Table>
-                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Handle</TableHead><TableHead>Fields</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead className="max-md:hidden">Handle</TableHead><TableHead className="max-md:hidden">Fields</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
                 <TableBody>
                     {fieldsets.map((f) => (
                         <TableRow key={f.id}>
-                            <TableCell><Link className="font-medium hover:underline" href={adminUrl(`structure/fieldsets/${f.id}/edit`, adminPath)}>{f.title}</Link></TableCell>
-                            <TableCell><code className="text-xs">{f.handle}</code></TableCell>
-                            <TableCell>{f.fields_count}</TableCell>
+                            <TableCell>{can('sunrice.fieldsets.edit') ? (
+                                    <Link className="font-medium hover:underline" href={adminUrl(`structure/fieldsets/${f.id}/edit`, adminPath)}>{f.title}</Link>
+                                ) : <span className="font-medium">{f.title}</span>}</TableCell>
+                            <TableCell className="max-md:hidden"><code className="text-xs">{f.handle}</code></TableCell>
+                            <TableCell className="max-md:hidden">{f.fields_count}</TableCell>
                             <TableCell>
                                 {can('sunrice.fieldsets.delete') && (
                                     <Button

@@ -32,6 +32,11 @@ class UsersController extends Controller
                     'name' => $u->name,
                     'email' => $u->email,
                     'roles' => $u->roles->pluck('name'),
+                    // What this user may do to that account (super admins are protected).
+                    'can' => [
+                        'update' => request()->user()->can('update', $u),
+                        'delete' => request()->user()->can('delete', $u),
+                    ],
                 ]),
             'roles' => Role::query()->orderBy('name')->get(['id', 'name']),
         ]);
@@ -40,10 +45,11 @@ class UsersController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', config('sunrice.auth.user_model'));
+        $model = config('sunrice.auth.user_model');
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique((new $model)->getTable(), 'email')],
             'password' => ['required', 'confirmed', Password::defaults()],
             'roles' => ['array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
@@ -66,7 +72,7 @@ class UsersController extends Controller
 
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'email' => ['sometimes', 'required', 'email', 'max:255'],
+            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique($user->getTable(), 'email')->ignore($user->getKey(), $user->getKeyName())],
             'password' => ['nullable', 'confirmed', Password::defaults()],
             'roles' => ['sometimes', 'array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],

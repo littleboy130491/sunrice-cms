@@ -1,4 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
+import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -26,6 +27,12 @@ export default function Submissions({ form, submissions, filters }: Props) {
     const can = useCan();
     const [search, setSearch] = React.useState(filters.search ?? '');
     const handles = form.fields.map((f) => f.handle as string);
+    const fileFields = new Set(form.fields.filter((f) => f.type === 'file').map((f) => f.handle as string));
+    const labelOf = (h: string) => (form.fields.find((f) => f.handle === h)?.label as string) || h;
+    const canDelete = can(`sunrice.forms.${form.id}.delete-submissions`);
+    const remove = (id: number) =>
+        window.confirm(`Delete submission #${id}? Its uploaded files are deleted too.`)
+        && router.delete(adminUrl(`submissions/${id}`, adminPath), { preserveScroll: true });
 
     function apply() {
         router.get(adminUrl(`forms/${form.id}/submissions`, adminPath), { search }, { preserveState: true });
@@ -63,17 +70,32 @@ export default function Submissions({ form, submissions, filters }: Props) {
                     <TableRow>
                         <TableHead>#</TableHead>
                         <TableHead>Submitted</TableHead>
-                        {handles.map((h) => <TableHead key={h}>{h}</TableHead>)}
+                        {handles.map((h) => <TableHead key={h}>{labelOf(h)}</TableHead>)}
+                        {canDelete && <TableHead className="w-12" />}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {submissions.data.map((s) => (
                         <TableRow key={s.id}>
                             <TableCell>{s.id}</TableCell>
-                            <TableCell>{s.created_at}</TableCell>
+                            <TableCell className="whitespace-nowrap" title={s.created_at}>{new Date(s.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</TableCell>
                             {handles.map((h) => (
-                                <TableCell key={h}>{String(s.data[h] ?? '')}</TableCell>
+                                <TableCell key={h}>
+                                    {fileFields.has(h) && s.data[h] ? (
+                                        // Uploaded files are private: download through the admin.
+                                        <a className="underline" href={adminUrl(`submissions/${s.id}/download/${h}`, adminPath)}>Download</a>
+                                    ) : (
+                                        <span className="line-clamp-2">{String(s.data[h] ?? '')}</span>
+                                    )}
+                                </TableCell>
                             ))}
+                            {canDelete && (
+                                <TableCell>
+                                    <Button variant="ghost" size="icon" className="text-destructive" aria-label={`Delete submission #${s.id}`} onClick={() => remove(s.id)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
+                            )}
                         </TableRow>
                     ))}
                     {submissions.data.length === 0 && (

@@ -18,6 +18,8 @@ class TermSearchController extends Controller
     {
         $taxonomy = $request->input('taxonomy');
         $q = (string) $request->input('q', '');
+        // `ids[]` looks up titles for terms already picked.
+        $ids = array_filter(array_map('intval', (array) $request->input('ids', [])));
 
         $terms = Term::query()
             ->whereIn('taxonomy_id', $this->allowedTaxonomyIds($request))
@@ -26,8 +28,9 @@ class TermSearchController extends Controller
             ->when($q !== '', function ($query) use ($q) {
                 $query->whereHas('translations', fn ($t) => $t->whereLike('name', "%{$q}%"));
             })
+            ->when($ids !== [], fn ($query) => $query->whereIn('id', $ids))
             ->orderBy('sort_order')
-            ->limit(50)
+            ->limit($ids !== [] ? 200 : 50)
             ->get()
             ->map(fn (Term $t) => [
                 'id' => $t->id,

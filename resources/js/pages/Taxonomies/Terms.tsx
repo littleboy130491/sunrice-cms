@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
-import { Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -82,6 +82,42 @@ export default function TermsPage({ taxonomy, terms, locales, mainLocale, bluepr
     const localeHasError = (l: string) => Object.keys(errors).some((k) => k.startsWith(`translations.${l}`));
 
     const fields = (blueprint ?? []).flatMap((t) => t.fields ?? []);
+    const canEditTerms = can(`sunrice.terms.${taxonomy.id}.edit`);
+
+    // Terms in tree order (parents before their children), with depth.
+    const known = new Set(terms.map((t) => t.id));
+    const childrenOf = (parent: number | null) => terms.filter((t) => (t.parent_id !== null && known.has(t.parent_id) ? t.parent_id : null) === parent);
+    const siblingsOf = (term: TermRow) => childrenOf(term.parent_id !== null && known.has(term.parent_id) ? term.parent_id : null);
+    const tree: { term: TermRow; depth: number }[] = [];
+    const walk = (parent: number | null, depth: number) => childrenOf(parent).forEach((t) => {
+        tree.push({ term: t, depth });
+        walk(t.id, depth + 1);
+    });
+    walk(null, 0);
+
+    // The term being edited and its descendants can't be its parent.
+    const excludedParents = new Set<number>();
+    const exclude = (id: number) => {
+        excludedParents.add(id);
+        childrenOf(id).forEach((c) => exclude(c.id));
+    };
+    if (editing) exclude(editing.id);
+
+    // Move a term among its siblings, then save the whole order.
+    const move = (term: TermRow, dir: -1 | 1) => {
+        const siblings = siblingsOf(term);
+        const i = siblings.findIndex((s) => s.id === term.id);
+        const j = i + dir;
+        if (j < 0 || j >= siblings.length) return;
+        const swapped = new Map([[siblings[i].id, siblings[j]], [siblings[j].id, siblings[i]]]);
+        const order: number[] = [];
+        const visit = (parent: number | null) => childrenOf(parent).map((t) => swapped.get(t.id) ?? t).forEach((t) => {
+            order.push(t.id);
+            visit(t.id);
+        });
+        visit(null);
+        router.post(adminUrl(`taxonomies/${taxonomy.handle}/terms/reorder`, adminPath), { items: order }, { preserveScroll: true });
+    };
 
     return (
         <div className="flex flex-col gap-4">
@@ -91,24 +127,42 @@ export default function TermsPage({ taxonomy, terms, locales, mainLocale, bluepr
             </div>
 
             <ul className="flex flex-col gap-1">
-                {terms.map((t) => (
-                    <li key={t.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-                        <button type="button" className="flex items-center gap-2 text-sm" onClick={() => can(`sunrice.terms.${taxonomy.id}.edit`) && openEdit(t)}>
-                            {t.translations[main]?.title ?? `#${t.id}`}
-                            {t.parent_id && <span className="text-xs text-muted-foreground">child of #{t.parent_id}</span>}
-                            <span className="text-xs text-muted-foreground">({t.count} entries)</span>
-                        </button>
-                        {can(`sunrice.terms.${taxonomy.id}.delete`) && (
-                            <Button
-                                variant="ghost" size="icon" className="text-destructive"
-                                onClick={() => window.confirm('Delete term?') && router.delete(adminUrl(`terms/${t.id}`, adminPath), { preserveScroll: true })}
+                {tree.map(({ term: t, depth }) => {
+                    const siblings = siblingsOf(t);
+                    const position = siblings.findIndex((s) => s.id === t.id);
+
+                    return (
+                        <li key={t.id} className="flex items-center justify-between gap-2 rounded-md border px-3 py-2" style={{ marginLeft: depth * 24 }}>
+                            <button
+                                type="button"
+                                className="flex min-w-0 items-center gap-2 text-left text-sm disabled:cursor-default"
+                                disabled={!canEditTerms}
+                                onClick={() => openEdit(t)}
                             >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        )}
-                    </li>
-                ))}
-                {terms.length === 0 && <li className="py-8 text-center text-sm text-muted-foreground">No terms.</li>}
+                                <span className="truncate font-medium">{t.translations[main]?.title ?? `#${t.id}`}</span>
+                                <span className="shrink-0 text-xs text-muted-foreground">{t.count} {t.count === 1 ? 'entry' : 'entries'}</span>
+                            </button>
+                            <span className="flex shrink-0 items-center gap-1">
+                                {canEditTerms && (
+                                    <>
+                                        <Button variant="ghost" size="sm" onClick={() => move(t, -1)} disabled={position <= 0} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></Button>
+                                        <Button variant="ghost" size="sm" onClick={() => move(t, 1)} disabled={position >= siblings.length - 1} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></Button>
+                                        <Button variant="ghost" size="sm" onClick={() => openEdit(t)} aria-label="Edit term"><Pencil className="h-3.5 w-3.5" /></Button>
+                                    </>
+                                )}
+                                {can(`sunrice.terms.${taxonomy.id}.delete`) && (
+                                    <Button
+                                        variant="ghost" size="sm" className="text-destructive" aria-label="Delete term"
+                                        onClick={() => window.confirm(`Delete "${t.translations[main]?.title ?? 'this term'}"? It is removed from every entry.`) && router.delete(adminUrl(`terms/${t.id}`, adminPath), { preserveScroll: true })}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </span>
+                        </li>
+                    );
+                })}
+                {terms.length === 0 && <li className="py-8 text-center text-sm text-muted-foreground">No terms yet.</li>}
             </ul>
 
             <Dialog open={open} onOpenChange={setOpen}>
@@ -122,7 +176,7 @@ export default function TermsPage({ taxonomy, terms, locales, mainLocale, bluepr
                                     <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="none">None</SelectItem>
-                                        {terms.filter((t) => t.id !== editing?.id).map((t) => (
+                                        {terms.filter((t) => !excludedParents.has(t.id)).map((t) => (
                                             <SelectItem key={t.id} value={String(t.id)}>{t.translations[main]?.title ?? `#${t.id}`}</SelectItem>
                                         ))}
                                     </SelectContent>

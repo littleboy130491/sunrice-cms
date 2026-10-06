@@ -80,9 +80,11 @@ class FormSubmissionsController extends Controller
     {
         Gate::authorize('deleteSubmissions', $submission->form);
 
+        // Its uploaded files go too, as when old submissions are pruned.
+        $submission->pruning();
         $submission->delete();
 
-        return back();
+        return back()->with('success', 'Submission deleted.');
     }
 
     public function export(Form $form): StreamedResponse

@@ -10,7 +10,7 @@ interface Props {
     columns: ColumnDef[];
     rows: Paginated<{ id: string | number; [key: string]: unknown }>;
     meta: { search: string | null; filters: Record<string, string>; sort: string | null };
-    can: { create: boolean };
+    can: { create: boolean; delete?: boolean };
     visibleColumns?: string[];
     filters?: FilterDef[];
 }
@@ -39,7 +39,7 @@ export default function ResourceIndex({ resource, columns, rows, meta, can, visi
                 filters={filters}
                 exportUrl={adminUrl(`resources/${resource.key}/export`, adminPath)}
                 bulkUrl={adminUrl(`resources/${resource.key}/bulk`, adminPath)}
-                bulkActions={[{ key: 'delete', label: 'Delete', variant: 'destructive', confirm: 'Delete selected records?' }]}
+                bulkActions={can.delete ? [{ key: 'delete', label: 'Delete', variant: 'destructive', confirm: 'Delete selected records?' }] : []}
                 rowHref={(row) => adminUrl(`resources/${resource.key}/${row.id}/edit`, adminPath)}
             />
         </div>

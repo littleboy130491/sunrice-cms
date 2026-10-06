@@ -45,6 +45,8 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
     const [folderId, setFolderId] = React.useState<number | null>(null);
     const [search, setSearch] = React.useState('');
     const [selected, setSelected] = React.useState<Set<number>>(new Set());
+    // The picked assets themselves, so picks from another folder or search survive.
+    const picked = React.useRef(new Map<number, ApiAsset>());
     const fileRef = React.useRef<HTMLInputElement>(null);
 
     const load = React.useCallback(async () => {
@@ -91,6 +93,7 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
             }
             toast.success(`Uploaded ${json.filename ?? file.name}.`);
             // Select what was just uploaded.
+            picked.current.set(json.id, json);
             setSelected((s) => (multiple ? new Set([...s, json.id]) : new Set([json.id])));
             await load();
         } finally {
@@ -99,11 +102,13 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
     };
 
     const choose = () => {
-        onSelect(assets.filter((a) => selected.has(a.id)).map((a) => ({
+        assets.forEach((a) => selected.has(a.id) && picked.current.set(a.id, a));
+        onSelect([...selected].map((id) => picked.current.get(id)).filter((a): a is ApiAsset => !!a).map((a) => ({
             id: a.id, filename: a.filename, url: a.url, is_image: a.mime_type.startsWith('image/'),
         })));
         setOpen(false);
         setSelected(new Set());
+        picked.current.clear();
     };
 
     return (
@@ -156,6 +161,7 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
                                 key={a.id}
                                 className={`flex flex-col items-center gap-1 rounded-md border p-2 text-xs ${selected.has(a.id) ? 'border-primary ring-1 ring-primary' : ''}`}
                                 onClick={() => {
+                                    picked.current.set(a.id, a);
                                     setSelected((s) => {
                                         const next = multiple ? new Set(s) : new Set<number>();
                                         if (s.has(a.id)) next.delete(a.id);
