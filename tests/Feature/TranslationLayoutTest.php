@@ -242,7 +242,7 @@ it('previews an unready translation from its draft over the main draft layout', 
         ->assertSee('INTRO[Welcome draft]', false)
         ->assertSee('CODE[SKU-1]', false)
         ->assertSee('HERO[Halo]', false);
-    expect($en->is_ready)->toBeFalse();
+    expect($en->refresh()->is_ready)->toBeFalse();
 });
 
 it('merges with the overlay helper directly', function () {
