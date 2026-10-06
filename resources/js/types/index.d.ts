@@ -61,6 +61,7 @@ export interface AdminField {
     handle: string;
     type: string;
     label: string;
+    instructions?: string;
     required?: boolean;
     display_type?: string;
     /** Resolved: whether the value differs per language. */

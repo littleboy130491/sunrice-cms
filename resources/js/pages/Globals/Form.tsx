@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { router, usePage } from '@inertiajs/react';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -53,6 +54,16 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
         setData(JSON.parse(saved));
         setErrors({});
     }, [locale, saved]);
+
+    const dirty = !isNew && JSON.stringify(data) !== saved;
+    useUnsavedChanges(dirty && !processing, () => submitMeta());
+
+    // Each language is saved separately: don't drop this one's edits silently.
+    const switchLocale = (lc: string) => {
+        if (lc === locale) return;
+        if (dirty && !window.confirm(`You have unsaved changes in ${locale.toUpperCase()}. Switch language and discard them?`)) return;
+        setLocale(lc);
+    };
 
     const submitMeta = () => {
         const options = {
@@ -127,9 +138,9 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
             ) : (
                 <>
                     {globalSet.translatable && (
-                        <Tabs value={locale} onValueChange={setLocale}>
+                        <Tabs value={locale} onValueChange={switchLocale} activationMode="manual">
                             <TabsList>
-                                {locales.map((l) => <TabsTrigger key={l} value={l}>{l}</TabsTrigger>)}
+                                {locales.map((l) => <TabsTrigger key={l} value={l} className="uppercase">{l}</TabsTrigger>)}
                             </TabsList>
                         </Tabs>
                     )}

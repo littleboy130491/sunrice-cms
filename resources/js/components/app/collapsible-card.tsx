@@ -41,18 +41,25 @@ export function CollapsibleCard({ title, description, storageKey, defaultOpen = 
 
     return (
         <Collapsible open={open} onOpenChange={change} asChild>
-            <Card className={cn(!open && 'gap-0')}>
-                <CardHeader>
-                    <CollapsibleTrigger className="flex w-full cursor-pointer items-start justify-between gap-2 text-left">
-                        <div className="grid gap-1.5">
+            <Card className="gap-0 overflow-hidden py-0">
+                <CardHeader className="px-0">
+                    <CollapsibleTrigger
+                        className={cn(
+                            'group/trigger flex w-full cursor-pointer items-start justify-between gap-3 px-6 py-4 text-left transition-colors hover:bg-muted/40',
+                            open && 'border-b border-border/70',
+                        )}
+                    >
+                        <div className="grid gap-1">
                             <CardTitle className={titleClassName}>{title}</CardTitle>
                             {description && open && <CardDescription>{description}</CardDescription>}
                         </div>
-                        <ChevronDown className={cn('mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform', !open && '-rotate-90')} />
+                        <span className="mt-[-2px] grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors group-hover/trigger:bg-muted group-hover/trigger:text-foreground">
+                            <ChevronDown className={cn('size-4 transition-transform duration-200', !open && '-rotate-90')} />
+                        </span>
                     </CollapsibleTrigger>
                 </CardHeader>
                 <CollapsibleContent>
-                    <CardContent className={contentClassName}>{children}</CardContent>
+                    <CardContent className={cn('py-5', contentClassName)}>{children}</CardContent>
                 </CollapsibleContent>
             </Card>
         </Collapsible>

@@ -18,10 +18,10 @@ function SortableRow({ id, locked, hidden, children }: { id: string; locked: boo
         <div
             ref={setNodeRef}
             style={{ transform: CSS.Transform.toString(transform), transition }}
-            className={cn('flex gap-2 rounded-md border p-3', hidden && 'border-dashed bg-muted/40')}
+            className={cn('flex gap-2 rounded-lg border border-border/80 bg-muted/25 p-3', hidden && 'border-dashed opacity-75')}
         >
             {!locked && (
-                <button type="button" className="cursor-grab text-muted-foreground" aria-label="Reorder" {...attributes} {...listeners}>
+                <button type="button" className="cursor-grab self-start rounded-md p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Reorder" {...attributes} {...listeners}>
                     <GripVertical className="h-4 w-4" />
                 </button>
             )}
@@ -78,7 +78,7 @@ export default function RepeaterField({ field, value, errors, pathPrefix, onChan
                 </SortableContext>
             </DndContext>
             {!secondary && (
-                <Button type="button" variant="outline" size="sm" className="self-start" onClick={() => onChange([...rows, { _id: newItemId() }])}>
+                <Button type="button" variant="outline" size="sm" className="h-10 w-full border-dashed bg-muted/30 font-normal text-muted-foreground shadow-none hover:text-foreground" onClick={() => onChange([...rows, { _id: newItemId() }])}>
                     <Plus /> Add row
                 </Button>
             )}

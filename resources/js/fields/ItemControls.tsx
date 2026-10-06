@@ -39,7 +39,7 @@ export default function ItemControls({ id, itemKey, hidden, locked, onKeyChange,
                 <Switch id={switchId} size="sm" checked={!hidden} onCheckedChange={(v) => onHiddenChange(!v)} disabled={locked} />
             </label>
             {!locked && (
-                <button type="button" className="text-muted-foreground hover:text-destructive" onClick={onRemove} aria-label="Remove">
+                <button type="button" className="grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive" onClick={onRemove} aria-label="Remove">
                     <X className="size-4" />
                 </button>
             )}
