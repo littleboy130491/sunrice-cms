@@ -31,7 +31,8 @@ class EntrySearchController extends Controller
             ->latest()
             ->limit(25)
             ->get()
-            ->filter(fn (Entry $e) => $request->user()?->can('view', $e) ?? true)
+            // Menu editors link to any entry, even ones they can't edit.
+            ->filter(fn (Entry $e) => $request->user()?->can('sunrice.menus.edit') || ($request->user()?->can('view', $e) ?? true))
             ->map(fn (Entry $e) => [
                 'id' => $e->id,
                 'title' => $e->translations->first()->title ?? "Entry #{$e->id}",

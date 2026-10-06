@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Testing\TestResponse;
 use Sunrice\Admin\Navigation;
 use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Frontend\UrlGenerator;
@@ -16,7 +17,7 @@ beforeEach(function () {
     $this->blueprint = Blueprint::factory()->create();
 });
 
-function saveCollection(string $handle, array $settings = []): Illuminate\Testing\TestResponse
+function saveCollection(string $handle, array $settings = []): TestResponse
 {
     return post('/cms/structure/collections', [
         'handle' => $handle, 'title' => ucfirst($handle),

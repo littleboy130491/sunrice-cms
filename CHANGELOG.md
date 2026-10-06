@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Menus: the item editor can now link to a collection archive (it was
+  saved without its target and never showed), pick a term from a taxonomy
+  (instead of typing an id), set a label per language (empty uses the linked
+  title), and edit existing items. Targets are validated for their type.
 - Taxonomies: attach collections from the taxonomy form, and switch term
   archive pages on there (there was no way to before). Term pages default
   to one per attached collection at `/{collection}/{taxonomy}/{slug}`,

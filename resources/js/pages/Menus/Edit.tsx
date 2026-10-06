@@ -1,21 +1,28 @@
 import * as React from 'react';
 import { router, usePage } from '@inertiajs/react';
-import { Plus, Trash2 } from 'lucide-react';
+import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EntryPicker, { PickedEntry } from '@/components/EntryPicker';
+import TermPicker, { PickedTerm } from '@/components/TermPicker';
+import { InputError } from '@/components/app/input-error';
 import { adminUrl } from '@/lib/route';
+import { useCan } from '@/lib/can';
 import type { SharedProps } from '@/types';
+
+type ItemType = 'url' | 'entry' | 'collection' | 'term';
 
 interface Item {
     id: number;
     parent_id: number | null;
-    type: string;
+    type: ItemType;
     target_id: number | null;
+    target_title: string | null;
     url: string | null;
     labels: Record<string, string>;
     new_tab: boolean;
@@ -24,65 +31,129 @@ interface Item {
 interface Props {
     menu: { id: number; handle: string; title: string };
     items: Item[];
+    collections: { id: number; title: string; has_archive: boolean }[];
+    taxonomies: { id: number; handle: string; title: string }[];
 }
 
-export default function MenuEdit({ menu, items }: Props) {
-    const { adminPath } = usePage<SharedProps>().props;
+interface FormState {
+    type: ItemType;
+    url: string;
+    entry: PickedEntry[];
+    collectionId: string;
+    taxonomy: string;
+    term: PickedTerm | null;
+    labels: Record<string, string>;
+    new_tab: boolean;
+}
+
+const TYPE_LABELS: Record<ItemType, string> = { url: 'URL', entry: 'Entry', collection: 'Collection archive', term: 'Term page' };
+
+const emptyForm = (taxonomy: string): FormState => ({
+    type: 'entry', url: '', entry: [], collectionId: '', taxonomy, term: null, labels: {}, new_tab: false,
+});
+
+export default function MenuEdit({ menu, items, collections, taxonomies }: Props) {
+    const { adminPath, locales, errors } = usePage<SharedProps & { errors: Record<string, string> }>().props;
+    const can = useCan();
+    const canEdit = can('sunrice.menus.edit');
     const [open, setOpen] = React.useState(false);
+    const [editing, setEditing] = React.useState<Item | null>(null);
     const [parentId, setParentId] = React.useState<number | null>(null);
-    const [form, setForm] = React.useState<{ type: string; target_id: number | null; url: string; labels: Record<string, string>; new_tab: boolean; picked: PickedEntry[] }>({
-        type: 'url', target_id: null, url: '', labels: {}, new_tab: false, picked: [],
-    });
+    const [form, setForm] = React.useState<FormState>(emptyForm(taxonomies[0]?.handle ?? ''));
 
     const roots = items.filter((i) => i.parent_id === null);
     const childrenOf = (id: number) => items.filter((i) => i.parent_id === id);
 
     const openCreate = (parent: number | null) => {
+        setEditing(null);
         setParentId(parent);
-        setForm({ type: 'url', target_id: null, url: '', labels: {}, new_tab: false, picked: [] });
+        setForm(emptyForm(taxonomies[0]?.handle ?? ''));
         setOpen(true);
     };
 
+    const openEdit = (item: Item) => {
+        setEditing(item);
+        setParentId(item.parent_id);
+        setForm({
+            ...emptyForm(taxonomies[0]?.handle ?? ''),
+            type: item.type,
+            url: item.url ?? '',
+            entry: item.type === 'entry' && item.target_id ? [{ id: item.target_id, title: item.target_title ?? `#${item.target_id}`, collection: '' }] : [],
+            collectionId: item.type === 'collection' && item.target_id ? String(item.target_id) : '',
+            term: item.type === 'term' && item.target_id ? { id: item.target_id, title: item.target_title ?? `#${item.target_id}` } : null,
+            labels: item.labels ?? {},
+            new_tab: item.new_tab,
+        });
+        setOpen(true);
+    };
+
+    const targetId = (): number | null => {
+        switch (form.type) {
+            case 'entry': return form.entry[0]?.id ?? null;
+            case 'collection': return form.collectionId ? Number(form.collectionId) : null;
+            case 'term': return form.term?.id ?? null;
+            default: return null;
+        }
+    };
+
     const submit = () => {
-        router.post(adminUrl(`menus/${menu.id}/items`, adminPath), {
+        const payload = {
             parent_id: parentId,
             type: form.type,
-            target_id: form.type === 'entry' || form.type === 'term' ? form.target_id : null,
+            target_id: targetId(),
             url: form.type === 'url' ? form.url : null,
             labels: form.labels,
             new_tab: form.new_tab,
-        }, { preserveScroll: true, onSuccess: () => setOpen(false) });
+        };
+        const options = { preserveScroll: true, onSuccess: () => setOpen(false) };
+        if (editing) {
+            router.put(adminUrl(`menu-items/${editing.id}`, adminPath), payload, options);
+        } else {
+            router.post(adminUrl(`menus/${menu.id}/items`, adminPath), payload, options);
+        }
     };
 
     const remove = (id: number) =>
         window.confirm('Remove item?') && router.delete(adminUrl(`menu-items/${id}`, adminPath), { preserveScroll: true });
 
-    const label = (i: Item) => Object.values(i.labels ?? {})[0] ?? `#${i.id}`;
+    const label = (i: Item) => i.labels?.[locales.main] || Object.values(i.labels ?? {})[0] || i.target_title || i.url || `#${i.id}`;
+    const selectedCollection = collections.find((c) => String(c.id) === form.collectionId);
+
+    const row = (item: Item, nested: boolean) => (
+        <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
+            <span className="flex min-w-0 items-center gap-2 text-sm">
+                <span className="truncate font-medium">{label(item)}</span>
+                <Badge variant="secondary">{TYPE_LABELS[item.type]}</Badge>
+                {item.type === 'url' ? (
+                    <code className="truncate text-xs text-muted-foreground">{item.url}</code>
+                ) : (
+                    <span className="truncate text-xs text-muted-foreground">{item.target_title ?? 'Missing target'}</span>
+                )}
+                {item.new_tab && <ExternalLink className="size-3 shrink-0 text-muted-foreground" />}
+            </span>
+            {canEdit && (
+                <span className="flex shrink-0 items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(item)} aria-label="Edit"><Pencil className="h-3.5 w-3.5" /></Button>
+                    {!nested && <Button variant="ghost" size="sm" onClick={() => openCreate(item.id)} aria-label="Add child"><Plus className="h-3.5 w-3.5" /></Button>}
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => remove(item.id)} aria-label="Remove"><Trash2 className="h-4 w-4" /></Button>
+                </span>
+            )}
+        </div>
+    );
 
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold tracking-tight">{menu.title} <code className="text-sm text-muted-foreground">{menu.handle}</code></h1>
-                <Button onClick={() => openCreate(null)}><Plus className="mr-1 h-4 w-4" /> Add item</Button>
+                {canEdit && <Button onClick={() => openCreate(null)}><Plus className="mr-1 h-4 w-4" /> Add item</Button>}
             </div>
 
             <ul className="flex flex-col gap-1">
                 {roots.map((item) => (
                     <li key={item.id}>
-                        <div className="flex items-center justify-between rounded-md border px-3 py-2">
-                            <span className="text-sm">{label(item)} <span className="text-xs text-muted-foreground">({item.type})</span></span>
-                            <span className="flex items-center gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => openCreate(item.id)}><Plus className="h-3 w-3" /></Button>
-                                <Button variant="ghost" size="sm" className="text-destructive" onClick={() => remove(item.id)}><Trash2 className="h-4 w-4" /></Button>
-                            </span>
-                        </div>
+                        {row(item, false)}
                         <ul className="ml-6 mt-1 flex flex-col gap-1">
-                            {childrenOf(item.id).map((child) => (
-                                <li key={child.id} className="flex items-center justify-between rounded-md border px-3 py-1.5">
-                                    <span className="text-sm">{label(child)} <span className="text-xs text-muted-foreground">({child.type})</span></span>
-                                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => remove(child.id)}><Trash2 className="h-4 w-4" /></Button>
-                                </li>
-                            ))}
+                            {childrenOf(item.id).map((child) => <li key={child.id}>{row(child, true)}</li>)}
                         </ul>
                     </li>
                 ))}
@@ -91,45 +162,83 @@ export default function MenuEdit({ menu, items }: Props) {
 
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Add menu item</DialogTitle></DialogHeader>
-                    <div className="flex flex-col gap-3">
+                    <DialogHeader><DialogTitle>{editing ? 'Edit menu item' : 'Add menu item'}</DialogTitle></DialogHeader>
+                    <div className="flex flex-col gap-4">
                         <div className="grid gap-2">
-                            <Label>Type</Label>
-                            <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+                            <Label>Links to</Label>
+                            <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as ItemType })}>
                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="url">URL</SelectItem>
-                                    <SelectItem value="entry">Entry</SelectItem>
-                                    <SelectItem value="collection">Collection</SelectItem>
-                                    <SelectItem value="term">Term</SelectItem>
+                                    {(Object.keys(TYPE_LABELS) as ItemType[]).map((t) => <SelectItem key={t} value={t}>{TYPE_LABELS[t]}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
-                        {form.type === 'url' ? (
+
+                        {form.type === 'url' && (
                             <div className="grid gap-2">
                                 <Label>URL</Label>
                                 <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="/about or https://…" />
-                            </div>
-                        ) : form.type === 'entry' ? (
-                            <EntryPicker
-                                value={form.picked}
-                                onChange={(picked) => setForm({ ...form, picked, target_id: picked[0]?.id ?? null })}
-                            />
-                        ) : (
-                            <div className="grid gap-2">
-                                <Label>Target id</Label>
-                                <Input type="number" value={form.target_id ?? ''} onChange={(e) => setForm({ ...form, target_id: Number(e.target.value) || null })} />
+                                <InputError message={errors.url} />
                             </div>
                         )}
+                        {form.type === 'entry' && (
+                            <div className="grid gap-2">
+                                <Label>Entry</Label>
+                                <EntryPicker value={form.entry} onChange={(entry) => setForm({ ...form, entry })} />
+                                <InputError message={errors.target_id} />
+                            </div>
+                        )}
+                        {form.type === 'collection' && (
+                            <div className="grid gap-2">
+                                <Label>Collection</Label>
+                                <Select value={form.collectionId} onValueChange={(v) => setForm({ ...form, collectionId: v })}>
+                                    <SelectTrigger><SelectValue placeholder="Choose a collection…" /></SelectTrigger>
+                                    <SelectContent>
+                                        {collections.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.title}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                {selectedCollection && !selectedCollection.has_archive && (
+                                    <p className="text-xs text-amber-600">This collection has no archive page, so the item stays hidden until you enable one.</p>
+                                )}
+                                <InputError message={errors.target_id} />
+                            </div>
+                        )}
+                        {form.type === 'term' && (
+                            <div className="grid gap-2">
+                                <Label>Term</Label>
+                                <div className="grid grid-cols-[10rem_1fr] gap-2">
+                                    <Select value={form.taxonomy} onValueChange={(v) => setForm({ ...form, taxonomy: v, term: null })}>
+                                        <SelectTrigger><SelectValue placeholder="Taxonomy" /></SelectTrigger>
+                                        <SelectContent>
+                                            {taxonomies.map((t) => <SelectItem key={t.id} value={t.handle}>{t.title}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <TermPicker taxonomy={form.taxonomy} value={form.term} onChange={(term) => setForm({ ...form, term })} />
+                                </div>
+                                {taxonomies.length === 0 && <p className="text-xs text-muted-foreground">No taxonomies yet.</p>}
+                                <InputError message={errors.target_id} />
+                            </div>
+                        )}
+
                         <div className="grid gap-2">
                             <Label>Label</Label>
-                            <Input value={form.labels.id ?? ''} onChange={(e) => setForm({ ...form, labels: { id: e.target.value } })} />
+                            {locales.available.map((lc) => (
+                                <div key={lc} className="flex items-center gap-2">
+                                    <span className="w-8 text-xs font-medium uppercase text-muted-foreground">{lc}</span>
+                                    <Input
+                                        value={form.labels[lc] ?? ''}
+                                        placeholder={form.type === 'url' ? '' : 'Uses the linked title'}
+                                        onChange={(e) => setForm({ ...form, labels: { ...form.labels, [lc]: e.target.value } })}
+                                    />
+                                </div>
+                            ))}
+                            <p className="text-xs text-muted-foreground">Empty languages fall back to the {locales.main.toUpperCase()} label, then the linked title.</p>
                         </div>
                         <label className="flex items-center gap-2 text-sm">
                             <Checkbox checked={form.new_tab} onCheckedChange={(c) => setForm({ ...form, new_tab: !!c })} />
                             Open in new tab
                         </label>
-                        <Button onClick={submit}>Add</Button>
+                        <Button onClick={submit}>{editing ? 'Save' : 'Add'}</Button>
                     </div>
                 </DialogContent>
             </Dialog>
