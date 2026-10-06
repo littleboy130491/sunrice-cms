@@ -13,7 +13,7 @@ import { useCan } from '@/lib/can';
 import { InputError } from '@/components/app/input-error';
 import type { SharedProps } from '@/types';
 
-interface UserRow { id: number; name: string; email: string; roles: string[] }
+interface UserRow { id: number; name: string; email: string; roles: string[]; can?: { update: boolean; delete: boolean } }
 interface RoleRow { id: number; name: string }
 
 export default function UsersIndex({ users, roles }: { users: UserRow[]; roles: RoleRow[] }) {
@@ -71,7 +71,7 @@ export default function UsersIndex({ users, roles }: { users: UserRow[]; roles: 
                     {users.map((u) => (
                         <TableRow key={u.id}>
                             <TableCell>
-                                {can('sunrice.users.edit') ? <button type="button" className="font-medium hover:underline" onClick={() => openEdit(u)}>{u.name}</button> : <span className="font-medium">{u.name}</span>}
+                                {(u.can?.update ?? can('sunrice.users.edit')) ? <button type="button" className="font-medium hover:underline" onClick={() => openEdit(u)}>{u.name}</button> : <span className="font-medium">{u.name}</span>}
                                 {/* On phones the email sits under the name. */}
                                 <div className="text-xs text-muted-foreground md:hidden">{u.email}</div>
                             </TableCell>
@@ -80,9 +80,9 @@ export default function UsersIndex({ users, roles }: { users: UserRow[]; roles: 
                                 <div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} variant="secondary">{r}</Badge>)}</div>
                             </TableCell>
                             <TableCell>
-                                {can('sunrice.users.delete') && (
+                                {(u.can?.delete ?? can('sunrice.users.delete')) && (
                                     <Button
-                                        variant="ghost" size="icon" className="text-destructive"
+                                        variant="ghost" size="icon" className="text-destructive" aria-label={`Delete ${u.email}`}
                                         onClick={() => window.confirm(`Delete ${u.email}?`) && router.delete(adminUrl(`users/${u.id}`, adminPath), { preserveScroll: true })}
                                     ><Trash2 className="h-4 w-4" /></Button>
                                 )}
@@ -97,10 +97,10 @@ export default function UsersIndex({ users, roles }: { users: UserRow[]; roles: 
                 <DialogContent>
                     <DialogHeader><DialogTitle>{editing ? `Edit ${editing.name}` : 'New user'}</DialogTitle></DialogHeader>
                     <form onSubmit={submit} className="flex flex-col gap-3">
-                        <div className="grid gap-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /><InputError message={errors.name} /></div>
-                        <div className="grid gap-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /><InputError message={errors.email} /></div>
-                        <div className="grid gap-2"><Label>{editing ? 'New password (blank = keep)' : 'Password'}</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /><InputError message={errors.password} /></div>
-                        <div className="grid gap-2"><Label>Confirm password</Label><Input type="password" value={form.password_confirmation} onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })} /></div>
+                        <div className="grid gap-2"><Label htmlFor="user-name">Name</Label><Input id="user-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /><InputError message={errors.name} /></div>
+                        <div className="grid gap-2"><Label htmlFor="user-email">Email</Label><Input id="user-email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /><InputError message={errors.email} /></div>
+                        <div className="grid gap-2"><Label htmlFor="user-password">{editing ? 'New password (blank = keep)' : 'Password'}</Label><Input id="user-password" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /><InputError message={errors.password} /></div>
+                        <div className="grid gap-2"><Label htmlFor="user-password-confirmation">Confirm password</Label><Input id="user-password-confirmation" type="password" value={form.password_confirmation} onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })} /></div>
                         <div className="grid gap-1">
                             <Label>Roles</Label>
                             {roles.map((r) => (

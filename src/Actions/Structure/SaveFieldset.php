@@ -25,6 +25,13 @@ class SaveFieldset
             'fields' => ['array'],
         ])->validate();
 
+        // Two fields with one handle would share (and overwrite) one value.
+        // Checked on its own: as part of the rules above it would reduce
+        // each field to just its handle in $validated.
+        validator(['fields' => $attributes['fields'] ?? []], [
+            'fields.*.handle' => ['required', 'string', 'max:100', 'distinct'],
+        ], [], ['fields.*.handle' => 'field handle'])->validate();
+
         $fieldset ??= new Fieldset;
         $fieldset->fill([
             'handle' => $validated['handle'] ?? $fieldset->handle,

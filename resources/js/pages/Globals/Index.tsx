@@ -26,7 +26,9 @@ export default function GlobalsIndex({ globals }: { globals: Row[] }) {
                 <TableBody>
                     {globals.map((g) => (
                         <TableRow key={g.id}>
-                            <TableCell><Link className="font-medium hover:underline" href={adminUrl(`globals/${g.id}/edit`, adminPath)}>{g.title}</Link></TableCell>
+                            <TableCell>{can('sunrice.globals.edit') ? (
+                                    <Link className="font-medium hover:underline" href={adminUrl(`globals/${g.id}/edit`, adminPath)}>{g.title}</Link>
+                                ) : <span className="font-medium">{g.title}</span>}</TableCell>
                             <TableCell className="max-md:hidden"><code className="text-xs">{g.handle}</code></TableCell>
                             <TableCell className="max-md:hidden"><Badge variant="secondary">{g.group}</Badge></TableCell>
                             <TableCell className="max-md:hidden">{g.blueprint?.title ?? '—'}</TableCell>

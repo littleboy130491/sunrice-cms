@@ -95,6 +95,14 @@ export default function TermsPage({ taxonomy, terms, locales, mainLocale, bluepr
     });
     walk(null, 0);
 
+    // The term being edited and its descendants can't be its parent.
+    const excludedParents = new Set<number>();
+    const exclude = (id: number) => {
+        excludedParents.add(id);
+        childrenOf(id).forEach((c) => exclude(c.id));
+    };
+    if (editing) exclude(editing.id);
+
     // Move a term among its siblings, then save the whole order.
     const move = (term: TermRow, dir: -1 | 1) => {
         const siblings = siblingsOf(term);
@@ -168,7 +176,7 @@ export default function TermsPage({ taxonomy, terms, locales, mainLocale, bluepr
                                     <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="none">None</SelectItem>
-                                        {terms.filter((t) => t.id !== editing?.id).map((t) => (
+                                        {terms.filter((t) => !excludedParents.has(t.id)).map((t) => (
                                             <SelectItem key={t.id} value={String(t.id)}>{t.translations[main]?.title ?? `#${t.id}`}</SelectItem>
                                         ))}
                                     </SelectContent>

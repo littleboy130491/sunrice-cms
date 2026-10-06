@@ -41,10 +41,18 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
     const [locale, setLocale] = React.useState(globalSet?.translatable ? mainLocale : '_shared');
     const [data, setData] = React.useState<Record<string, Json>>({});
 
+    // Translatable switched on/off (or the global just created): pick the right row.
     React.useEffect(() => {
-        setData(values?.[locale] ?? {});
+        setLocale(globalSet?.translatable ? mainLocale : '_shared');
+    }, [globalSet?.id, globalSet?.translatable, mainLocale]);
+
+    // Load the language's saved values when it changes or after a save. Keyed
+    // on the saved content, so a failed save (same values) keeps the edits.
+    const saved = JSON.stringify(values?.[locale] ?? {});
+    React.useEffect(() => {
+        setData(JSON.parse(saved));
         setErrors({});
-    }, [locale, values]);
+    }, [locale, saved]);
 
     const submitMeta = () => {
         const options = {

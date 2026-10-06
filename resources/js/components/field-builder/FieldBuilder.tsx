@@ -174,8 +174,10 @@ function SettingControl({
 }
 
 function FieldRow({
-    field, index, fieldTypes, fieldsets, depth, translatable, onUpdate, onRemove, dragHandle,
+    field, index, fieldTypes, fieldsets, depth, translatable, onUpdate, onRemove, dragHandle, saved = false,
 }: {
+    /** The field existed when the page loaded (content may be stored under its handle). */
+    saved?: boolean;
     /** Props for the drag handle (from useSortable). */
     dragHandle?: React.HTMLAttributes<HTMLButtonElement>;
     field: BuilderField;
@@ -188,6 +190,7 @@ function FieldRow({
     onRemove: () => void;
 }) {
     const [open, setOpen] = React.useState(false);
+    const originalHandle = React.useRef(field.handle);
     const typeDef = fieldTypes.find((t) => t.type === field.type);
     const isTranslatable = field.translatable ?? typeDef?.translatable ?? false;
     const switchId = `translatable-${depth}-${index}`;
@@ -218,6 +221,12 @@ function FieldRow({
                         <div className="grid gap-1">
                             <Label className="text-xs">Handle</Label>
                             <Input value={field.handle} onChange={(e) => onUpdate({ handle: slugify(e.target.value) })} disabled={field.type === 'fieldset'} />
+                            {saved && field.handle !== originalHandle.current && (
+                                <p className="text-xs text-amber-600">
+                                    Content saved under “{originalHandle.current}” won't show under the new name. To move it, keep the old name here and run
+                                    {' '}<code>php artisan sunrice:rename-field</code>.
+                                </p>
+                            )}
                         </div>
                         <div className="grid gap-1">
                             <Label className="text-xs">Label</Label>
@@ -281,6 +290,14 @@ function FieldRow({
     );
 }
 
+/** `text_1`, `text_2`…: the first free handle for a new field of this type. */
+function uniqueHandle(type: string, fields: BuilderField[]): string {
+    const taken = new Set(fields.map((f) => f.handle));
+    let n = 1;
+    while (taken.has(`${type}_${n}`)) n++;
+    return `${type}_${n}`;
+}
+
 function SortableField({ id, children }: { id: string; children: (dragHandle: React.HTMLAttributes<HTMLButtonElement>) => React.ReactNode }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
 
@@ -298,7 +315,7 @@ function SortableField({ id, children }: { id: string; children: (dragHandle: Re
 export default function FieldBuilder({ value, onChange, fieldTypes, fieldsets, depth = 0, translatable = false }: Props) {
     const add = (type: string) => {
         const next: BuilderField = {
-            handle: `${type}_${value.length + 1}`,
+            handle: uniqueHandle(type, value),
             type,
             label: type.replace('_', ' '),
             required: false,
@@ -320,6 +337,9 @@ export default function FieldBuilder({ value, onChange, fieldTypes, fieldsets, d
         }
         return id;
     };
+    // Fields present on load; renaming one of those can orphan saved content.
+    const initialIds = React.useRef<Set<string> | null>(null);
+    if (initialIds.current === null) initialIds.current = new Set(value.map(idOf));
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -346,6 +366,7 @@ export default function FieldBuilder({ value, onChange, fieldTypes, fieldsets, d
                                     depth={depth}
                                     translatable={translatable}
                                     dragHandle={dragHandle}
+                                    saved={initialIds.current?.has(idOf(field)) ?? false}
                                     onUpdate={(patch) => {
                                         const next = { ...field, ...patch };
                                         ids.current.set(next, idOf(field));
@@ -359,7 +380,8 @@ export default function FieldBuilder({ value, onChange, fieldTypes, fieldsets, d
                 </SortableContext>
             </DndContext>
 
-            <Select onValueChange={add}>
+            {/* Controlled and reset to empty, so the same type can be added twice in a row. */}
+            <Select value="" onValueChange={add}>
                 <SelectTrigger className="w-48">
                     <SelectValue placeholder={<><Plus className="mr-1 inline h-4 w-4" />Add field</>} />
                 </SelectTrigger>

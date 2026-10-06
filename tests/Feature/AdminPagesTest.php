@@ -90,6 +90,19 @@ it('creates blueprints with a nested field tree', function () {
         ->and($blueprint->fields[1]['fields'][0]['handle'])->toBe('author');
 });
 
+it('rejects blueprints with two fields sharing a handle', function () {
+    post('/cms/structure/blueprints', [
+        'title' => 'Article',
+        'handle' => 'article',
+        'fields' => [
+            ['handle' => 'body', 'type' => 'text'],
+            ['handle' => 'body', 'type' => 'textarea'],
+        ],
+    ])->assertSessionHasErrors('fields.0.handle');
+
+    expect(Blueprint::where('handle', 'article')->exists())->toBeFalse();
+});
+
 it('creates, updates and deletes fieldsets', function () {
     post('/cms/structure/fieldsets', [
         'title' => 'SEO',

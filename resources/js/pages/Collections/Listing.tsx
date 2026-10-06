@@ -33,10 +33,12 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
     const editable = secondary ? can.edit || can.translate : can.edit;
 
     // Load the language's saved values when switching tabs or after saving.
+    // Keyed on the saved content: a failed save (same values) keeps the edits.
+    const saved = JSON.stringify(values[locale] ?? { title: '', intro: '', data: {} });
     React.useEffect(() => {
-        setForm(values[locale] ?? { title: '', intro: '', data: {} });
+        setForm(JSON.parse(saved));
         setErrors({});
-    }, [locale, values]);
+    }, [locale, saved]);
 
     const save = (e: React.FormEvent) => {
         e.preventDefault();

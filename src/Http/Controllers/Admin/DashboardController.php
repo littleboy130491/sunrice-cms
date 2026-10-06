@@ -16,7 +16,14 @@ class DashboardController extends Controller
 {
     public function __invoke(): Response
     {
+        $user = request()->user();
+        // Only collections this user may open.
+        $visible = Collection::query()->get()
+            ->filter(fn (Collection $c) => $user->can('viewAny', [Entry::class, $c->id]))
+            ->pluck('id');
+
         $collections = Collection::query()
+            ->whereIn('id', $visible)
             ->withCount('entries')
             ->orderBy('title')
             ->get()
@@ -28,10 +35,14 @@ class DashboardController extends Controller
             ->all();
 
         $recentEdits = Entry::query()
+            ->whereIn('collection_id', $visible)
             ->with(['collection:id,title,handle', 'translations'])
             ->latest('updated_at')
-            ->limit(8)
+            ->limit(20)
             ->get()
+            ->filter(fn (Entry $e) => $user->can('view', $e))
+            ->take(8)
+            ->values()
             ->map(fn (Entry $e) => [
                 'id' => $e->id,
                 'title' => $e->translations->first()->title ?? '#'.$e->id,

@@ -25,7 +25,9 @@ export default function BlueprintsIndex({ blueprints }: { blueprints: Row[] }) {
                 <TableBody>
                     {blueprints.map((b) => (
                         <TableRow key={b.id}>
-                            <TableCell><Link className="font-medium hover:underline" href={adminUrl(`structure/blueprints/${b.id}/edit`, adminPath)}>{b.title}</Link></TableCell>
+                            <TableCell>{can('sunrice.blueprints.edit') ? (
+                                    <Link className="font-medium hover:underline" href={adminUrl(`structure/blueprints/${b.id}/edit`, adminPath)}>{b.title}</Link>
+                                ) : <span className="font-medium">{b.title}</span>}</TableCell>
                             <TableCell className="max-md:hidden"><code className="text-xs">{b.handle}</code></TableCell>
                             <TableCell className="max-md:hidden">{b.fields_count}</TableCell>
                             <TableCell>

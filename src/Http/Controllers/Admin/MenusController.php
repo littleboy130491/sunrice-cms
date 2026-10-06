@@ -83,6 +83,8 @@ class MenusController extends Controller
                     'term' => ($t = $terms->get($i->target_id)) ? $t->taxonomy->title.': '.$t->mainTranslation()?->name : null,
                     default => null,
                 },
+                // The term's taxonomy, so editing the item searches the right one.
+                'target_taxonomy' => $i->type === 'term' ? $terms->get($i->target_id)?->taxonomy?->handle : null,
                 'url' => $i->url,
                 'labels' => $i->labels,
                 'new_tab' => $i->new_tab,

@@ -29,6 +29,7 @@ class RolesController extends Controller
                     'id' => $r->id,
                     'name' => $r->name,
                     'permissions_count' => $r->permissions_count,
+                    'deletable' => request()->user()->can('delete', $r),
                 ]),
         ]);
     }

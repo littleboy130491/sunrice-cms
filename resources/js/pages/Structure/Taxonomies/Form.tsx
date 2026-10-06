@@ -82,9 +82,10 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
                     />
                     <div className="grid gap-2">
                         <Label>Blueprint</Label>
-                        <Select value={String(form.data.blueprint_id || '')} onValueChange={(v) => form.setData('blueprint_id', Number(v))}>
-                            <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                        <Select value={String(form.data.blueprint_id || 'none')} onValueChange={(v) => form.setData('blueprint_id', v === 'none' ? '' : Number(v))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="none">None (title and slug only)</SelectItem>
                                 {blueprints.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.title}</SelectItem>)}
                             </SelectContent>
                         </Select>

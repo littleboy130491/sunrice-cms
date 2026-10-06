@@ -26,7 +26,9 @@ export default function TaxonomiesIndex({ taxonomies }: { taxonomies: Row[] }) {
                 <TableBody>
                     {taxonomies.map((t) => (
                         <TableRow key={t.id}>
-                            <TableCell><Link className="font-medium hover:underline" href={adminUrl(`structure/taxonomies/${t.id}/edit`, adminPath)}>{t.title}</Link></TableCell>
+                            <TableCell>{can('sunrice.taxonomies.edit') ? (
+                                    <Link className="font-medium hover:underline" href={adminUrl(`structure/taxonomies/${t.id}/edit`, adminPath)}>{t.title}</Link>
+                                ) : <span className="font-medium">{t.title}</span>}</TableCell>
                             <TableCell className="max-md:hidden"><code className="text-xs">{t.handle}</code></TableCell>
                             <TableCell className="max-md:hidden">{t.hierarchical && <Badge variant="secondary">hierarchical</Badge>}</TableCell>
                             <TableCell><Link href={adminUrl(`taxonomies/${t.handle}`, adminPath)} className="hover:underline">{t.terms_count}</Link></TableCell>

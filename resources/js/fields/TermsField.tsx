@@ -21,7 +21,19 @@ export default function TermsField({ field, value, onChange }: FieldProps) {
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState('');
     const [options, setOptions] = React.useState<TermOption[]>([]);
-    const ids = (value as number[]) ?? [];
+    const ids = Array.isArray(value) ? (value as number[]) : [];
+    // Titles of picked terms, remembered as they're seen or looked up.
+    const [titles, setTitles] = React.useState<Record<number, string>>({});
+    const remember = (list: TermOption[]) => setTitles((t) => ({ ...t, ...Object.fromEntries(list.map((o) => [o.id, o.title])) }));
+    const missing = ids.filter((id) => !(id in titles)).join(',');
+    React.useEffect(() => {
+        if (!missing) return;
+        const params = new URLSearchParams();
+        missing.split(',').forEach((id) => params.append('ids[]', id));
+        fetchJson<{ data?: TermOption[] }>(`${adminUrl('api/terms', adminPath)}?${params}`)
+            .then((json) => remember(json.data ?? []))
+            .catch(() => undefined);
+    }, [missing, adminPath]);
 
     React.useEffect(() => {
         if (!open || !taxonomy) return;
@@ -31,6 +43,7 @@ export default function TermsField({ field, value, onChange }: FieldProps) {
             try {
                 const json = await fetchJson<{ data?: TermOption[] }>(`${adminUrl('api/terms', adminPath)}?${params}`);
                 setOptions(json.data ?? []);
+                remember(json.data ?? []);
             } catch (e) {
                 toast.error(e instanceof Error ? e.message : 'Could not load terms.');
             }
@@ -43,8 +56,8 @@ export default function TermsField({ field, value, onChange }: FieldProps) {
             <div className="flex flex-wrap gap-2">
                 {ids.map((id) => (
                     <span key={id} className="flex items-center gap-1 rounded-md border px-2 py-1 text-sm">
-                        {options.find((o) => o.id === id)?.title ?? `Term #${id}`}
-                        <button type="button" onClick={() => onChange(ids.filter((v) => v !== id))}>
+                        {titles[id] ?? `Term #${id}`}
+                        <button type="button" aria-label={`Remove ${titles[id] ?? 'term'}`} onClick={() => onChange(ids.filter((v) => v !== id))}>
                             <X className="h-3 w-3" />
                         </button>
                     </span>

@@ -23,6 +23,7 @@ interface Item {
     type: ItemType;
     target_id: number | null;
     target_title: string | null;
+    target_taxonomy?: string | null;
     url: string | null;
     labels: Record<string, string>;
     new_tab: boolean;
@@ -78,7 +79,7 @@ export default function MenuEdit({ menu, items, collections, taxonomies }: Props
         setEditing(item);
         setParentId(item.parent_id);
         setForm({
-            ...emptyForm(taxonomies[0]?.handle ?? ''),
+            ...emptyForm(item.target_taxonomy ?? taxonomies[0]?.handle ?? ''),
             type: item.type,
             url: item.url ?? '',
             entry: item.type === 'entry' && item.target_id ? [{ id: item.target_id, title: item.target_title ?? `#${item.target_id}`, collection: '' }] : [],
