@@ -88,7 +88,14 @@ class Seo extends Component
             return url($urls->entry($this->entry, $this->locale));
         }
 
-        return url()->current();
+        // Listings: keep the page number so page 2 isn't marked a copy of page 1.
+        $page = array_filter(
+            request()->query(),
+            fn ($value, $key) => preg_match('/(^|_)page$/', (string) $key) === 1 && is_numeric($value) && (int) $value > 1,
+            ARRAY_FILTER_USE_BOTH,
+        );
+
+        return url()->current().($page === [] ? '' : '?'.http_build_query($page));
     }
 
     /** @return array<string, string> */

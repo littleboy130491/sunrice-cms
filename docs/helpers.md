@@ -21,7 +21,7 @@ Facade: `Sunrice\Facades\Sunrice` (or `app(\Sunrice\Sunrice::class)`).
 | `sunrice_entries($collection)` | Alias of `Sunrice::entries()`. |
 | `sunrice_menu($handle, $locale)` | Alias of `Sunrice::menu()`. |
 | `sunrice_global($handle, $locale)` | Alias of `Sunrice::global()`. |
-| `sunrice_locale_urls(?Entry $entry)` | `[locale => url]` alternates for an entry. |
+| `sunrice_locale_urls(Entry\|Term\|null $page = null, ?Collection $collection = null)` | `[locale => url]` for a language switcher: the entry, the term (with the collection on per-collection term pages), or the current listing page. |
 
 ## EntryQuery
 

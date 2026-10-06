@@ -41,6 +41,9 @@ class SaveCollection
             'settings.archive_template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'settings.icon' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/'],
             'settings.archive_entries_in' => ['nullable', 'string', 'max:100'],
+            'archive_data' => ['nullable', 'array'],
+            'archive_data.title' => ['nullable', 'string', 'max:255'],
+            'archive_data.intro' => ['nullable', 'string', 'max:2000'],
             'taxonomy_ids' => ['array'],
             'taxonomy_ids.*' => ['integer', Rule::exists('sunrice_taxonomies', 'id')],
         ], [], [
@@ -64,6 +67,13 @@ class SaveCollection
             'blueprint_id' => Arr::get($validated, 'blueprint_id', $collection->blueprint_id),
             'settings' => $settings,
         ]);
+        if (array_key_exists('archive_data', $validated)) {
+            // Listing page heading and intro; other stored keys are kept.
+            $collection->archive_data = array_filter(
+                array_merge($collection->archive_data ?? [], (array) $validated['archive_data']),
+                fn ($value) => $value !== null && $value !== '',
+            );
+        }
         $collection->save();
 
         if (array_key_exists('taxonomy_ids', $validated)) {

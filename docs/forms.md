@@ -4,9 +4,10 @@ Build forms in the admin (`sunrice.forms.create`, then `sunrice.forms.{id}.edit`
 
 ```blade
 <x-sunrice::form handle="contact">
-    <input name="data[name]" required>
-    <input name="data[email]" type="email" required>
-    <textarea name="data[message]"></textarea>
+    <input name="data[name]" value="{{ $component->old('name') }}" required>
+    <input name="data[email]" type="email" value="{{ $component->old('email') }}" required>
+    @if ($message = $component->error('email')) <p>{{ $message }}</p> @endif
+    <textarea name="data[message]">{{ $component->old('message') }}</textarea>
 </x-sunrice::form>
 ```
 

@@ -5,10 +5,10 @@
     Available: $entries (paginator of Entry, already resolved for $locale),
     $collection, $locale, $pageType.
 
-    $collection->archive_data holds the values of the collection's archive
-    fields (set under Structure → Collections → Archive).
+    $collection->archive_data holds the listing heading (`title`) and
+    intro (`intro`) set under Structure → Collections → Pages & URLs.
 --}}
-@extends('sunrice.layouts.app', ['seoTitle' => $collection->title])
+@extends('sunrice.layouts.app', ['seoTitle' => ($collection->archive_data['title'] ?? null) ?: $collection->title])
 
 @section('content')
     <h1>{{ $collection->archive_data['title'] ?? $collection->title }}</h1>

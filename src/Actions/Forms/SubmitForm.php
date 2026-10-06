@@ -26,7 +26,13 @@ class SubmitForm
     {
         $schema = $form->schema();
 
-        $data = Validator::make(['data' => $input], $schema->rules('data'))->validate()['data'];
+        // Messages name fields by their label ("Email"), not "data.email".
+        $attributes = [];
+        foreach ($schema->fields() as $field) {
+            $attributes['data.'.$field['handle']] = (string) (($field['label'] ?? '') ?: str_replace('_', ' ', $field['handle']));
+        }
+
+        $data = Validator::make(['data' => $input], $schema->rules('data'), [], $attributes)->validate()['data'];
         $data = $schema->normalize($data);
 
         // Store uploaded files on the private forms disk.

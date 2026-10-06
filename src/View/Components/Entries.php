@@ -29,7 +29,7 @@ class Entries extends Component
      * @param  int|null  $limit  hard limit for non-paginated queries
      * @param  array<string, mixed>|string  $where  filters: [field => value] or [[field, op, value], ...]
      * @param  array<string, string|array<int, string>>|string  $terms  taxonomy => slug(s)
-     * @param  string|null  $orderBy  e.g. 'published_at' or '-price'
+     * @param  string|null  $orderBy  e.g. 'published_at', '-price' or 'published_at desc'
      * @param  string|null  $with  comma-separated relations to eager load
      */
     public function __construct(
@@ -55,9 +55,13 @@ class Entries extends Component
             $query->whereTerm($taxonomy, $slugs, includeChildren: true);
         }
 
-        if ($orderBy !== null && $orderBy !== '') {
-            $direction = str_starts_with($orderBy, '-') ? 'desc' : 'asc';
-            $query->orderBy(ltrim($orderBy, '-'), $direction);
+        // '-published_at', 'published_at desc' or 'title asc'; several
+        // comma-separated ('-published_at, title').
+        foreach (array_filter(array_map('trim', explode(',', (string) $orderBy))) as $order) {
+            $parts = preg_split('/\s+/', $order) ?: [$order];
+            $field = ltrim($parts[0], '-');
+            $direction = str_starts_with($parts[0], '-') || strtolower($parts[1] ?? '') === 'desc' ? 'desc' : 'asc';
+            $query->orderBy($field, $direction);
         }
 
         if ($with !== null && $with !== '') {

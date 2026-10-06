@@ -12,7 +12,8 @@ use Sunrice\Models\Collection;
  * Internal (entry) or external link. Stored:
  * {type: 'url'|'entry', url, entry_id, label, new_tab}.
  * Hydrates to {url, label, new_tab} — entry links resolve through the
- * UrlGenerator so they follow slug changes and the active locale.
+ * UrlGenerator so they follow slug changes and the active locale, and
+ * use the entry's title when no label is set.
  */
 class Link extends FieldType
 {
@@ -55,11 +56,15 @@ class Link extends FieldType
         }
 
         $url = $value['url'] ?? null;
-        if (($value['type'] ?? null) === 'entry' && ($value['entry_id'] ?? null)) {
-            $entry = $ctx->entry((int) $value['entry_id']);
+        $label = ($value['label'] ?? null) ?: null;
+        $entryId = $value['entry_id'] ?? $value['entry'] ?? null;
+        if (($value['type'] ?? null) === 'entry' && $entryId) {
+            $entry = $ctx->entry((int) $entryId);
             if ($entry !== null) {
                 $entry->resolveFor($ctx->locale);
                 $url = $entry->url;
+                // No link text given: use the entry's title.
+                $label ??= $entry->title;
             } else {
                 $url = null;
             }
@@ -67,15 +72,16 @@ class Link extends FieldType
 
         return [
             'url' => $url,
-            'label' => $value['label'] ?? null,
+            'label' => $label,
             'new_tab' => (bool) ($value['new_tab'] ?? false),
         ];
     }
 
     public function references(mixed $value, array $field): array
     {
-        if (is_array($value) && ($value['type'] ?? null) === 'entry' && ($value['entry_id'] ?? null)) {
-            return [['target_type' => 'entry', 'target_id' => (int) $value['entry_id']]];
+        $entryId = is_array($value) ? ($value['entry_id'] ?? $value['entry'] ?? null) : null;
+        if (is_array($value) && ($value['type'] ?? null) === 'entry' && $entryId) {
+            return [['target_type' => 'entry', 'target_id' => (int) $entryId]];
         }
 
         return [];
