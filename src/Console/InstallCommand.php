@@ -84,7 +84,7 @@ class InstallCommand extends Command
         }
 
         $this->callSilently('storage:link');
-        $this->components->twoColumnDetail('Storage link', UploadAsset::needsStorageLink() ? 'could not be created: run php artisan storage:link' : 'public/storage created');
+        $this->components->twoColumnDetail('Storage link', file_exists(public_path('storage')) ? 'public/storage created' : 'could not be created: run php artisan storage:link');
     }
 
     protected function publishPermissionMigration(): void
