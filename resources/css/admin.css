@@ -1,5 +1,8 @@
-@import 'tailwindcss';
+@import 'tailwindcss' source('../js');
 @import 'tw-animate-css';
+
+/* Only admin sources are scanned, so editing docs or PHP never changes the built CSS. */
+@source '../views/app.blade.php';
 
 @custom-variant dark (&:is(.dark *));
 
