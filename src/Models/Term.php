@@ -144,7 +144,7 @@ class Term extends Model
      */
     public function get(string $handle): mixed
     {
-        $data = ($this->resolved ?? $this->mainTranslation())?->data ?? [];
+        $data = ($this->resolved ?? $this->mainTranslation())->data ?? [];
         $blueprint = $this->taxonomy?->blueprint;
 
         if ($blueprint === null) {
