@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { adminUrl } from '@/lib/route';
 import { useForm } from '@inertiajs/react';
 import type { SharedProps } from '@/types';
@@ -53,27 +53,20 @@ export default function RoleEdit({ role, permissionGroups }: { role: { id: numbe
             )}
             <div className="grid gap-4 md:grid-cols-2">
                 {permissionGroups.map((g) => (
-                    <Card key={g.group}>
-                        <CardHeader>
-                            <CardTitle className="flex items-center justify-between text-sm">
-                                {g.group}
-                                {editable && (
-                                    <button type="button" className="text-xs text-muted-foreground hover:underline" onClick={() => toggleGroup(g)}>
-                                        toggle all
-                                    </button>
-                                )}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col gap-2">
-                            {g.permissions.map((p) => (
-                                <label key={p.name} className="flex items-center gap-2 text-sm">
-                                    <Checkbox checked={form.data.permissions.includes(p.name)} onCheckedChange={() => toggle(p.name)} disabled={!editable} />
-                                    <span>{p.label}</span>
-                                    <code className="ml-auto text-[10px] text-muted-foreground">{p.name}</code>
-                                </label>
-                            ))}
-                        </CardContent>
-                    </Card>
+                    <CollapsibleCard key={g.group} title={g.group} storageKey={`role:${g.group}`} titleClassName="text-sm" contentClassName="flex flex-col gap-2" hasErrors={permissionErrors.length > 0}
+                        headerAction={editable && (
+                            <button type="button" className="text-xs text-muted-foreground hover:underline" onClick={() => toggleGroup(g)}>
+                                toggle all
+                            </button>
+                        )}>
+                        {g.permissions.map((p) => (
+                            <label key={p.name} className="flex items-center gap-2 text-sm">
+                                <Checkbox checked={form.data.permissions.includes(p.name)} onCheckedChange={() => toggle(p.name)} disabled={!editable} />
+                                <span>{p.label}</span>
+                                <code className="ml-auto text-[10px] text-muted-foreground">{p.name}</code>
+                            </label>
+                        ))}
+                    </CollapsibleCard>
                 ))}
             </div>
             {editable && <div><Button type="submit" disabled={form.processing}>{form.processing ? 'Saving…' : 'Save role'}</Button></div>}

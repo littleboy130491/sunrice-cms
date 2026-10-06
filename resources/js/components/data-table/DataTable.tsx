@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     ColumnDef as TanColumnDef,
@@ -272,116 +273,118 @@ export function DataTable<T extends { id: number | string }>({
                 </div>
             </div>
 
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_2px_12px_-5px_rgb(35_25_60/0.06)]">
-                <Table>
-                    <TableHeader className="bg-muted/60">
-                        <TableRow className="hover:bg-transparent">
-                            {reorderable && <TableHead className="w-8" />}
-                            <TableHead className="w-8">
-                                <Checkbox
-                                    aria-label="Select all rows"
-                                    checked={allSelected}
-                                    onCheckedChange={(checked) =>
-                                        setSelection(
-                                            checked
-                                                ? Object.fromEntries(orderedData.map((r) => [String(r.id), true]))
-                                                : {},
-                                        )
-                                    }
-                                />
-                            </TableHead>
-                            {visibleColumns.map((c) => (
-                                <TableHead key={c.key}>
-                                    {c.sortable ? (
-                                        <button
-                                            type="button"
-                                            className="-ml-2 inline-flex h-8 items-center gap-1 rounded-md px-2 hover:bg-accent hover:text-accent-foreground"
-                                            onClick={() => toggleSort(c.key)}
-                                        >
-                                            {c.label}
-                                            {state.sort === c.key ? (
-                                                <ArrowUp className="h-3 w-3" />
-                                            ) : state.sort === `-${c.key}` ? (
-                                                <ArrowDown className="h-3 w-3" />
-                                            ) : (
-                                                <ArrowUpDown className="h-3 w-3 opacity-40" />
-                                            )}
-                                        </button>
-                                    ) : (
-                                        c.label
-                                    )}
+            <CollapsibleCard title="Results" storageKey={`table:${tableKey}`} contentClassName="p-0">
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                    <div className="overflow-hidden">
+                    <Table>
+                        <TableHeader className="bg-muted/60">
+                            <TableRow className="hover:bg-transparent">
+                                {reorderable && <TableHead className="w-8" />}
+                                <TableHead className="w-8">
+                                    <Checkbox
+                                        aria-label="Select all rows"
+                                        checked={allSelected}
+                                        onCheckedChange={(checked) =>
+                                            setSelection(
+                                                checked
+                                                    ? Object.fromEntries(orderedData.map((r) => [String(r.id), true]))
+                                                    : {},
+                                            )
+                                        }
+                                    />
                                 </TableHead>
-                            ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <SortableContext items={orderedData.map((r) => r.id)} strategy={verticalListSortingStrategy}>
-                            {orderedData.map((row) => {
-                                const cells = (
-                                    <>
-                                        <TableCell>
-                                            <Checkbox
-                                                aria-label="Select row"
-                                                checked={!!selection[String(row.id)]}
-                                                onCheckedChange={(checked) =>
-                                                    setSelection((s) => ({ ...s, [String(row.id)]: !!checked }))
-                                                }
-                                            />
-                                        </TableCell>
-                                        {visibleColumns.map((c) => (
-                                            <TableCell key={c.key}>
-                                                {rowHref?.(row) ? (
-                                                    <Link href={rowHref(row) as string} className="font-medium underline-offset-4 hover:underline">
-                                                        {cellValue(row, c)}
-                                                    </Link>
+                                {visibleColumns.map((c) => (
+                                    <TableHead key={c.key}>
+                                        {c.sortable ? (
+                                            <button
+                                                type="button"
+                                                className="-ml-2 inline-flex h-8 items-center gap-1 rounded-md px-2 hover:bg-accent hover:text-accent-foreground"
+                                                onClick={() => toggleSort(c.key)}
+                                            >
+                                                {c.label}
+                                                {state.sort === c.key ? (
+                                                    <ArrowUp className="h-3 w-3" />
+                                                ) : state.sort === `-${c.key}` ? (
+                                                    <ArrowDown className="h-3 w-3" />
                                                 ) : (
-                                                    cellValue(row, c)
+                                                    <ArrowUpDown className="h-3 w-3 opacity-40" />
                                                 )}
+                                            </button>
+                                        ) : (
+                                            c.label
+                                        )}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <SortableContext items={orderedData.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+                                {orderedData.map((row) => {
+                                    const cells = (
+                                        <>
+                                            <TableCell>
+                                                <Checkbox
+                                                    aria-label="Select row"
+                                                    checked={!!selection[String(row.id)]}
+                                                    onCheckedChange={(checked) =>
+                                                        setSelection((s) => ({ ...s, [String(row.id)]: !!checked }))
+                                                    }
+                                                />
                                             </TableCell>
-                                        ))}
-                                    </>
-                                );
+                                            {visibleColumns.map((c) => (
+                                                <TableCell key={c.key}>
+                                                    {rowHref?.(row) ? (
+                                                        <Link href={rowHref(row) as string} className="font-medium underline-offset-4 hover:underline">
+                                                            {cellValue(row, c)}
+                                                        </Link>
+                                                    ) : (
+                                                        cellValue(row, c)
+                                                    )}
+                                                </TableCell>
+                                            ))}
+                                        </>
+                                    );
 
-                                return reorderable ? (
-                                    <SortableRow key={row.id} id={row.id}>
-                                        {cells}
-                                    </SortableRow>
-                                ) : (
-                                    <TableRow key={row.id}>{cells}</TableRow>
-                                );
-                            })}
-                            {orderedData.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={visibleColumns.length + (reorderable ? 2 : 1)} className="h-24 text-center text-muted-foreground">
-                                        No results.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </SortableContext>
-                    </TableBody>
-                </Table>
-                </div>
-            </DndContext>
-
-            <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
-                <span>
-                    {rows.total === 0 ? 'No rows' : `Showing ${rows.from ?? 0}–${rows.to ?? 0} of ${rows.total}`}
-                </span>
-                {rows.last_page > 1 && (
-                    <div className="flex items-center gap-2">
-                        <span className="hidden sm:inline">
-                            Page {rows.current_page} of {rows.last_page}
-                        </span>
-                        <PageButton url={rows.links[0]?.url ?? null} label="Previous page">
-                            <ChevronLeft />
-                        </PageButton>
-                        <PageButton url={rows.links[rows.links.length - 1]?.url ?? null} label="Next page">
-                            <ChevronRight />
-                        </PageButton>
+                                    return reorderable ? (
+                                        <SortableRow key={row.id} id={row.id}>
+                                            {cells}
+                                        </SortableRow>
+                                    ) : (
+                                        <TableRow key={row.id}>{cells}</TableRow>
+                                    );
+                                })}
+                                {orderedData.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={visibleColumns.length + (reorderable ? 2 : 1)} className="h-24 text-center text-muted-foreground">
+                                            No results.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </SortableContext>
+                        </TableBody>
+                    </Table>
                     </div>
-                )}
-            </div>
+                </DndContext>
+
+                <div className="flex items-center justify-between gap-4 px-6 py-4 text-sm text-muted-foreground">
+                    <span>
+                        {rows.total === 0 ? 'No rows' : `Showing ${rows.from ?? 0}–${rows.to ?? 0} of ${rows.total}`}
+                    </span>
+                    {rows.last_page > 1 && (
+                        <div className="flex items-center gap-2">
+                            <span className="hidden sm:inline">
+                                Page {rows.current_page} of {rows.last_page}
+                            </span>
+                            <PageButton url={rows.links[0]?.url ?? null} label="Previous page">
+                                <ChevronLeft />
+                            </PageButton>
+                            <PageButton url={rows.links[rows.links.length - 1]?.url ?? null} label="Next page">
+                                <ChevronRight />
+                            </PageButton>
+                        </div>
+                    )}
+                </div>
+            </CollapsibleCard>
         </div>
     );
 }

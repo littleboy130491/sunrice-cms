@@ -330,9 +330,10 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
             )}
 
             <form ref={formRef} onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-                <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-6 disabled:opacity-80">
+                <div className="flex min-w-0 flex-col gap-6">
                     {contentTabs.map((tab, index) => (
-                        <CollapsibleCard key={tab.handle} title={tab.label} storageKey={`entry:${collection.handle}:${tab.handle}`} contentClassName="flex flex-col gap-6">
+                        <CollapsibleCard key={tab.handle} title={tab.label} storageKey={`entry:${collection.handle}:${tab.handle}`} hasErrors={Object.keys(form.errors).length > 0} contentClassName="flex flex-col gap-6">
+                            <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-6 disabled:opacity-80">
                                 {index === 0 && (
                                     <div className="grid gap-4 sm:grid-cols-2">
                                         <div className="grid gap-2">
@@ -370,24 +371,28 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                         onChange={(values) => form.setData('data', values)}
                                     />
                                 </TranslationModeProvider>
+                            </fieldset>
                         </CollapsibleCard>
                     ))}
                     {seoTab && (
                         <CollapsibleCard
+                            hasErrors={Object.keys(form.errors).length > 0}
                             title={seoTab.label}
                             description="How this entry appears in search results and social shares."
                             storageKey={`entry:${collection.handle}:seo`}
                         >
-                            <FieldRenderer
-                                fields={seoTab.fields}
-                                values={form.data.seo}
-                                errors={form.errors}
-                                pathPrefix="seo"
-                                onChange={(values) => form.setData('seo', values)}
-                            />
+                            <fieldset disabled={!canEdit} className="min-w-0 disabled:opacity-80">
+                                <FieldRenderer
+                                    fields={seoTab.fields}
+                                    values={form.data.seo}
+                                    errors={form.errors}
+                                    pathPrefix="seo"
+                                    onChange={(values) => form.setData('seo', values)}
+                                />
+                            </fieldset>
                         </CollapsibleCard>
                     )}
-                </fieldset>
+                </div>
 
                 <div className="flex flex-col gap-6 lg:sticky lg:top-6">
                     <CollapsibleCard title="Status" titleClassName="text-sm" storageKey="entry:status" contentClassName="flex flex-col gap-4">

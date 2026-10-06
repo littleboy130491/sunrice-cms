@@ -14,7 +14,7 @@ export default function AuthLayout({ children, title = 'Log in to Sunrice', desc
     return (
         <div className="sunrice-shell grid min-h-svh bg-background p-4 lg:grid-cols-2 lg:gap-4">
             <Head title={title} />
-            <aside className="sunrice-atmosphere relative hidden flex-col justify-between overflow-hidden rounded-3xl p-10 lg:flex xl:p-14">
+            <aside className="sunrice-atmosphere relative hidden flex-col justify-between overflow-hidden rounded-xl p-10 lg:flex xl:p-14">
                 <div className="flex items-center gap-3 text-lg font-semibold tracking-tight">
                     <AppLogoIcon className="size-6" /> Sunrice.
                 </div>

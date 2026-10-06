@@ -55,7 +55,8 @@ vendor/bin/testbench serve            # http://127.0.0.1:8000/cms
 
 Sign in as `admin@example.com` / `password`. `workbench:build` resets
 the database; re-run it (or `vendor/bin/testbench sunrice:publish-assets`)
-after `npm run build`. Tests: `vendor/bin/pest`; code style: `vendor/bin/pint`.
+after `npm run build`. Tests: `vendor/bin/pest`; frontend component checks:
+`npm run test:frontend`; code style: `vendor/bin/pint`.
 
 ## License
 

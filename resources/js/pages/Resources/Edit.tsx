@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { adminUrl } from '@/lib/route';
 import FieldRenderer from '@/fields/FieldRenderer';
 import type { AdminField, SharedProps, Json } from '@/types';
@@ -43,12 +43,9 @@ export default function ResourceEdit({ resource, fields, record }: Props) {
             <h1 className="sunrice-page-title">
                 {isNew ? `New ${resource.singularLabel}` : `Edit ${resource.singularLabel}`}
             </h1>
-            <Card>
-                <CardHeader><CardTitle>{resource.label}</CardTitle></CardHeader>
-                <CardContent>
-                    <FieldRenderer fields={fields} values={values} errors={errors} onChange={setValues} />
-                </CardContent>
-            </Card>
+            <CollapsibleCard title={resource.label} storageKey="resource:resource-label" hasErrors={Object.keys(errors).length > 0}>
+                <FieldRenderer fields={fields} values={values} errors={errors} onChange={setValues} />
+            </CollapsibleCard>
             <Button onClick={save} disabled={processing}>{processing ? 'Saving…' : isNew ? 'Create' : 'Save'}</Button>
         </div>
     );
