@@ -42,8 +42,26 @@ field handles it expects.
   `@foreach ($entries as $entry)` a listing's `$entry` is its last card.
 - The language switcher shows the names set under Settings → Languages
   and links each language's version of the entry, term page or listing.
-- A listing's heading and intro are set per language in the collection
-  form; templates read them with `$collection->archiveText($locale)`.
+- Collection and taxonomy titles can be set per language in their forms;
+  templates use `$collection->titleIn($locale)` / `$taxonomy->titleIn($locale)`.
+
+### Listing pages
+
+A collection's listing page (archive) has its own content, edited from
+the collection's entries list with the **Listing page** button, one tab
+per language:
+
+- a heading and intro, read with `$collection->archiveText($locale)`
+  (`['title' => …, 'intro' => …]`, falling back to the main language);
+- any fields you like: create a blueprint (e.g. `description` rich text,
+  `image` asset, a `hero` flexible field…) and pick it as **Listing
+  blueprint** under Structure → Collections → Pages & URLs. Read them with
+  `$collection->archive('handle')`, hydrated like entry fields. As with
+  entries, translatable fields can differ per language and the others are
+  shared with the main language.
+
+Editing the main language needs the collection's entry **edit**
+permission; other languages also accept **translate**.
 
 ## Reading data
 

@@ -69,7 +69,7 @@ class CollectionsController extends Controller
         return Inertia::render('Structure/Collections/Form', [
             'collection' => $collection->load('taxonomies:id')->only(
                 'id', 'handle', 'title', 'blueprint_id', 'settings',
-            ) + ['archive_data' => Collection::archiveByLocale($collection->archive_data), 'taxonomy_ids' => $collection->taxonomies->pluck('id')],
+            ) + ['taxonomy_ids' => $collection->taxonomies->pluck('id')],
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
             'taxonomies' => Taxonomy::query()->orderBy('title')->get(['id', 'title', 'handle']),
         ]);

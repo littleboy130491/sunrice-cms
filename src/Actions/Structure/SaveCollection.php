@@ -10,7 +10,6 @@ use Illuminate\Validation\ValidationException;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Collection;
 use Sunrice\Permissions\SyncPermissions;
-use Sunrice\Support\Locales;
 
 class SaveCollection
 {
@@ -34,6 +33,8 @@ class SaveCollection
             'settings.sluggable' => ['boolean'],
             'settings.archivable' => ['boolean'],
             'settings.has_single' => ['boolean'],
+            // Fields for the listing page, edited from the collection's entries list.
+            'settings.archive_blueprint_id' => ['nullable', 'integer', Rule::exists('sunrice_blueprints', 'id')],
             'settings.titles' => ['nullable', 'array'],
             'settings.titles.*' => ['nullable', 'string', 'max:255'],
             'settings.has_archive' => ['boolean'],
@@ -44,11 +45,6 @@ class SaveCollection
             'settings.archive_template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'settings.icon' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/'],
             'settings.archive_entries_in' => ['nullable', 'string', 'max:100'],
-            // Listing heading and intro per language: {locale: {title, intro}}.
-            'archive_data' => ['nullable', 'array'],
-            'archive_data.*' => ['array'],
-            'archive_data.*.title' => ['nullable', 'string', 'max:255'],
-            'archive_data.*.intro' => ['nullable', 'string', 'max:2000'],
             'taxonomy_ids' => ['array'],
             'taxonomy_ids.*' => ['integer', Rule::exists('sunrice_taxonomies', 'id')],
         ], [], [
@@ -72,9 +68,6 @@ class SaveCollection
             'blueprint_id' => Arr::get($validated, 'blueprint_id', $collection->blueprint_id),
             'settings' => $settings,
         ]);
-        if (array_key_exists('archive_data', $validated)) {
-            $collection->archive_data = $this->archiveData($collection, (array) $validated['archive_data']);
-        }
         $collection->save();
 
         if (array_key_exists('taxonomy_ids', $validated)) {
@@ -109,29 +102,6 @@ class SaveCollection
     }
 
     /**
-     * Merge the posted listing text into what is stored, per language,
-     * dropping blanks. Unknown languages are ignored.
-     *
-     * @param  array<string, mixed>  $posted
-     * @return array<string, array<string, string>>
-     */
-    protected function archiveData(Collection $collection, array $posted): array
-    {
-        $stored = Collection::archiveByLocale($collection->archive_data);
-        foreach ($posted as $locale => $text) {
-            if (! Locales::isAvailable((string) $locale) || ! is_array($text)) {
-                continue;
-            }
-            $stored[$locale] = array_filter(
-                array_merge($stored[$locale] ?? [], array_intersect_key($text, array_flip(['title', 'intro']))),
-                fn ($value) => is_string($value) && $value !== '',
-            );
-        }
-
-        return array_filter($stored);
-    }
-
-    /**
      * Drop blanks (so defaults apply) and tidy the archive URL.
      *
      * @param  array<string, mixed>  $settings
@@ -145,7 +115,7 @@ class SaveCollection
                 unset($settings['titles']);
             }
         }
-        foreach (['archive_route', 'template', 'archive_template', 'per_page'] as $key) {
+        foreach (['archive_route', 'template', 'archive_template', 'per_page', 'archive_blueprint_id'] as $key) {
             if (array_key_exists($key, $settings) && ($settings[$key] === null || $settings[$key] === '')) {
                 unset($settings[$key]);
             }
@@ -153,8 +123,10 @@ class SaveCollection
         if (isset($settings['archive_route'])) {
             $settings['archive_route'] = '/'.trim((string) $settings['archive_route'], '/');
         }
-        if (isset($settings['per_page'])) {
-            $settings['per_page'] = (int) $settings['per_page'];
+        foreach (['per_page', 'archive_blueprint_id'] as $key) {
+            if (isset($settings[$key])) {
+                $settings[$key] = (int) $settings[$key];
+            }
         }
 
         return $settings;

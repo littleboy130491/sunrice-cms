@@ -17,8 +17,6 @@ interface CollectionShape {
     title: string;
     blueprint_id: number | null;
     settings: Record<string, Json>;
-    /** Listing heading and intro per language. */
-    archive_data?: Record<string, { title?: string; intro?: string }> | null;
     taxonomy_ids: number[];
 }
 
@@ -44,12 +42,9 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             template: (collection?.settings?.template as string) ?? '',
             archive_template: (collection?.settings?.archive_template as string) ?? '',
             icon: (collection?.settings?.icon as string) ?? 'file-text',
+            archive_blueprint_id: (collection?.settings?.archive_blueprint_id as number | undefined) ?? ('' as number | ''),
             titles: ((collection?.settings?.titles ?? {}) as Record<string, string>),
         },
-        archive_data: Object.fromEntries(locales.available.map((lc) => [lc, {
-            title: collection?.archive_data?.[lc]?.title ?? '',
-            intro: collection?.archive_data?.[lc]?.intro ?? '',
-        }])) as Record<string, { title: string; intro: string }>,
         taxonomy_ids: collection?.taxonomy_ids ?? [],
     });
 
@@ -178,26 +173,19 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                     </label>
                     {settings.has_archive && (
                         <div className="grid gap-2 pl-7">
-                            {locales.available.map((lc) => {
-                                const text = form.data.archive_data[lc] ?? { title: '', intro: '' };
-                                const set = (patch: Partial<typeof text>) =>
-                                    form.setData('archive_data', { ...form.data.archive_data, [lc]: { ...text, ...patch } });
-                                const multi = locales.available.length > 1;
-                                const suffix = multi ? ` (${lc.toUpperCase()})` : '';
-                                return (
-                                    <div key={lc} className="grid gap-2">
-                                        <Label htmlFor={`archive_title_${lc}`}>Listing heading{suffix}</Label>
-                                        <Input id={`archive_title_${lc}`} value={text.title}
-                                            placeholder={lc === locales.main ? (form.data.title || 'Collection title') : `Uses the ${locales.main.toUpperCase()} heading`}
-                                            onChange={(e) => set({ title: e.target.value })} />
-                                        <InputError message={errors[`archive_data.${lc}.title`]} />
-                                        <Label htmlFor={`archive_intro_${lc}`}>Listing intro{suffix}</Label>
-                                        <textarea id={`archive_intro_${lc}`} rows={3} className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                                            value={text.intro} onChange={(e) => set({ intro: e.target.value })} />
-                                        <InputError message={errors[`archive_data.${lc}.intro`]} />
-                                    </div>
-                                );
-                            })}
+                            <Label>Listing blueprint</Label>
+                            <Select value={String(settings.archive_blueprint_id || 'none')} onValueChange={(v) => setSetting('archive_blueprint_id', v === 'none' ? '' : Number(v))}>
+                                <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">None (heading and intro only)</SelectItem>
+                                    {blueprints.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.title}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                                Extra fields for the listing page, such as a hero image or description. Edit them, with the heading and intro,
+                                from the collection's entries list (Listing page).
+                            </p>
+                            <InputError message={errors['settings.archive_blueprint_id']} />
                             <Label htmlFor="archive_route">Listing URL</Label>
                             <Input id="archive_route" className="font-mono text-sm" value={settings.archive_route} placeholder={`/${handle}`} onChange={(e) => setSetting('archive_route', e.target.value)} />
                             <InputError message={errors['settings.archive_route']} />

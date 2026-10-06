@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Sunrice\Database\Factories\CollectionFactory;
 use Sunrice\Fields\BlueprintSchema;
+use Sunrice\Fields\HydrationContext;
+use Sunrice\Fields\TranslationOverlay;
 use Sunrice\Models\Concerns\HasTranslatedTitle;
 use Sunrice\Support\Locales;
 
@@ -145,11 +147,56 @@ class Collection extends Model
         return array_filter($data, 'is_array');
     }
 
+    /**
+     * The listing page's custom field values in a language: the main
+     * language's values with this language's translatable ones laid over
+     * (like entries), raw (not hydrated).
+     *
+     * @return array<string, mixed>
+     */
+    public function archiveFields(?string $locale = null): array
+    {
+        $locale ??= Locales::current();
+        $byLocale = static::archiveByLocale($this->archive_data);
+        $main = (array) ($byLocale[Locales::main()]['data'] ?? []);
+        if (Locales::isMain($locale)) {
+            return $main;
+        }
+
+        $overlay = (array) ($byLocale[$locale]['data'] ?? []);
+        $schema = $this->archiveSchema();
+
+        return $schema === null ? $main : TranslationOverlay::merge($schema->fields(), $main, $overlay);
+    }
+
+    /**
+     * A listing-page field for templates, hydrated like entry fields
+     * (asset → Asset, rich text → HTML, …): $collection->archive('hero_image').
+     */
+    public function archive(string $handle, ?string $locale = null): mixed
+    {
+        $locale ??= Locales::current();
+        $value = $this->archiveFields($locale)[$handle] ?? null;
+        $schema = $this->archiveSchema();
+
+        return $schema === null ? $value : $schema->hydrateField($handle, $value, new HydrationContext($locale));
+    }
+
+    /** @var array{0: mixed, 1: BlueprintSchema|null}|null */
+    protected ?array $archiveSchemaCache = null;
+
+    /**
+     * Fields of the listing page (Structure → Collections → Listing
+     * blueprint), or null when none is chosen.
+     */
     public function archiveSchema(): ?BlueprintSchema
     {
         $id = $this->setting('archive_blueprint_id');
-        $blueprint = $id ? Blueprint::find($id) : null;
+        if ($this->archiveSchemaCache === null || $this->archiveSchemaCache[0] !== $id) {
+            $blueprint = $id ? Blueprint::find($id) : null;
+            $this->archiveSchemaCache = [$id, $blueprint?->schema()];
+        }
 
-        return $blueprint?->schema();
+        return $this->archiveSchemaCache[1];
     }
 }
