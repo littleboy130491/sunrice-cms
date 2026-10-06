@@ -91,6 +91,34 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Machine translation
+    |--------------------------------------------------------------------------
+    |
+    | Used by `php artisan sunrice:translate` to translate content and the
+    | app's language files with an LLM.
+    |
+    | driver:     gemini (Google AI Studio key) or openrouter (any model).
+    | model:      overrides the driver's default model below.
+    | batch_size: strings sent per request.
+    |
+    */
+    'translation' => [
+        'driver' => env('SUNRICE_TRANSLATE_DRIVER', 'gemini'),
+        'model' => env('SUNRICE_TRANSLATE_MODEL'),
+        'gemini' => [
+            'key' => env('GEMINI_API_KEY'),
+            'model' => 'gemini-3.5-flash-lite',
+        ],
+        'openrouter' => [
+            'key' => env('OPENROUTER_API_KEY'),
+            'model' => 'google/gemini-3.5-flash-lite',
+        ],
+        'batch_size' => 40,
+        'timeout' => 120,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | SEO
     |--------------------------------------------------------------------------
     |

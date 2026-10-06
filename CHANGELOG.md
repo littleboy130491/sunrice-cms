@@ -13,6 +13,10 @@
   from the sitemap), a site-wide `SUNRICE_NOINDEX` switch, Twitter card tags,
   `og:type`/`og:site_name`, and absolute canonical, `og:url`, hreflang and
   sitemap URLs.
+- `sunrice:translate` machine-translates entries, terms, globals, menu labels
+  and Laravel language files with Gemini (default) or OpenRouter. Only
+  missing translations are filled in unless `--force`; entry translations
+  are saved as drafts for review.
 - `sunrice:optimize-images` resizes and recompresses image assets in place
   (defaults in `sunrice.assets.optimize`, overridable per run), backs up the
   originals to the private `local` disk by default and can `--restore` them.

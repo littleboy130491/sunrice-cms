@@ -221,6 +221,7 @@ class SunriceServiceProvider extends PackageServiceProvider
             Console\PublishAssetsCommand::class,
             Console\RegenerateImageSizesCommand::class,
             Console\OptimizeImagesCommand::class,
+            Console\TranslateCommand::class,
         ]);
     }
 
