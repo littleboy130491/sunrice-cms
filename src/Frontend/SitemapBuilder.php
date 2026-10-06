@@ -47,7 +47,7 @@ class SitemapBuilder
                         if (! Locales::isMain($locale) && ! $resolved?->is_ready) {
                             continue; // fallback URL — excluded from sitemap
                         }
-                        if ((bool) ($resolved?->seo['noindex'] ?? false)) {
+                        if ((bool) ($resolved->seo['noindex'] ?? false)) {
                             continue; // hidden from search engines
                         }
                         $sitemap->add(
