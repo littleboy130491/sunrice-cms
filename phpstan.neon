@@ -1,0 +1,14 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 6
+    paths:
+        - src/
+        - config/
+        - database/
+    ignoreErrors:
+        - identifier: larastan.noEnvCallsOutsideOfConfig
+          path: config/sunrice.php
+        - message: '#Class App\\Models\\User not found#'
+          path: config/sunrice.php

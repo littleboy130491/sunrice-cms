@@ -1,0 +1,97 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Sunrice\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+use Sunrice\Database\Factories\EntryTranslationFactory;
+use Sunrice\Support\Locales;
+
+/**
+ * @property int $id
+ * @property int $entry_id
+ * @property int $collection_id
+ * @property string $locale
+ * @property string $title
+ * @property string $slug
+ * @property array<string,mixed> $data
+ * @property array<string,mixed> $seo
+ * @property array<string,mixed>|null $draft
+ * @property bool $is_ready
+ * @property bool $is_outdated
+ * @property Carbon|null $content_published_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ *
+ * @use HasFactory<EntryTranslationFactory>
+ */
+class EntryTranslation extends Model
+{
+    /** @use HasFactory<EntryTranslationFactory> */
+    use HasFactory;
+
+    protected $table = 'sunrice_entry_translations';
+
+    protected $guarded = [];
+
+    protected $attributes = [
+        'data' => '{}',
+        'seo' => '{}',
+    ];
+
+    protected $casts = [
+        'data' => 'array',
+        'seo' => 'array',
+        'draft' => 'array',
+        'is_ready' => 'boolean',
+        'content_published_at' => 'datetime',
+    ];
+
+    protected static function newFactory(): EntryTranslationFactory
+    {
+        return EntryTranslationFactory::new();
+    }
+
+    /** @return BelongsTo<Entry, $this> */
+    public function entry(): BelongsTo
+    {
+        return $this->belongsTo(Entry::class);
+    }
+
+    /** @return HasMany<Revision, $this> */
+    public function revisions(): HasMany
+    {
+        return $this->hasMany(Revision::class)->orderByDesc('created_at');
+    }
+
+    /**
+     * Whether this translation's live content has unsaved draft changes.
+     */
+    public function hasUnpublishedChanges(): bool
+    {
+        return $this->draft !== null;
+    }
+
+    /**
+     * Main language was published more recently than this translation —
+     * shown as the "Outdated" badge in the admin. Always false on the
+     * main translation itself.
+     */
+    public function isOutdated(): bool
+    {
+        if (Locales::isMain($this->locale) || ! $this->is_ready) {
+            return false;
+        }
+
+        $main = $this->entry?->mainTranslation();
+
+        return $main?->content_published_at !== null
+            && $this->content_published_at !== null
+            && $main->content_published_at->gt($this->content_published_at);
+    }
+}

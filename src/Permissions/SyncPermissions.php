@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Sunrice\Permissions;
+
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
+
+/**
+ * Creates missing Sunrice permissions and deletes entity-scoped
+ * permissions whose collection/taxonomy/form/resource is gone.
+ * Called by the structure actions and `sunrice:sync-permissions`.
+ */
+class SyncPermissions
+{
+    public function __construct(protected PermissionRegistry $registry) {}
+
+    /**
+     * @return array{created: int, deleted: int}
+     */
+    public function handle(): array
+    {
+        $guard = config('sunrice.auth.guard', 'web');
+        $wanted = $this->registry->names();
+
+        $existing = Permission::query()
+            ->where('guard_name', $guard)
+            ->where('name', 'like', 'sunrice.%')
+            ->pluck('name')
+            ->all();
+
+        $toCreate = array_diff($wanted, $existing);
+        // Never delete global permissions — only entity-scoped ones that are gone.
+        $globalNames = array_column($this->registry->global(), 'name');
+        $toDelete = array_diff(array_diff($existing, $globalNames), $wanted);
+
+        foreach ($toCreate as $name) {
+            Permission::create(['name' => $name, 'guard_name' => $guard]);
+        }
+        if ($toDelete !== []) {
+            Permission::query()->where('guard_name', $guard)->whereIn('name', $toDelete)->delete();
+        }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        return ['created' => count($toCreate), 'deleted' => count($toDelete)];
+    }
+}
