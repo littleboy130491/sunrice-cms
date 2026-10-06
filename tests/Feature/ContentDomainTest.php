@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 use Sunrice\Actions\Taxonomies\DeleteTaxonomy;
@@ -145,6 +146,31 @@ it('skips menu items whose target is unpublished or trashed', function () {
 
     $nodes = app(MenuBuilder::class)->build('main', Locales::main());
     expect($nodes)->toHaveCount(1);
+});
+
+it('marks the active menu item per request, not from the cached menu', function () {
+    $menu = Menu::factory()->create(['handle' => 'main']);
+    foreach (['/' => 'Home', '/en' => 'English home', '/about' => 'About', '/blog' => 'Blog'] as $url => $label) {
+        MenuItem::query()->create([
+            'menu_id' => $menu->id, 'sort_order' => 0, 'type' => 'url', 'url' => $url,
+            'labels' => [Locales::main() => $label], 'new_tab' => false,
+        ]);
+    }
+
+    $activeOn = function (string $path) {
+        app()->instance('request', Request::create($path));
+
+        return app(MenuBuilder::class)->build('main', Locales::main())
+            ->filter(fn ($node) => $node->isActive)
+            ->pluck('label')
+            ->all();
+    };
+
+    // The first build is cached; later requests must still get their own active item.
+    expect($activeOn('/about'))->toBe(['About'])
+        ->and($activeOn('/blog/first-post'))->toBe(['Blog'])
+        ->and($activeOn('/'))->toBe(['Home'])
+        ->and($activeOn('/en/about'))->toBe([]);
 });
 
 // ---------------- globals domain (T10.3) ----------------

@@ -9,7 +9,6 @@
     $site = sunrice_global('site');           // GlobalData: read fields as properties or ->get('field', 'default')
     $mainMenu = sunrice_menu('main');          // Collection of MenuNode (label, url, newTab, children)
     $languages = sunrice_locale_urls($entry ?? null); // ['id' => '/about', 'en' => '/en/about'] on entry pages
-    $currentUrl = url()->current();
 @endphp
 
 <header class="site-header">
@@ -24,7 +23,7 @@
 
         @if ($mainMenu->isNotEmpty())
             <nav aria-label="Main">
-                @include('sunrice.partials.menu', ['items' => $mainMenu, 'currentUrl' => $currentUrl])
+                @include('sunrice.partials.menu', ['items' => $mainMenu])
             </nav>
         @endif
 

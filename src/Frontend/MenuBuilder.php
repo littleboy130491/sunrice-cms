@@ -28,7 +28,48 @@ class MenuBuilder
      */
     public function build(string $handle, ?string $locale = null): Collection
     {
-        return ContentCache::remember('menu:'.$handle, fn () => $this->buildMenu($handle, $locale), $locale);
+        // Only the structure is cached; the active state depends on the
+        // current request, so it is applied to every read.
+        $nodes = ContentCache::remember('menu:'.$handle, fn () => $this->buildMenu($handle, $locale), $locale);
+
+        return $this->withActiveState($nodes, '/'.trim((string) request()->path(), '/'));
+    }
+
+    /**
+     * @param  Collection<int, MenuNode>  $nodes
+     * @return Collection<int, MenuNode>
+     */
+    protected function withActiveState(Collection $nodes, string $currentPath): Collection
+    {
+        return $nodes->map(fn (MenuNode $node): MenuNode => new MenuNode(
+            label: $node->label,
+            url: $node->url,
+            newTab: $node->newTab,
+            isActive: $this->isActive($node->url, $currentPath),
+            children: $this->withActiveState($node->children, $currentPath),
+        ))->values();
+    }
+
+    /**
+     * A link is active on its own page and on pages below it. Home links
+     * (`/` and locale roots such as `/en`) only match exactly, and links
+     * to other hosts never match.
+     */
+    protected function isActive(string $url, string $currentPath): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        if (is_string($host) && $host !== request()->getHost()) {
+            return false;
+        }
+
+        $path = '/'.trim((string) parse_url($url, PHP_URL_PATH), '/');
+        $homePaths = array_merge(['/'], array_map(fn (string $locale) => '/'.$locale, Locales::available()));
+
+        if (in_array($path, $homePaths, true)) {
+            return $currentPath === $path;
+        }
+
+        return $currentPath === $path || str_starts_with($currentPath.'/', $path.'/');
     }
 
     /** @return Collection<int, MenuNode> */
@@ -144,27 +185,20 @@ class MenuBuilder
      */
     protected function tree(array $items, array $targets, string $locale, ?int $parentId = null): Collection
     {
-        $currentPath = '/'.trim((string) request()->path(), '/');
-
         return collect($items)
             ->filter(fn (MenuItem $item) => $item->parent_id === $parentId)
             ->sortBy('sort_order')
-            ->map(function (MenuItem $item) use ($items, $targets, $locale, $currentPath): ?MenuNode {
+            ->map(function (MenuItem $item) use ($items, $targets, $locale): ?MenuNode {
                 $target = $targets[$item->id] ?? null;
                 if ($target === null || $target['url'] === null) {
                     return null;
                 }
 
                 $label = $item->labels[$locale] ?? $item->labels[Locales::main()] ?? $target['title'] ?? '';
-                $url = $target['url'];
-                $isActive = $url !== '/' && str_starts_with($currentPath.'/', rtrim($url, '/').'/')
-                    || $currentPath === $url;
-
                 return new MenuNode(
                     label: $label,
-                    url: $url,
+                    url: $target['url'],
                     newTab: (bool) $item->new_tab,
-                    isActive: $isActive,
                     children: $this->tree($items, $targets, $locale, $item->id),
                 );
             })

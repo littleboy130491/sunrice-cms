@@ -7,6 +7,8 @@
   articles override and flexible-content block templates that show how to
   read entries, fields, assets, globals, menus, terms and forms.
 - `Term::get()` reads taxonomy-blueprint fields, hydrated like entry fields.
+- Menus: the active item is worked out per request instead of being cached
+  with the menu, and home links (`/`, `/en`) only match their own page.
 - Admin password reset emails now link to the CMS reset page instead of the
   host app's `password.reset` route.
 - The package's fallback `show` view no longer prints plain-text fields

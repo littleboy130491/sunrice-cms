@@ -16,7 +16,7 @@
     <div class="container">
         @if ($footerMenu->isNotEmpty())
             <nav aria-label="Footer">
-                @include('sunrice.partials.menu', ['items' => $footerMenu, 'currentUrl' => url()->current()])
+                @include('sunrice.partials.menu', ['items' => $footerMenu])
             </nav>
         @endif
 
