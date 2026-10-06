@@ -11,9 +11,10 @@ use Sunrice\Models\Entry;
 use Sunrice\Support\Locales;
 
 /**
- * `<x-sunrice::seo :entry="$entry" />` — title, description, canonical,
- * Open Graph and hreflang alternates. Fallback pages get a canonical
- * pointing at the main-language URL and no hreflang output.
+ * `<x-sunrice::seo :entry="$entry" />` — title, description, robots,
+ * canonical, Open Graph, Twitter card and hreflang alternates. Fallback
+ * pages get a canonical pointing at the main-language URL and no hreflang
+ * output. All URLs are absolute, as search engines require.
  */
 class Seo extends Component
 {
@@ -34,7 +35,14 @@ class Seo extends Component
     /** @var array<string, string> */
     public array $alternates;
 
-    public function __construct(?Entry $entry = null, ?string $title = null, ?string $description = null)
+    /** `noindex, follow` when the page should stay out of search results, else null. */
+    public ?string $robots;
+
+    public string $siteName;
+
+    public ?string $twitterSite;
+
+    public function __construct(?Entry $entry = null, ?string $title = null, ?string $description = null, ?bool $noindex = null)
     {
         $this->entry = $entry;
         $seo = $entry === null ? [] : ($entry->seo ?? []);
@@ -46,6 +54,19 @@ class Seo extends Component
         $this->image = $this->image($seo);
         $this->canonical = $this->canonical($seo);
         $this->alternates = $this->alternates();
+        $this->robots = $this->robots($seo, $noindex);
+        $this->siteName = (string) config('app.name');
+        $this->twitterSite = config('sunrice.seo.twitter_site') ?: null;
+    }
+
+    /** @param array<string, mixed> $seo */
+    protected function robots(array $seo, ?bool $noindex): ?string
+    {
+        // The site-wide switch (e.g. on staging) wins over per-page settings.
+        $hidden = (bool) config('sunrice.seo.noindex', false)
+            || ($noindex ?? (bool) ($seo['noindex'] ?? false));
+
+        return $hidden ? 'noindex, follow' : null;
     }
 
     /** @param array<string, mixed> $seo */
@@ -55,15 +76,15 @@ class Seo extends Component
 
         // Fallback pages canonicalize to the main-language URL.
         if ($this->isFallback && $this->entry !== null) {
-            return $urls->entry($this->entry, Locales::main());
+            return url($urls->entry($this->entry, Locales::main()));
         }
 
         if (! empty($seo['canonical'])) {
-            return (string) $seo['canonical'];
+            return url((string) $seo['canonical']);
         }
 
         if ($this->entry !== null) {
-            return $urls->entry($this->entry, $this->locale);
+            return url($urls->entry($this->entry, $this->locale));
         }
 
         return url()->current();
@@ -87,10 +108,10 @@ class Seo extends Component
                     continue;
                 }
             }
-            $alternates[$locale] = $urls->entry($this->entry, $locale);
+            $alternates[$locale] = url($urls->entry($this->entry, $locale));
         }
 
-        $alternates['x-default'] = $urls->entry($this->entry, Locales::main());
+        $alternates['x-default'] = url($urls->entry($this->entry, Locales::main()));
 
         return $alternates;
     }
@@ -105,7 +126,7 @@ class Seo extends Component
 
         $asset = Asset::query()->find((int) $id);
 
-        return $asset?->url('large');
+        return $asset === null ? null : url($asset->url('large'));
     }
 
     public function render(): string

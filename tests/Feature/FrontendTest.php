@@ -232,8 +232,47 @@ it('canonicalizes fallback pages to the main URL without hreflang', function () 
     file_put_contents(__DIR__.'/../fixtures/views/seo.blade.php', '<x-sunrice::seo :entry="$entry" />');
 
     get('/seo-check')->assertOk()
-        ->assertSee('<link rel="canonical" href="/pages/about">', false)
+        ->assertSee('<link rel="canonical" href="'.url('/pages/about').'">', false)
         ->assertDontSee('hreflang', false);
+});
+
+it('renders robots, Open Graph and Twitter tags with absolute URLs', function () {
+    config(['sunrice.seo.twitter_site' => '@acme']);
+    $collection = createCollection('pages', ['route' => '/pages/{slug}']);
+    $entry = createEntry($collection, title: 'About');
+    $entry->mainTranslation()->update(['slug' => 'about', 'seo' => ['title' => 'About Acme', 'description' => 'Who we are']]);
+
+    get('/pages/about')->assertOk()
+        ->assertSee('<title>About Acme</title>', false)
+        ->assertSee('<meta property="og:url" content="'.url('/pages/about').'">', false)
+        ->assertSee('<meta name="twitter:card" content="summary">', false)
+        ->assertSee('<meta name="twitter:site" content="@acme">', false)
+        ->assertSee('<meta name="twitter:description" content="Who we are">', false)
+        ->assertDontSee('name="robots"', false);
+});
+
+it('hides noindex entries from search engines and the sitemap', function () {
+    $collection = createCollection('pages', ['route' => '/pages/{slug}']);
+    $hidden = createEntry($collection, title: 'Thank you');
+    $hidden->mainTranslation()->update(['slug' => 'thank-you', 'seo' => ['noindex' => true]]);
+    $visible = createEntry($collection, title: 'About');
+    $visible->mainTranslation()->update(['slug' => 'about']);
+
+    get('/pages/thank-you')->assertOk()->assertSee('<meta name="robots" content="noindex, follow">', false);
+    get('/pages/about')->assertOk()->assertDontSee('name="robots"', false);
+
+    expect(get('/sitemap.xml')->assertOk()->getContent())
+        ->toContain(url('/pages/about'))
+        ->not->toContain('/pages/thank-you');
+});
+
+it('hides every page when the site-wide noindex switch is on', function () {
+    config(['sunrice.seo.noindex' => true]);
+    $collection = createCollection('pages', ['route' => '/pages/{slug}']);
+    $entry = createEntry($collection, title: 'About');
+    $entry->mainTranslation()->update(['slug' => 'about']);
+
+    get('/pages/about')->assertOk()->assertSee('<meta name="robots" content="noindex, follow">', false);
 });
 
 // ---------------- preview (T11.6) ----------------

@@ -32,7 +32,7 @@ class SitemapBuilder
         Collection::query()->with('entries.translations')->get()->each(function (Collection $collection) use ($sitemap, $urls): void {
             if ($collection->setting('has_archive')) {
                 foreach (Locales::available() as $locale) {
-                    $sitemap->add(Url::create($urls->archive($collection, $locale)));
+                    $sitemap->add(Url::create(url($urls->archive($collection, $locale))));
                 }
             }
 
@@ -47,8 +47,11 @@ class SitemapBuilder
                         if (! Locales::isMain($locale) && ! $resolved?->is_ready) {
                             continue; // fallback URL — excluded from sitemap
                         }
+                        if ((bool) ($resolved?->seo['noindex'] ?? false)) {
+                            continue; // hidden from search engines
+                        }
                         $sitemap->add(
-                            Url::create($urls->entry($entry, $locale))
+                            Url::create(url($urls->entry($entry, $locale)))
                                 ->setLastModificationDate($entry->updated_at ?? now())
                         );
                     }
@@ -66,7 +69,7 @@ class SitemapBuilder
                         continue;
                     }
                     $sitemap->add(
-                        Url::create($urls->term($term, $locale))
+                        Url::create(url($urls->term($term, $locale)))
                             ->setLastModificationDate($term->updated_at ?? now())
                     );
                 }

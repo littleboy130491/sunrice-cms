@@ -310,6 +310,7 @@ class EntriesController extends Controller
             ['handle' => 'description', 'type' => 'textarea', 'label' => 'Meta description'],
             ['handle' => 'canonical', 'type' => 'text', 'label' => 'Canonical URL'],
             ['handle' => 'image', 'type' => 'asset', 'label' => 'Open Graph image'],
+            ['handle' => 'noindex', 'type' => 'toggle', 'label' => 'Hide from search engines (noindex)'],
         ];
     }
 

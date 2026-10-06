@@ -91,6 +91,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | SEO
+    |--------------------------------------------------------------------------
+    |
+    | noindex:      Hide the whole site from search engines (adds
+    |               `<meta name="robots" content="noindex, follow">` to every
+    |               page). Useful on staging. Single pages can be hidden from
+    |               the entry's SEO tab instead.
+    | twitter_site: The site's X/Twitter handle for `twitter:site`, e.g. "@acme".
+    |
+    */
+    'seo' => [
+        'noindex' => (bool) env('SUNRICE_NOINDEX', false),
+        'twitter_site' => env('SUNRICE_TWITTER_SITE'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Assets
     |--------------------------------------------------------------------------
     |

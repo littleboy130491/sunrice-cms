@@ -26,9 +26,23 @@ loads).
 ## `<x-sunrice::seo>`
 
 `<x-sunrice::seo :entry="$entry" />` emits `<title>`, meta description,
-canonical link, Open Graph/Twitter tags, `hreflang` alternates and
-`x-default`. Fallback pages canonicalize to the main-locale URL and emit
-no hreflang. Works without an entry (uses `app.name`, current URL).
+`<meta name="robots">` (only when the page is hidden), canonical link,
+Open Graph tags, Twitter card tags, `hreflang` alternates and
+`x-default`. All URLs are absolute. Fallback pages canonicalize to the
+main-locale URL and emit no hreflang. Works without an entry (uses
+`app.name`, current URL).
+
+Values come from the entry's SEO tab: meta title, description, canonical
+URL, share image and "Hide from search engines". Override them per call
+with the `title`, `description` and `noindex` props:
+
+```blade
+<x-sunrice::seo :entry="$entry ?? null" title="Search results" :noindex="true" />
+```
+
+Hidden entries are also left out of `/sitemap.xml`. Set
+`SUNRICE_NOINDEX=true` to hide a whole site (e.g. staging), and
+`SUNRICE_TWITTER_SITE=@handle` for `twitter:site`.
 
 ## `<x-sunrice::form>`
 
