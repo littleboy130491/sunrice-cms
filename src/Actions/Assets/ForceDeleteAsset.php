@@ -30,6 +30,8 @@ class ForceDeleteAsset
         foreach ($asset->sizes as $path) {
             Storage::disk($asset->disk)->delete($path);
         }
+        [$backupDisk, $backupPath] = OptimizeImage::backupLocation($asset);
+        $backupDisk->delete($backupPath);
 
         $asset->forceDelete();
         ContentChanged::dispatch('asset_deleted');

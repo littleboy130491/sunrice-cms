@@ -35,6 +35,10 @@ class ReplaceAsset
 
         Storage::disk($asset->disk)->put($asset->path, $file->getContent());
 
+        // A backup from sunrice:optimize-images belongs to the replaced file.
+        [$backupDisk, $backupPath] = OptimizeImage::backupLocation($asset);
+        $backupDisk->delete($backupPath);
+
         [$width, $height] = [null, null];
         if (str_starts_with((string) $file->getMimeType(), 'image/') && ! str_contains((string) $file->getMimeType(), 'svg')) {
             $info = @getimagesize($file->getRealPath());

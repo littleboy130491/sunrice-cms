@@ -19,6 +19,7 @@ All options live in `config/sunrice.php` (publish with
 | `sunrice.cache.store` | `null` | Cache store name (`null` = default store). |
 | `sunrice.cache.ttl` | `3600` | Seconds entries stay cached. |
 | `sunrice.cache.full_page` | `false` | Full-page HTTP cache (requires `spatie/laravel-responsecache`, PHP 8.4+). |
+| `sunrice.assets.optimize.*` | see [assets](assets.md#optimizing-images) | Defaults for `sunrice:optimize-images`. |
 | `sunrice.seo.noindex` | `env('SUNRICE_NOINDEX', false)` | Add `noindex, follow` to every page (e.g. staging). |
 | `sunrice.seo.twitter_site` | `env('SUNRICE_TWITTER_SITE')` | X/Twitter handle for `twitter:site`. |
 | `sunrice.assets.disk` | `public` | Filesystem disk for the asset library. |

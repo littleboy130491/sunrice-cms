@@ -116,6 +116,13 @@ return [
     | max_upload_kb: Maximum upload size in kilobytes.
     | image_sizes:   Generated sizes: name => [width, height, mode].
     |                mode 'crop' = center cover crop, 'fit' = scale down.
+    | optimize:      Defaults for `php artisan sunrice:optimize-images`
+    |                (each can be overridden with a command option):
+    |                  max_width / max_height  shrink larger images to fit
+    |                  quality                 JPEG/WebP/AVIF quality, 1-100
+    |                  backup                  keep the original before overwriting
+    |                  backup_disk             null = the asset's own disk
+    |                  backup_directory        folder the originals are copied into
     |
     */
     'assets' => [
@@ -126,6 +133,14 @@ return [
             'thumbnail' => [300, 300, 'crop'],
             'medium' => [800, null, 'fit'],
             'large' => [1600, null, 'fit'],
+        ],
+        'optimize' => [
+            'max_width' => 2560,
+            'max_height' => 2560,
+            'quality' => 82,
+            'backup' => true,
+            'backup_disk' => null,
+            'backup_directory' => 'sunrice-originals',
         ],
     ],
 

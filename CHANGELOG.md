@@ -13,6 +13,9 @@
   from the sitemap), a site-wide `SUNRICE_NOINDEX` switch, Twitter card tags,
   `og:type`/`og:site_name`, and absolute canonical, `og:url`, hreflang and
   sitemap URLs.
+- `sunrice:optimize-images` resizes and recompresses image assets in place
+  (defaults in `sunrice.assets.optimize`, overridable per run), backs up the
+  originals by default and can `--restore` them.
 - Admin password reset emails now link to the CMS reset page instead of the
   host app's `password.reset` route.
 - The package's fallback `show` view no longer prints plain-text fields
