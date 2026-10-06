@@ -6,25 +6,65 @@ The role named by `sunrice.super_admin_role` bypasses every check
 
 Run `php artisan sunrice:sync-permissions` after adding collections,
 taxonomies, forms or resources — it creates missing permissions and
-deletes stale ones.
+deletes stale ones. When upgrading from the old `sunrice.manage-*`
+permissions it also gives their replacements to every role and user that
+held them (e.g. `manage-structure` → the collections, blueprints,
+fieldsets and taxonomies permissions plus `forms.create`/`forms.delete`),
+so nobody loses access.
 
 ## Global permissions
 
 | Permission | Grants |
 | --- | --- |
 | `sunrice.access-admin` | Access to the admin panel. |
-| `sunrice.manage-structure` | Collections, blueprints, fieldsets, menus, taxonomies, forms, globals CRUD. |
-| `sunrice.assets.view` / `upload` / `delete` | Asset library. |
-| `sunrice.settings.edit` | Settings screens (homepage, locales). |
+| `sunrice.collections.{view,create,edit,delete}` | Collections (structure screens). |
+| `sunrice.blueprints.{view,create,edit,delete}` | Blueprints. |
+| `sunrice.fieldsets.{view,create,edit,delete}` | Fieldsets. |
+| `sunrice.taxonomies.{view,create,edit,delete}` | Taxonomy definitions (terms are per taxonomy, below). |
+| `sunrice.forms.{create,delete}` | Creating and deleting forms (editing is per form, below). |
+| `sunrice.menus.{view,create,edit,delete}` | Menus and their items (`edit`). |
+| `sunrice.globals.{view,create,edit,delete}` | Global sets; `edit` changes their values. |
+| `sunrice.assets.{view,upload,edit,delete}` | Asset library; `edit` changes details and replaces files. |
+| `sunrice.users.{view,create,edit,delete}` | Users. |
+| `sunrice.roles.{view,create,edit,delete}` | Roles. |
+| `sunrice.settings.edit` | Settings. |
+
+Super admins are protected: only another super admin can edit or delete a
+super-admin user, give or remove the super-admin role, or change that role.
 
 ## Entity-scoped permissions
 
 | Pattern | Actions |
 | --- | --- |
-| `sunrice.entries.{collectionId}.{action}` | `view`, `create`, `edit`, `edit-own`, `delete`, `delete-own`, `publish` |
+| `sunrice.entries.{collectionId}.{action}` | `view`, `create`, `edit`, `edit-own`, `translate`, `delete`, `delete-own`, `publish` |
 | `sunrice.terms.{taxonomyId}.{action}` | `view`, `create`, `edit`, `delete` |
 | `sunrice.forms.{formId}.{action}` | `edit`, `view-submissions`, `export-submissions`, `delete-submissions` |
 | `sunrice.resources.{key}.{action}` | `view`, `create`, `edit`, `delete`, `export` |
 
+`translate` lets a user edit an entry's other-language versions only: the
+main language is read-only for them, and they can't mark a translation
+Ready, publish or delete. Anyone with `edit` (or `edit-own` on their own
+entries) can translate too. Reordering a collection's entries or a
+taxonomy's terms needs `edit`.
+
 Model resources additionally honor the model's own policy when one is
 registered.
+
+## Default roles
+
+```bash
+php artisan sunrice:seed-roles      # or: sunrice:install --roles
+```
+
+| Role | Can |
+| --- | --- |
+| Administrator | Every Sunrice permission (without the super-admin bypass). |
+| Editor | All entries and terms (incl. publishing and translating), menus, editing globals, assets, viewing/exporting form submissions. |
+| Author | Create entries and edit/delete their own; view terms; view and upload assets. Can't publish. |
+| Translator | View entries and edit their other-language versions only; view assets. |
+
+Run it again after adding collections, taxonomies or forms: it gives these
+roles the new permissions. It only adds permissions, so changes you make to
+the roles in the admin are kept. To seed your own set, extend
+`Sunrice\Database\Seeders\RolesSeeder` and override `roles()` (role name →
+permission patterns, `*` matches anything).

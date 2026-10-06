@@ -16,7 +16,7 @@ export default function BlueprintsIndex({ blueprints }: { blueprints: Row[] }) {
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold tracking-tight">Blueprints</h1>
-                {can('sunrice.manage-structure') && (
+                {can('sunrice.blueprints.create') && (
                     <Button asChild><Link href={adminUrl('structure/blueprints/create', adminPath)}><Plus className="mr-1 h-4 w-4" /> New blueprint</Link></Button>
                 )}
             </div>
@@ -30,7 +30,7 @@ export default function BlueprintsIndex({ blueprints }: { blueprints: Row[] }) {
                             <TableCell>{b.fields_count}</TableCell>
                             <TableCell>{b.collections_count}</TableCell>
                             <TableCell>
-                                {can('sunrice.manage-structure') && (
+                                {can('sunrice.blueprints.delete') && (
                                     <Button
                                         variant="ghost" size="sm" className="text-destructive"
                                         onClick={() => window.confirm(`Delete "${b.title}"?`) && router.delete(adminUrl(`structure/blueprints/${b.id}`, adminPath))}

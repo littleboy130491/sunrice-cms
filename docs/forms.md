@@ -1,6 +1,6 @@
 # Forms
 
-Build forms in the admin (`manage-structure`); render them in Blade:
+Build forms in the admin (`sunrice.forms.create`, then `sunrice.forms.{id}.edit`); render them in Blade:
 
 ```blade
 <x-sunrice::form handle="contact">

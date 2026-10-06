@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
+use Sunrice\Database\Seeders\RolesSeeder;
 use Sunrice\Permissions\SyncPermissions;
 
 /**
@@ -20,7 +21,9 @@ use Sunrice\Permissions\SyncPermissions;
  */
 class InstallCommand extends Command
 {
-    protected $signature = 'sunrice:install {--no-user : Skip creating a super admin user}';
+    protected $signature = 'sunrice:install
+        {--no-user : Skip creating a super admin user}
+        {--roles : Also create the default roles (Administrator, Editor, Author, Translator)}';
 
     protected $description = 'Install Sunrice CMS';
 
@@ -40,6 +43,12 @@ class InstallCommand extends Command
         /** @var Role $role */
         $role = Role::findOrCreate(config('sunrice.super_admin_role', 'Super Admin'), $guard);
         $this->components->twoColumnDetail('Super admin role', $role->name);
+
+        if ($this->option('roles')) {
+            $seeder = new RolesSeeder;
+            $seeder->run();
+            $this->components->twoColumnDetail('Default roles', implode(', ', array_keys($seeder->roles())));
+        }
 
         $hasRoles = $this->checkUserModel();
 

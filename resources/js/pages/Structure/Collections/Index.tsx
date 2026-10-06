@@ -19,13 +19,14 @@ interface CollectionRow {
 export default function CollectionsIndex({ collections }: { collections: CollectionRow[] }) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
-    const canManage = can('sunrice.manage-structure');
+    const canCreate = can('sunrice.collections.create');
+    const canDelete = can('sunrice.collections.delete');
 
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold tracking-tight">Collections</h1>
-                {canManage && (
+                {canCreate && (
                     <Button asChild>
                         <Link href={adminUrl('structure/collections/create', adminPath)}>
                             <Plus className="mr-1 h-4 w-4" /> New collection
@@ -65,7 +66,7 @@ export default function CollectionsIndex({ collections }: { collections: Collect
                                 </Link>
                             </TableCell>
                             <TableCell>
-                                {canManage && (
+                                {canDelete && (
                                     <Button
                                         variant="ghost"
                                         size="sm"

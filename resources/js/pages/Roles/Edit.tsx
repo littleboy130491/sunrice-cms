@@ -10,7 +10,7 @@ import type { SharedProps } from '@/types';
 
 interface Group { group: string; permissions: { name: string; label: string }[] }
 
-export default function RoleEdit({ role, permissionGroups }: { role: { id: number; name: string; permissions: string[] }; permissionGroups: Group[] }) {
+export default function RoleEdit({ role, permissionGroups }: { role: { id: number; name: string; permissions: string[]; editable?: boolean }; permissionGroups: Group[] }) {
     const { adminPath } = usePage<SharedProps>().props;
     const form = useForm({ name: role.name, permissions: role.permissions });
 
@@ -63,7 +63,7 @@ export default function RoleEdit({ role, permissionGroups }: { role: { id: numbe
                     </Card>
                 ))}
             </div>
-            <div><Button type="submit" disabled={form.processing}>Save role</Button></div>
+            {role.editable !== false && <div><Button type="submit" disabled={form.processing}>Save role</Button></div>}
         </form>
     );
 }

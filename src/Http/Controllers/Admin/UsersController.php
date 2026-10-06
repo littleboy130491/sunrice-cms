@@ -19,14 +19,10 @@ class UsersController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct()
-    {
-        $this->middleware('can:sunrice.manage-users');
-    }
-
     public function index(): Response
     {
         $model = config('sunrice.auth.user_model');
+        $this->authorize('viewAny', $model);
 
         return Inertia::render('Users/Index', [
             'users' => $model::query()->with('roles:id,name')->orderBy('name')->get()
@@ -42,6 +38,8 @@ class UsersController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', config('sunrice.auth.user_model'));
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
@@ -49,6 +47,8 @@ class UsersController extends Controller
             'roles' => ['array'],
             'roles.*' => ['string', Rule::exists('roles', 'name')],
         ]);
+
+        $this->guardSuperAdminRole($request, [], $validated['roles'] ?? []);
 
         $model = config('sunrice.auth.user_model');
         $user = $model::create(Arr::except($validated, 'roles'));
@@ -61,6 +61,7 @@ class UsersController extends Controller
     {
         $model = config('sunrice.auth.user_model');
         $user = $model::findOrFail($user);
+        $this->authorize('update', $user);
 
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
@@ -76,6 +77,7 @@ class UsersController extends Controller
         $user->update(Arr::except($validated, 'roles'));
 
         if (isset($validated['roles'])) {
+            $this->guardSuperAdminRole($request, $user->roles->pluck('name')->all(), $validated['roles']);
             $user->syncRoles($validated['roles']);
         }
 
@@ -86,11 +88,28 @@ class UsersController extends Controller
     {
         $model = config('sunrice.auth.user_model');
         $user = $model::findOrFail($user);
+        $this->authorize('delete', $user);
 
         abort_if((string) $user->getKey() === (string) $request->user()->getAuthIdentifier(), 422, 'You cannot delete yourself.');
 
         $user->delete();
 
         return back()->with('success', 'User deleted.');
+    }
+
+    /**
+     * Only a super admin may give or take away the super-admin role.
+     *
+     * @param  array<int, string>  $before
+     * @param  array<int, string>  $after
+     */
+    protected function guardSuperAdminRole(Request $request, array $before, array $after): void
+    {
+        $role = config('sunrice.super_admin_role');
+        if ($role === null || in_array($role, $before, true) === in_array($role, $after, true)) {
+            return;
+        }
+
+        abort_unless($request->user()->can('assignSuperAdmin', config('sunrice.auth.user_model')), 403, 'Only a super admin can change who is a super admin.');
     }
 }

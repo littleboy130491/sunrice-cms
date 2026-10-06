@@ -92,6 +92,8 @@ class CollectionsController extends Controller
 
     public function reorder(Request $request, Reorder $reorder): RedirectResponse
     {
+        $this->authorize('update', Collection::class);
+
         $validated = $request->validate(['items' => ['required', 'array'], 'items.*' => ['integer']]);
         $reorder->handle(Collection::class, $validated['items']);
 

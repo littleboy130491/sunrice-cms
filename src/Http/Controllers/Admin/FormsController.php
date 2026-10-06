@@ -34,14 +34,14 @@ class FormsController extends Controller
 
     public function create(): Response
     {
-        Gate::authorize('sunrice.manage-structure');
+        Gate::authorize('create', Form::class);
 
         return Inertia::render('Forms/Form', ['form' => null, 'fieldTypes' => $this->fieldTypes()]);
     }
 
     public function store(Request $request, SaveForm $save): RedirectResponse
     {
-        Gate::authorize('sunrice.manage-structure');
+        Gate::authorize('create', Form::class);
 
         $form = $save->handle(null, $request->all());
 
@@ -85,7 +85,7 @@ class FormsController extends Controller
 
     public function destroy(Form $form, DeleteForm $delete): RedirectResponse
     {
-        Gate::authorize('sunrice.manage-structure');
+        Gate::authorize('delete', $form);
 
         $delete->handle($form);
 

@@ -18,13 +18,10 @@ class RolesController extends Controller
 {
     use AuthorizesRequests;
 
-    public function __construct()
-    {
-        $this->middleware('can:sunrice.manage-roles');
-    }
-
     public function index(): Response
     {
+        $this->authorize('viewAny', Role::class);
+
         return Inertia::render('Roles/Index', [
             'roles' => Role::query()->withCount('permissions')->orderBy('name')->get()
                 ->map(fn (Role $r) => [
@@ -37,6 +34,8 @@ class RolesController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Role::class);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('roles', 'name')],
         ]);
@@ -48,11 +47,14 @@ class RolesController extends Controller
 
     public function edit(Role $role): Response
     {
+        $this->authorize('view', $role);
+
         return Inertia::render('Roles/Edit', [
             'role' => [
                 'id' => $role->id,
                 'name' => $role->name,
                 'permissions' => $role->permissions->pluck('name'),
+                'editable' => request()->user()->can('update', $role),
             ],
             'permissionGroups' => app(PermissionRegistry::class)->grouped(),
         ]);
@@ -60,6 +62,8 @@ class RolesController extends Controller
 
     public function update(Request $request, Role $role): RedirectResponse
     {
+        $this->authorize('update', $role);
+
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:100', Rule::unique('roles', 'name')->ignore($role)],
             'permissions' => ['sometimes', 'array'],
@@ -78,6 +82,7 @@ class RolesController extends Controller
 
     public function destroy(Role $role): RedirectResponse
     {
+        $this->authorize('delete', $role);
         abort_if($role->users()->exists(), 422, 'Role still assigned to users.');
 
         $role->delete();

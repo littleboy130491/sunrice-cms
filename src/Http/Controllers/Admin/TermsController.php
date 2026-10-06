@@ -82,13 +82,16 @@ class TermsController extends Controller
 
     public function reorder(Request $request, Taxonomy $taxonomy, Reorder $reorder): RedirectResponse
     {
-        $this->authorize('viewAny', [Term::class, $taxonomy->id]);
+        $this->authorize('reorder', [Term::class, $taxonomy->id]);
 
         $validated = $request->validate([
             'items' => ['required', 'array'],
             'items.*' => ['integer'],
         ]);
-        $reorder->handle(Term::class, $validated['items']);
+        // Only this taxonomy's terms, in the posted order.
+        $ids = array_map('intval', $validated['items']);
+        $own = Term::query()->where('taxonomy_id', $taxonomy->id)->whereIn('id', $ids)->pluck('id')->all();
+        $reorder->handle(Term::class, array_values(array_intersect($ids, $own)));
 
         return back();
     }

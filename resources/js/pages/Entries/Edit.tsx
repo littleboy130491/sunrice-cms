@@ -46,18 +46,24 @@ interface Props {
     taxonomies: { id: number; handle: string; title: string }[];
     locales: string[];
     mainLocale?: string;
+    /** What the current user may do with this entry (null for a new entry). */
+    can?: { update: boolean; translate: boolean; publish: boolean; delete: boolean; create: boolean } | null;
 }
 
 function flatFields(tabs: AdminTab[] | null): AdminField[] {
     return (tabs ?? []).flatMap((t) => t.fields ?? []);
 }
 
-export default function EntryEdit({ collection, entry, blueprint, blueprints, taxonomies, locales, mainLocale = locales[0] }: Props) {
+export default function EntryEdit({ collection, entry, blueprint, blueprints, taxonomies, locales, mainLocale = locales[0], can: allowed }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
     const isNew = entry === null;
 
     const [locale, setLocale] = React.useState(mainLocale);
+    const perms = allowed ?? { update: true, translate: true, publish: true, delete: true, create: true };
+    // Translate-only users edit other languages; the main language is read-only for them.
+    const canEdit = isNew || (locale === mainLocale ? perms.update : perms.translate);
+    const hasMenuActions = perms.update || perms.publish || perms.create || perms.delete;
     const existing = entry?.translations ?? {};
 
     // Working data for each locale is the draft (data.draft) if present
@@ -173,9 +179,12 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                 </div>
                 {!isNew && (
                     <div className="flex items-center gap-2">
-                        <Button type="button" onClick={publish}>
-                            <Send /> Publish
-                        </Button>
+                        {perms.publish && (
+                            <Button type="button" onClick={publish}>
+                                <Send /> Publish
+                            </Button>
+                        )}
+                        {hasMenuActions && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button type="button" variant="outline" size="icon" aria-label="More actions">
@@ -183,28 +192,37 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuItem onSelect={markReady}>
-                                    <CheckCircle2 /> {current.is_ready ? 'Unmark ready' : 'Mark ready'}
-                                </DropdownMenuItem>
-                                {locale !== mainLocale && current.is_ready && (
+                                {perms.update && (
+                                    <DropdownMenuItem onSelect={markReady}>
+                                        <CheckCircle2 /> {current.is_ready ? 'Unmark ready' : 'Mark ready'}
+                                    </DropdownMenuItem>
+                                )}
+                                {perms.update && locale !== mainLocale && current.is_ready && (
                                     <DropdownMenuItem onSelect={returnToDraft}>
                                         <Undo2 /> Return to draft
                                     </DropdownMenuItem>
                                 )}
-                                {entry?.status === 'published' && (
+                                {perms.publish && entry?.status === 'published' && (
                                     <DropdownMenuItem onSelect={unpublish}>
                                         <EyeOff /> Unpublish
                                     </DropdownMenuItem>
                                 )}
-                                <DropdownMenuItem onSelect={duplicate}>
-                                    <Copy /> Duplicate
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem variant="destructive" onSelect={trash}>
-                                    <Trash2 /> Move to trash
-                                </DropdownMenuItem>
+                                {perms.create && (
+                                    <DropdownMenuItem onSelect={duplicate}>
+                                        <Copy /> Duplicate
+                                    </DropdownMenuItem>
+                                )}
+                                {perms.delete && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem variant="destructive" onSelect={trash}>
+                                            <Trash2 /> Move to trash
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
                             </DropdownMenuContent>
                         </DropdownMenu>
+                        )}
                     </div>
                 )}
             </div>
@@ -223,8 +241,16 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                 </Tabs>
             )}
 
+            {!canEdit && (
+                <p className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                    {locale === mainLocale && perms.translate
+                        ? 'You can translate this entry. Switch to another language to edit it.'
+                        : 'You can view this version but not edit it.'}
+                </p>
+            )}
+
             <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-                <div className="flex min-w-0 flex-col gap-6">
+                <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-6 disabled:opacity-80">
                     {contentTabs.map((tab, index) => (
                         <Card key={tab.handle}>
                             <CardHeader>
@@ -287,7 +313,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                             </CardContent>
                         </Card>
                     )}
-                </div>
+                </fieldset>
 
                 <div className="flex flex-col gap-6 lg:sticky lg:top-6">
                     <Card>
@@ -327,14 +353,16 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                     </Select>
                                 </div>
                             )}
-                            <Button type="submit" variant={isNew ? 'default' : 'outline'} disabled={form.processing} className="w-full">
-                                {form.processing && <LoaderCircle className="animate-spin" />}
-                                {isNew ? 'Create draft' : 'Save draft'}
-                            </Button>
+                            {canEdit && (
+                                <Button type="submit" variant={isNew ? 'default' : 'outline'} disabled={form.processing} className="w-full">
+                                    {form.processing && <LoaderCircle className="animate-spin" />}
+                                    {isNew ? 'Create draft' : 'Save draft'}
+                                </Button>
+                            )}
                         </CardContent>
                     </Card>
 
-                    {!isNew && current.revisions.length > 0 && (
+                    {!isNew && canEdit && current.revisions.length > 0 && (
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-sm">

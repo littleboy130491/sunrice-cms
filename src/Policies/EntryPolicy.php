@@ -44,6 +44,24 @@ class EntryPolicy
         return $this->can($user, $entry, 'edit-own') && $entry->author_id === $user->getAuthIdentifier();
     }
 
+    /**
+     * Edit the entry's secondary-language translations. Anyone who can
+     * edit the entry can translate it; the translate permission alone
+     * allows translations only (not the main language, not publishing).
+     */
+    public function translate(mixed $user, Entry $entry): bool
+    {
+        return $this->update($user, $entry) || $this->can($user, $entry, 'translate');
+    }
+
+    /**
+     * Reordering a collection changes every entry's position.
+     */
+    public function reorder(mixed $user, int $collectionId): bool
+    {
+        return $this->can($user, $collectionId, 'edit');
+    }
+
     public function delete(mixed $user, Entry $entry): bool
     {
         if ($this->can($user, $entry, 'delete')) {

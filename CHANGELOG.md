@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- **Granular permissions** — the `sunrice.manage-*` permissions are replaced
+  by view/create/edit/delete permissions per area (collections, blueprints,
+  fieldsets, taxonomies, menus, globals, users, roles), `forms.create` /
+  `forms.delete` and `assets.edit`. `sunrice:sync-permissions` hands the new
+  permissions to every role and user that held the old ones.
+- **Translate permission** — `sunrice.entries.{id}.translate` allows editing
+  an entry's other-language versions only (no main language, publishing or
+  marking Ready).
+- **Default roles** — `php artisan sunrice:seed-roles` (or
+  `sunrice:install --roles`) creates Administrator, Editor, Author and
+  Translator; rerun it after adding collections. Seeder:
+  `Sunrice\Database\Seeders\RolesSeeder`.
+- Fixed: users who could manage users could edit or delete super admins and
+  hand out the super-admin role; role managers could rename or delete the
+  super-admin role. Reordering collections had no permission check, and
+  reordering entries or terms only needed view access (and could touch
+  other collections' entries). The Taxonomies sidebar section never showed
+  for non-super-admins.
 - Fixed: `sunrice:install` failed on a fresh app because the
   spatie/laravel-permission tables were never created. It now publishes
   spatie's migration when the tables are missing, before migrating. It also

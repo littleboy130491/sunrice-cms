@@ -139,7 +139,9 @@ class EntriesController extends Controller
 
     public function update(Request $request, Entry $entry, SaveDraft $saveDraft): RedirectResponse
     {
-        $this->authorize('update', $entry);
+        // The main language needs edit rights; other languages also accept
+        // the translate permission.
+        $this->authorize(Locales::isMain((string) $request->input('locale', Locales::main())) ? 'update' : 'translate', $entry);
 
         $validated = $request->validate([
             'locale' => ['required', 'string', 'max:10'],
@@ -156,6 +158,12 @@ class EntriesController extends Controller
             'seo' => ['array'],
             'is_ready' => ['nullable', 'boolean'],
         ]);
+
+        // Marking a translation Ready puts it live, which translate-only
+        // users can't do.
+        if (! $request->user()->can('update', $entry)) {
+            unset($validated['is_ready']);
+        }
 
         $translation = $this->translationFor($entry, $validated['locale']);
         $saveDraft->handle($translation, $validated);
@@ -239,7 +247,8 @@ class EntriesController extends Controller
 
     public function restoreRevision(Revision $revision, RestoreRevision $action): RedirectResponse
     {
-        $this->authorize('update', $revision->translation->entry);
+        $translation = $revision->translation;
+        $this->authorize(Locales::isMain($translation->locale) ? 'update' : 'translate', $translation->entry);
         $action->handle($revision);
 
         return back()->with('success', 'Revision restored to draft.');
@@ -247,10 +256,13 @@ class EntriesController extends Controller
 
     public function reorder(Request $request, Collection $collection, Reorder $reorder): RedirectResponse
     {
-        $this->authorize('viewAny', [Entry::class, $collection->id]);
+        $this->authorize('reorder', [Entry::class, $collection->id]);
 
         $validated = $request->validate(['items' => ['required', 'array'], 'items.*' => ['integer']]);
-        $reorder->handle(Entry::class, $validated['items']);
+        // Only this collection's entries, in the posted order.
+        $ids = array_map('intval', $validated['items']);
+        $own = Entry::query()->where('collection_id', $collection->id)->whereIn('id', $ids)->pluck('id')->all();
+        $reorder->handle(Entry::class, array_values(array_intersect($ids, $own)));
 
         return back();
     }
@@ -282,7 +294,7 @@ class EntriesController extends Controller
 
     public function preview(Request $request, Entry $entry): RedirectResponse
     {
-        $this->authorize('update', $entry);
+        $this->authorize('view', $entry);
 
         $validated = $request->validate(['locale' => ['required', 'string']]);
 
@@ -340,6 +352,7 @@ class EntriesController extends Controller
     protected function editorProps(Collection $collection, ?Entry $entry): array
     {
         $entry?->load(['translations.revisions', 'collection', 'terms']);
+        $user = request()->user();
 
         $blueprint = $entry?->activeBlueprint() ?? $collection->blueprint;
         $translations = [];
@@ -389,6 +402,13 @@ class EntriesController extends Controller
             'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title')),
             'locales' => Locales::available(),
             'mainLocale' => Locales::main(),
+            'can' => $entry === null ? null : [
+                'update' => $user->can('update', $entry),
+                'translate' => $user->can('translate', $entry),
+                'publish' => $user->can('publish', $entry),
+                'delete' => $user->can('delete', $entry),
+                'create' => $user->can('create', [Entry::class, $entry->collection_id]),
+            ],
         ];
     }
 }

@@ -33,12 +33,15 @@ use Sunrice\Models\Menu;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Policies\AssetPolicy;
+use Sunrice\Policies\BlueprintPolicy;
+use Sunrice\Policies\CollectionPolicy;
 use Sunrice\Policies\EntryPolicy;
+use Sunrice\Policies\FieldsetPolicy;
 use Sunrice\Policies\FormPolicy;
 use Sunrice\Policies\GlobalSetPolicy;
 use Sunrice\Policies\MenuPolicy;
 use Sunrice\Policies\RolePolicy;
-use Sunrice\Policies\StructurePolicy;
+use Sunrice\Policies\TaxonomyPolicy;
 use Sunrice\Policies\TermPolicy;
 use Sunrice\Policies\UserPolicy;
 use Sunrice\View\Components\Entries;
@@ -223,6 +226,7 @@ class SunriceServiceProvider extends PackageServiceProvider
             Console\OptimizeImagesCommand::class,
             Console\TranslateCommand::class,
             Console\UpgradeTranslationsCommand::class,
+            Console\SeedRolesCommand::class,
         ]);
     }
 
@@ -288,10 +292,10 @@ class SunriceServiceProvider extends PackageServiceProvider
             Term::class => TermPolicy::class,
             Asset::class => AssetPolicy::class,
             Form::class => FormPolicy::class,
-            Collection::class => StructurePolicy::class,
-            Blueprint::class => StructurePolicy::class,
-            Fieldset::class => StructurePolicy::class,
-            Taxonomy::class => StructurePolicy::class,
+            Collection::class => CollectionPolicy::class,
+            Blueprint::class => BlueprintPolicy::class,
+            Fieldset::class => FieldsetPolicy::class,
+            Taxonomy::class => TaxonomyPolicy::class,
             Menu::class => MenuPolicy::class,
             GlobalSet::class => GlobalSetPolicy::class,
             Role::class => RolePolicy::class,
