@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sunrice\Console;
 
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\Builder;
 use Sunrice\Actions\Assets\OptimizeImage;
 use Sunrice\Actions\Assets\RestoreOriginalImage;
 use Sunrice\Events\ContentChanged;
@@ -48,8 +49,8 @@ class OptimizeImagesCommand extends Command
             : $this->optimize($query, $optimizer, $maxWidth, $maxHeight, $quality, $backup, $dryRun);
     }
 
-    /** @param \Illuminate\Database\Eloquent\Builder<Asset> $query */
-    protected function optimize($query, OptimizeImage $optimizer, int $maxWidth, int $maxHeight, int $quality, bool $backup, bool $dryRun): int
+    /** @param Builder<Asset> $query */
+    protected function optimize(Builder $query, OptimizeImage $optimizer, int $maxWidth, int $maxHeight, int $quality, bool $backup, bool $dryRun): int
     {
         $this->line(sprintf(
             '%s images to fit %dx%d at quality %d%s.',
@@ -111,8 +112,8 @@ class OptimizeImagesCommand extends Command
         return self::SUCCESS;
     }
 
-    /** @param \Illuminate\Database\Eloquent\Builder<Asset> $query */
-    protected function restore($query, RestoreOriginalImage $restorer): int
+    /** @param Builder<Asset> $query */
+    protected function restore(Builder $query, RestoreOriginalImage $restorer): int
     {
         $restored = 0;
         $query->chunkById(50, function ($assets) use ($restorer, &$restored): void {
