@@ -11,6 +11,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Sunrice\Permissions\PermissionRegistry;
 
@@ -64,16 +65,27 @@ class RolesController extends Controller
     {
         $this->authorize('update', $role);
 
+        $guard = config('sunrice.auth.guard', 'web');
+        $known = app(PermissionRegistry::class)->names();
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:100', Rule::unique('roles', 'name')->ignore($role)],
             'permissions' => ['sometimes', 'array'],
-            'permissions.*' => ['string', Rule::exists('permissions', 'name')->where('guard_name', config('sunrice.auth.guard', 'web'))],
-        ]);
+            'permissions.*' => ['string', function (string $attribute, mixed $value, \Closure $fail) use ($known, $guard): void {
+                if (! in_array($value, $known, true) && ! Permission::query()->where('guard_name', $guard)->where('name', $value)->exists()) {
+                    $fail("Unknown permission \"{$value}\".");
+                }
+            }],
+        ], [], ['permissions.*' => 'permission']);
 
         if (isset($validated['name'])) {
             $role->update(['name' => $validated['name']]);
         }
         if (isset($validated['permissions'])) {
+            // The editor lists every permission the registry knows about,
+            // including ones for collections created since the last sync.
+            foreach (array_intersect($validated['permissions'], $known) as $name) {
+                Permission::findOrCreate($name, $guard);
+            }
             $role->syncPermissions($validated['permissions']);
         }
 
@@ -83,7 +95,9 @@ class RolesController extends Controller
     public function destroy(Role $role): RedirectResponse
     {
         $this->authorize('delete', $role);
-        abort_if($role->users()->exists(), 422, 'Role still assigned to users.');
+        if ($role->users()->exists()) {
+            return back()->with('error', "Role \"{$role->name}\" is still assigned to users. Unassign it first.");
+        }
 
         $role->delete();
 

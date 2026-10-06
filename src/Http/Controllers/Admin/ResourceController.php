@@ -101,7 +101,7 @@ class ResourceController extends Controller
         $model->save();
         $this->syncRelations($model, $class, $input);
 
-        return redirect("/cms/resources/{$resource}");
+        return redirect()->route('sunrice.admin.resources.index', $resource)->with('success', $class::singularLabel().' created.');
     }
 
     public function edit(Request $request, string $resource, int $id): Response
@@ -141,7 +141,7 @@ class ResourceController extends Controller
 
         $model->delete();
 
-        return redirect("/cms/resources/{$resource}");
+        return redirect()->route('sunrice.admin.resources.index', $resource)->with('success', $class::singularLabel().' deleted.');
     }
 
     public function bulk(Request $request, string $resource): RedirectResponse
@@ -149,12 +149,14 @@ class ResourceController extends Controller
         $class = $this->resource($resource);
         $ids = (array) $request->input('ids', []);
 
+        $count = 0;
         foreach ($class::model()::query()->whereIn('id', $ids)->get() as $model) {
             $this->checkAbility($request, $resource, 'delete', $model);
             $model->delete();
+            $count++;
         }
 
-        return back();
+        return back()->with('success', "Deleted {$count} ".($count === 1 ? $class::singularLabel() : $class::label()).'.');
     }
 
     public function export(Request $request, string $resource, CsvExporter $csv): StreamedResponse

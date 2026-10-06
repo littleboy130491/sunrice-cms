@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Inertia\Testing\AssertableInertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -117,8 +118,48 @@ it('keeps user managers away from super admins', function () {
         'name' => 'Ed', 'email' => 'ed@x.com',
         'password' => 'secret-pw-123', 'password_confirmation' => 'secret-pw-123',
         'roles' => [config('sunrice.super_admin_role')],
-    ])->assertForbidden();
+    ])->assertSessionHasErrors('roles');
     expect(User::query()->where('email', 'ed@x.com')->exists())->toBeFalse();
+});
+
+it('saves role permissions that have not been synced yet and flashes', function () {
+    $collection = createCollection('news');
+    $role = Role::findOrCreate('writer', 'web');
+    userWith(['sunrice.roles.view', 'sunrice.roles.edit']);
+    // A collection created without a permission sync still shows up in the editor.
+    Permission::query()->where('name', "sunrice.entries.{$collection->id}.translate")->delete();
+
+    put("/cms/roles/{$role->id}", ['name' => 'writer', 'permissions' => ["sunrice.entries.{$collection->id}.translate"]])
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('success', 'Role saved.');
+    expect($role->fresh()->hasPermissionTo("sunrice.entries.{$collection->id}.translate"))->toBeTrue();
+
+    put("/cms/roles/{$role->id}", ['permissions' => ['sunrice.made-up']])->assertSessionHasErrors('permissions.0');
+});
+
+it('refuses to delete an assigned role or yourself with a message', function () {
+    $role = Role::findOrCreate('writer', 'web');
+    $me = userWith(['sunrice.roles.view', 'sunrice.roles.delete', 'sunrice.users.view', 'sunrice.users.delete']);
+    $me->assignRole($role);
+
+    $this->delete("/cms/roles/{$role->id}")->assertRedirect()->assertSessionHas('error');
+    expect(Role::query()->whereKey($role->id)->exists())->toBeTrue();
+
+    $this->delete("/cms/users/{$me->id}")->assertRedirect()->assertSessionHas('error', 'You cannot delete yourself.');
+});
+
+it('shares a fresh flash id so repeated saves each toast', function () {
+    $role = Role::findOrCreate('writer', 'web');
+    userWith(['sunrice.roles.view', 'sunrice.roles.edit']);
+
+    $ids = [];
+    foreach ([1, 2] as $_) {
+        put("/cms/roles/{$role->id}", ['name' => 'writer'])->assertSessionHas('success');
+        get("/cms/roles/{$role->id}/edit")->assertInertia(function (AssertableInertia $page) use (&$ids) {
+            $ids[] = $page->toArray()['props']['flash']['id'];
+        });
+    }
+    expect($ids[0])->not->toBeNull()->and($ids[1])->not->toBe($ids[0]);
 });
 
 it('does not let role managers edit the super admin role', function () {

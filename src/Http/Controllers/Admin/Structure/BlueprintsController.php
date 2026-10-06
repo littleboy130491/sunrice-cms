@@ -69,7 +69,11 @@ class BlueprintsController extends Controller
 
     public function destroy(Blueprint $blueprint, DeleteBlueprint $delete): RedirectResponse
     {
-        $delete->handle($blueprint);
+        try {
+            $delete->handle($blueprint);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return redirect()->route('sunrice.admin.structure.blueprints.index')
             ->with('success', "Blueprint \"{$blueprint->title}\" deleted.");

@@ -45,7 +45,7 @@ class FormsController extends Controller
 
         $form = $save->handle(null, $request->all());
 
-        return redirect("/cms/forms/{$form->handle}");
+        return redirect()->route('sunrice.admin.forms.edit', $form->handle)->with('success', "Form \"{$form->title}\" created.");
     }
 
     public function edit(Form $form): Response
@@ -89,6 +89,6 @@ class FormsController extends Controller
 
         $delete->handle($form);
 
-        return redirect('/cms');
+        return redirect()->route('sunrice.admin.forms.index')->with('success', 'Form deleted.');
     }
 }

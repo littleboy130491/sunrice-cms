@@ -11,6 +11,7 @@ use Illuminate\Routing\Controller;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
@@ -74,10 +75,15 @@ class UsersController extends Controller
         if (empty($validated['password'])) {
             unset($validated['password']);
         }
+        // Check the role change before saving anything, so a refused
+        // change doesn't leave the other fields half-saved.
+        if (isset($validated['roles'])) {
+            $this->guardSuperAdminRole($request, $user->roles->pluck('name')->all(), $validated['roles']);
+        }
+
         $user->update(Arr::except($validated, 'roles'));
 
         if (isset($validated['roles'])) {
-            $this->guardSuperAdminRole($request, $user->roles->pluck('name')->all(), $validated['roles']);
             $user->syncRoles($validated['roles']);
         }
 
@@ -88,9 +94,10 @@ class UsersController extends Controller
     {
         $model = config('sunrice.auth.user_model');
         $user = $model::findOrFail($user);
+        if ((string) $user->getKey() === (string) $request->user()->getAuthIdentifier()) {
+            return back()->with('error', 'You cannot delete yourself.');
+        }
         $this->authorize('delete', $user);
-
-        abort_if((string) $user->getKey() === (string) $request->user()->getAuthIdentifier(), 422, 'You cannot delete yourself.');
 
         $user->delete();
 
@@ -110,6 +117,8 @@ class UsersController extends Controller
             return;
         }
 
-        abort_unless($request->user()->can('assignSuperAdmin', config('sunrice.auth.user_model')), 403, 'Only a super admin can change who is a super admin.');
+        if (! $request->user()->can('assignSuperAdmin', config('sunrice.auth.user_model'))) {
+            throw ValidationException::withMessages(['roles' => 'Only a super admin can change who is a super admin.']);
+        }
     }
 }

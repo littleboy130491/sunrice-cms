@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Actions\Entries\ChangeBlueprint;
@@ -240,7 +241,11 @@ class EntriesController extends Controller
     public function returnToDraft(EntryTranslation $translation, ReturnTranslationToDraft $action): RedirectResponse
     {
         $this->authorize('update', $translation->entry);
-        $action->handle($translation);
+        try {
+            $action->handle($translation);
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
 
         return back()->with('success', 'Translation returned to draft.');
     }
@@ -275,21 +280,48 @@ class EntriesController extends Controller
             'ids.*' => ['integer'],
         ]);
 
-        $entries = Entry::withTrashed()->whereIn('id', $validated['ids'])->get();
+        $entries = Entry::withTrashed()
+            ->where('collection_id', $collection->id)
+            ->whereIn('id', $validated['ids'])
+            ->get();
 
         $user = $request->user();
 
+        $done = 0;
         foreach ($entries as $entry) {
-            match ($validated['action']) {
-                'trash' => $user->can('delete', $entry) ? app(TrashEntry::class)->handle($entry) : null,
-                'restore' => $entry->trashed() && $user->can('delete', $entry) ? app(RestoreEntry::class)->handle($entry) : null,
-                'delete' => $entry->trashed() && $user->can('delete', $entry) ? app(ForceDeleteEntry::class)->handle($entry) : null,
-                'publish' => $user->can('publish', $entry) ? app(PublishTranslation::class)->handle($entry->mainTranslation()) : null,
-                default => null,
+            $allowed = match ($validated['action']) {
+                'trash' => ! $entry->trashed() && $user->can('delete', $entry),
+                'restore', 'delete' => $entry->trashed() && $user->can('delete', $entry),
+                'publish' => ! $entry->trashed() && $entry->mainTranslation() !== null && $user->can('publish', $entry),
+                default => false,
             };
+            if (! $allowed) {
+                continue;
+            }
+            switch ($validated['action']) {
+                case 'trash':
+                    app(TrashEntry::class)->handle($entry);
+                    break;
+                case 'restore':
+                    app(RestoreEntry::class)->handle($entry);
+                    break;
+                case 'delete':
+                    app(ForceDeleteEntry::class)->handle($entry);
+                    break;
+                case 'publish':
+                    app(PublishTranslation::class)->handle($entry->mainTranslation());
+                    break;
+            }
+            $done++;
         }
 
-        return back()->with('success', 'Done.');
+        $template = ['trash' => 'Moved %d %s to trash.', 'restore' => 'Restored %d %s.', 'delete' => 'Deleted %d %s permanently.', 'publish' => 'Published %d %s.'][$validated['action']];
+        $message = sprintf($template, $done, $done === 1 ? 'entry' : 'entries');
+        $skipped = count($validated['ids']) - $done;
+
+        return $done === 0
+            ? back()->with('error', 'Nothing changed: you may not have permission for the selected entries.')
+            : back()->with('success', $skipped > 0 ? "{$message} {$skipped} skipped." : $message);
     }
 
     public function preview(Request $request, Entry $entry): RedirectResponse
@@ -328,7 +360,9 @@ class EntriesController extends Controller
 
     protected function translationFor(Entry $entry, string $locale): EntryTranslation
     {
-        abort_unless(Locales::isAvailable($locale), 422, 'Unknown locale.');
+        if (! Locales::isAvailable($locale)) {
+            throw ValidationException::withMessages(['locale' => 'Unknown language. Reload the page and try again.']);
+        }
 
         $main = $entry->mainTranslation();
 

@@ -53,7 +53,9 @@ const emptyForm = (taxonomy: string): FormState => ({
 });
 
 export default function MenuEdit({ menu, items, collections, taxonomies }: Props) {
-    const { adminPath, locales, errors } = usePage<SharedProps & { errors: Record<string, string> }>().props;
+    const { adminPath, locales } = usePage<SharedProps>().props;
+    const [errors, setErrors] = React.useState<Record<string, string>>({});
+    const [processing, setProcessing] = React.useState(false);
     const can = useCan();
     const canEdit = can('sunrice.menus.edit');
     const [open, setOpen] = React.useState(false);
@@ -68,6 +70,7 @@ export default function MenuEdit({ menu, items, collections, taxonomies }: Props
         setEditing(null);
         setParentId(parent);
         setForm(emptyForm(taxonomies[0]?.handle ?? ''));
+        setErrors({});
         setOpen(true);
     };
 
@@ -84,6 +87,7 @@ export default function MenuEdit({ menu, items, collections, taxonomies }: Props
             labels: item.labels ?? {},
             new_tab: item.new_tab,
         });
+        setErrors({});
         setOpen(true);
     };
 
@@ -105,7 +109,13 @@ export default function MenuEdit({ menu, items, collections, taxonomies }: Props
             labels: form.labels,
             new_tab: form.new_tab,
         };
-        const options = { preserveScroll: true, onSuccess: () => setOpen(false) };
+        const options = {
+            preserveScroll: true,
+            onStart: () => setProcessing(true),
+            onFinish: () => setProcessing(false),
+            onSuccess: () => { setOpen(false); setErrors({}); },
+            onError: (e: Record<string, string>) => setErrors(e),
+        };
         if (editing) {
             router.put(adminUrl(`menu-items/${editing.id}`, adminPath), payload, options);
         } else {
@@ -230,15 +240,18 @@ export default function MenuEdit({ menu, items, collections, taxonomies }: Props
                                         placeholder={form.type === 'url' ? '' : 'Uses the linked title'}
                                         onChange={(e) => setForm({ ...form, labels: { ...form.labels, [lc]: e.target.value } })}
                                     />
+                                    <InputError message={errors[`labels.${lc}`]} />
                                 </div>
                             ))}
+                            <InputError message={errors.labels} />
                             <p className="text-xs text-muted-foreground">Empty languages fall back to the {locales.main.toUpperCase()} label, then the linked title.</p>
                         </div>
                         <label className="flex items-center gap-2 text-sm">
                             <Checkbox checked={form.new_tab} onCheckedChange={(c) => setForm({ ...form, new_tab: !!c })} />
                             Open in new tab
                         </label>
-                        <Button onClick={submit}>{editing ? 'Save' : 'Add'}</Button>
+                        <InputError message={errors.parent_id ?? errors.type ?? errors.new_tab} />
+                        <Button onClick={submit} disabled={processing}>{editing ? 'Save' : 'Add'}</Button>
                     </div>
                 </DialogContent>
             </Dialog>

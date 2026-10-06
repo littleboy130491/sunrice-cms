@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
+import { InputError } from '@/components/app/input-error';
 import type { SharedProps } from '@/types';
 
 interface Row { id: number; handle: string; title: string; items_count: number }
@@ -17,9 +18,17 @@ export default function MenusIndex({ menus }: { menus: Row[] }) {
     const can = useCan();
     const [open, setOpen] = React.useState(false);
     const [form, setForm] = React.useState({ handle: '', title: '' });
+    const [errors, setErrors] = React.useState<Record<string, string>>({});
+    const [processing, setProcessing] = React.useState(false);
 
-    const submit = () => {
-        router.post(adminUrl('menus', adminPath), form, { onSuccess: () => setOpen(false) });
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        router.post(adminUrl('menus', adminPath), form, {
+            onStart: () => setProcessing(true),
+            onFinish: () => setProcessing(false),
+            onSuccess: () => { setOpen(false); setForm({ handle: '', title: '' }); setErrors({}); },
+            onError: setErrors,
+        });
     };
 
     return (
@@ -27,24 +36,26 @@ export default function MenusIndex({ menus }: { menus: Row[] }) {
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold tracking-tight">Menus</h1>
                 {can('sunrice.menus.create') && (
-                    <Dialog open={open} onOpenChange={setOpen}>
+                    <Dialog open={open} onOpenChange={(o) => { setOpen(o); setErrors({}); }}>
                         <DialogTrigger asChild><Button><Plus className="mr-1 h-4 w-4" /> New menu</Button></DialogTrigger>
                         <DialogContent>
                             <DialogHeader><DialogTitle>New menu</DialogTitle></DialogHeader>
-                            <div className="flex flex-col gap-3">
+                            <form onSubmit={submit} className="flex flex-col gap-3">
                                 <div className="grid gap-2">
                                     <Label>Title</Label>
                                     <Input value={form.title} onChange={(e) => setForm({
                                         title: e.target.value,
                                         handle: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''),
                                     })} />
+                                    <InputError message={errors.title} />
                                 </div>
                                 <div className="grid gap-2">
                                     <Label>Handle</Label>
                                     <Input value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} />
+                                    <InputError message={errors.handle} />
                                 </div>
-                                <Button onClick={submit}>Create</Button>
-                            </div>
+                                <Button type="submit" disabled={processing}>Create</Button>
+                            </form>
                         </DialogContent>
                     </Dialog>
                 )}

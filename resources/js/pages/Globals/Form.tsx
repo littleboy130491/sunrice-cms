@@ -9,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import FieldRenderer from '@/fields/FieldRenderer';
 import { adminUrl } from '@/lib/route';
-import type { AdminTab, SharedProps } from '@/types'; import type { Json } from '@/types';
+import { InputError } from '@/components/app/input-error';
+import type { AdminTab, Json, SharedProps } from '@/types';
 
 interface Props {
     globalSet: { id: number; handle: string; title: string; group: string; blueprint_id: number | null; translatable: boolean } | null;
@@ -17,12 +18,18 @@ interface Props {
     values: Record<string, Record<string, Json>> | null;
     blueprints: { id: number; title: string }[];
     locales: string[];
+    mainLocale?: string;
 }
 
-export default function GlobalForm({ globalSet, blueprint, values, blueprints, locales }: Props) {
+/** Server errors for values.* are shown against the matching data.* field paths. */
+const valueErrors = (errors: Record<string, string>) =>
+    Object.fromEntries(Object.entries(errors).map(([k, v]) => [k.replace(/^values\./, 'data.'), v]));
+
+export default function GlobalForm({ globalSet, blueprint, values, blueprints, locales, mainLocale = locales[0] }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const isNew = globalSet === null;
-    const mainLocale = locales[0];
+    const [errors, setErrors] = React.useState<Record<string, string>>({});
+    const [processing, setProcessing] = React.useState(false);
 
     const [meta, setMeta] = React.useState({
         handle: globalSet?.handle ?? '',
@@ -36,16 +43,24 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
 
     React.useEffect(() => {
         setData(values?.[locale] ?? {});
+        setErrors({});
     }, [locale, values]);
 
     const submitMeta = () => {
+        const options = {
+            preserveScroll: true,
+            onStart: () => setProcessing(true),
+            onFinish: () => setProcessing(false),
+            onSuccess: () => setErrors({}),
+            onError: (e: Record<string, string>) => setErrors(e),
+        };
         if (isNew) {
-            router.post(adminUrl('globals', adminPath), meta);
+            router.post(adminUrl('globals', adminPath), meta, options);
         } else {
             router.put(adminUrl(`globals/${globalSet.id}`, adminPath), {
                 locale: locale === '_shared' ? null : locale,
                 values: data,
-            }, { preserveScroll: true });
+            }, options);
         }
     };
 
@@ -66,10 +81,12 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
                                     title: e.target.value,
                                     handle: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''),
                                 })} />
+                                <InputError message={errors.title} />
                             </div>
                             <div className="grid gap-2">
                                 <Label>Handle</Label>
                                 <Input value={meta.handle} onChange={(e) => setMeta({ ...meta, handle: e.target.value })} />
+                                <InputError message={errors.handle} />
                             </div>
                         </div>
                         <div className="grid gap-2">
@@ -90,12 +107,13 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
                                     {blueprints.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.title}</SelectItem>)}
                                 </SelectContent>
                             </Select>
+                            <InputError message={errors.blueprint_id} />
                         </div>
                         <label className="flex items-center gap-2 text-sm">
                             <Checkbox checked={meta.translatable} onCheckedChange={(c) => setMeta({ ...meta, translatable: !!c })} />
                             Translatable
                         </label>
-                        <Button onClick={submitMeta} className="w-32">Create</Button>
+                        <Button onClick={submitMeta} className="w-32" disabled={processing}>Create</Button>
                     </CardContent>
                 </Card>
             ) : (
@@ -109,10 +127,10 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
                     )}
                     <Card>
                         <CardContent>
-                            <FieldRenderer fields={fields} values={data} onChange={setData} />
+                            <FieldRenderer fields={fields} values={data} errors={valueErrors(errors)} onChange={setData} />
                         </CardContent>
                     </Card>
-                    <Button onClick={submitMeta} className="w-32">Save</Button>
+                    <Button onClick={submitMeta} className="w-32" disabled={processing}>{processing ? 'Saving…' : 'Save'}</Button>
                 </>
             )}
         </div>

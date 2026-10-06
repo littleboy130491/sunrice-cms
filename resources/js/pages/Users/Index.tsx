@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
+import { InputError } from '@/components/app/input-error';
 import type { SharedProps } from '@/types';
 
 interface UserRow { id: number; name: string; email: string; roles: string[] }
@@ -24,25 +25,39 @@ export default function UsersIndex({ users, roles }: { users: UserRow[]; roles: 
         name: '', email: '', password: '', password_confirmation: '', roles: [],
     });
 
+    const [errors, setErrors] = React.useState<Record<string, string>>({});
+    const [processing, setProcessing] = React.useState(false);
+
     const openCreate = () => {
+        setErrors({});
         setEditing(null);
         setForm({ name: '', email: '', password: '', password_confirmation: '', roles: [] });
         setOpen(true);
     };
 
     const openEdit = (u: UserRow) => {
+        setErrors({});
         setEditing(u);
         setForm({ name: u.name, email: u.email, password: '', password_confirmation: '', roles: u.roles });
         setOpen(true);
     };
 
-    const submit = () => {
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const options = {
+            preserveScroll: true,
+            onStart: () => setProcessing(true),
+            onFinish: () => setProcessing(false),
+            onSuccess: () => { setOpen(false); setErrors({}); },
+            onError: (e: Record<string, string>) => setErrors(e),
+        };
         if (editing) {
-            router.put(adminUrl(`users/${editing.id}`, adminPath), form, { preserveScroll: true, onSuccess: () => setOpen(false) });
+            router.put(adminUrl(`users/${editing.id}`, adminPath), form, options);
         } else {
-            router.post(adminUrl('users', adminPath), form, { onSuccess: () => setOpen(false) });
+            router.post(adminUrl('users', adminPath), form, options);
         }
     };
+    const rolesError = Object.entries(errors).find(([k]) => k === 'roles' || k.startsWith('roles.'))?.[1];
 
     return (
         <div className="flex flex-col gap-4">
@@ -77,10 +92,10 @@ export default function UsersIndex({ users, roles }: { users: UserRow[]; roles: 
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>{editing ? `Edit ${editing.name}` : 'New user'}</DialogTitle></DialogHeader>
-                    <div className="flex flex-col gap-3">
-                        <div className="grid gap-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-                        <div className="grid gap-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-                        <div className="grid gap-2"><Label>{editing ? 'New password (blank = keep)' : 'Password'}</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
+                    <form onSubmit={submit} className="flex flex-col gap-3">
+                        <div className="grid gap-2"><Label>Name</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /><InputError message={errors.name} /></div>
+                        <div className="grid gap-2"><Label>Email</Label><Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /><InputError message={errors.email} /></div>
+                        <div className="grid gap-2"><Label>{editing ? 'New password (blank = keep)' : 'Password'}</Label><Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /><InputError message={errors.password} /></div>
                         <div className="grid gap-2"><Label>Confirm password</Label><Input type="password" value={form.password_confirmation} onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })} /></div>
                         <div className="grid gap-1">
                             <Label>Roles</Label>
@@ -93,9 +108,10 @@ export default function UsersIndex({ users, roles }: { users: UserRow[]; roles: 
                                     {r.name}
                                 </label>
                             ))}
+                            <InputError message={rolesError} />
                         </div>
-                        <Button onClick={submit}>Save</Button>
-                    </div>
+                        <Button type="submit" disabled={processing}>{processing ? 'Saving…' : 'Save'}</Button>
+                    </form>
                 </DialogContent>
             </Dialog>
         </div>

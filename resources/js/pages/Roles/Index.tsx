@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
+import { InputError } from '@/components/app/input-error';
 import type { SharedProps } from '@/types';
 
 interface Row { id: number; name: string; permissions_count: number }
@@ -17,9 +18,17 @@ export default function RolesIndex({ roles }: { roles: Row[] }) {
     const can = useCan();
     const [open, setOpen] = React.useState(false);
     const [name, setName] = React.useState('');
+    const [error, setError] = React.useState<string>();
+    const [processing, setProcessing] = React.useState(false);
 
-    const submit = () => {
-        router.post(adminUrl('roles', adminPath), { name }, { onSuccess: () => { setOpen(false); setName(''); } });
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        router.post(adminUrl('roles', adminPath), { name }, {
+            onStart: () => setProcessing(true),
+            onFinish: () => setProcessing(false),
+            onSuccess: () => { setOpen(false); setName(''); setError(undefined); },
+            onError: (errors) => setError(errors.name),
+        });
     };
 
     return (
@@ -27,17 +36,18 @@ export default function RolesIndex({ roles }: { roles: Row[] }) {
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold tracking-tight">Roles</h1>
                 {can('sunrice.roles.create') && (
-                    <Dialog open={open} onOpenChange={setOpen}>
+                    <Dialog open={open} onOpenChange={(o) => { setOpen(o); setError(undefined); }}>
                         <DialogTrigger asChild><Button><Plus className="mr-1 h-4 w-4" /> New role</Button></DialogTrigger>
                         <DialogContent>
                             <DialogHeader><DialogTitle>New role</DialogTitle></DialogHeader>
-                            <div className="flex flex-col gap-3">
+                            <form onSubmit={submit} className="flex flex-col gap-3">
                                 <div className="grid gap-2">
                                     <Label>Name</Label>
-                                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="editor" />
+                                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="editor" autoFocus />
+                                    <InputError message={error} />
                                 </div>
-                                <Button onClick={submit}>Create</Button>
-                            </div>
+                                <Button type="submit" disabled={processing}>Create</Button>
+                            </form>
                         </DialogContent>
                     </Dialog>
                 )}
