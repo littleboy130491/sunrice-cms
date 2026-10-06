@@ -3,13 +3,20 @@
 
     Child templates `@extends('sunrice.layouts.app')` and fill:
       - @section('content')   the page body
-    and may pass `$entry` (single pages) so <x-sunrice::seo> can emit
-    the title, description, canonical URL, Open Graph tags and hreflang.
+    and may pass `seoTitle` (e.g. @extends('sunrice.layouts.app', ['seoTitle' => '...'])).
 
     Variables Sunrice passes to every template: $locale, $pageType
     ('entry' | 'archive' | 'term'), plus $entry / $entries / $collection /
-    $term / $taxonomy depending on the page type.
+    $term / $taxonomy depending on the page type, and $sunricePage — the
+    same page info (->entry, ->term, ->collection, ->taxonomy) that a
+    template's own loops can't overwrite. Layouts and partials read the
+    page from $sunricePage: a child's `@foreach ($entries as $entry)`
+    leaves $entry set to the last card when the layout renders.
 --}}
+@php
+    $page = $sunricePage ?? null;
+    $pageEntry = $page?->entry ?? (($pageType ?? null) === 'entry' ? ($entry ?? null) : null);
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', $locale ?? app()->getLocale()) }}">
 <head>
@@ -17,7 +24,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     {{-- SEO tags. Without an entry it falls back to app.name and the current URL. --}}
-    <x-sunrice::seo :entry="$entry ?? null" :title="$seoTitle ?? null" />
+    <x-sunrice::seo :entry="$pageEntry" :term="$page?->term" :collection="$page?->collection" :title="$seoTitle ?? null" />
 
     {{-- Starter styles: delete this block and use your own CSS (Vite, Tailwind, ...). --}}
     <style>
@@ -37,7 +44,8 @@
         nav li ul { display: none; }
         nav a { color: inherit; text-decoration: none; }
         nav a[aria-current="page"] { color: var(--accent); font-weight: 600; }
-        .lang-switch { display: flex; gap: 8px; font-size: 14px; text-transform: uppercase; }
+        .lang-switch { display: flex; gap: 12px; font-size: 14px; }
+        .lang-switch a[aria-current] { font-weight: 600; text-decoration: none; }
         .muted { color: var(--muted); }
         .meta { color: var(--muted); font-size: 14px; display: flex; gap: 12px; flex-wrap: wrap; }
         .tags { display: flex; gap: 8px; flex-wrap: wrap; padding: 0; list-style: none; }

@@ -15,7 +15,7 @@
 <footer class="site-footer">
     <div class="container">
         @if ($footerMenu->isNotEmpty())
-            <nav aria-label="Footer">
+            <nav aria-label="{{ __('sunrice::frontend.footer_menu') }}">
                 @include('sunrice.partials.menu', ['items' => $footerMenu])
             </nav>
         @endif

@@ -7,7 +7,9 @@ namespace Sunrice\View\Components;
 use Illuminate\View\Component;
 use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Asset;
+use Sunrice\Models\Collection as ContentCollection;
 use Sunrice\Models\Entry;
+use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
 
 /**
@@ -42,8 +44,18 @@ class Seo extends Component
 
     public ?string $twitterSite;
 
-    public function __construct(?Entry $entry = null, ?string $title = null, ?string $description = null, ?bool $noindex = null)
-    {
+    /**
+     * @param  Term|null  $term  on term pages, for hreflang links to the term in each language
+     * @param  ContentCollection|null  $collection  on per-collection term pages
+     */
+    public function __construct(
+        ?Entry $entry = null,
+        ?string $title = null,
+        ?string $description = null,
+        ?bool $noindex = null,
+        protected ?Term $term = null,
+        protected ?ContentCollection $collection = null,
+    ) {
         $this->entry = $entry;
         $seo = $entry === null ? [] : ($entry->seo ?? []);
         $this->locale = $entry === null ? Locales::current() : ($entry->resolvedLocale ?? Locales::current());
@@ -101,8 +113,12 @@ class Seo extends Component
     /** @return array<string, string> */
     protected function alternates(): array
     {
+        if ($this->entry === null) {
+            return $this->pageAlternates();
+        }
+
         // No hreflang on fallback pages.
-        if ($this->entry === null || $this->isFallback) {
+        if ($this->isFallback) {
             return [];
         }
 
@@ -120,6 +136,36 @@ class Seo extends Component
         }
 
         $alternates['x-default'] = url($urls->entry($this->entry, Locales::main()));
+
+        return $alternates;
+    }
+
+    /**
+     * Listing and term pages exist in every language: link them all. A
+     * term only counts in a language it has a translation for.
+     *
+     * @return array<string, string>
+     */
+    protected function pageAlternates(): array
+    {
+        if (Locales::available() === [Locales::main()] || ! request()->attributes->has('sunrice.path')) {
+            return [];
+        }
+
+        $urls = app(UrlGenerator::class)->localeUrls($this->term, $this->collection);
+        if ($this->term !== null) {
+            $urls = array_filter(
+                $urls,
+                fn (string $locale) => Locales::isMain($locale) || $this->term->translation($locale) !== null,
+                ARRAY_FILTER_USE_KEY,
+            );
+        }
+        if (count($urls) < 2) {
+            return [];
+        }
+
+        $alternates = array_map(fn (string $url) => url($url), $urls);
+        $alternates['x-default'] = $alternates[Locales::main()] ?? url('/');
 
         return $alternates;
     }

@@ -32,7 +32,7 @@
     @endif
 
     @if ($entries->isEmpty())
-        <p class="muted">No entries in this {{ strtolower($taxonomy->title) }} yet.</p>
+        <p class="muted">{{ __('sunrice::frontend.nothing_in_term', ['term' => $term->name]) }}</p>
     @else
         <ul class="cards">
             @foreach ($entries as $entry)

@@ -29,6 +29,22 @@ Every template works on a fresh install: missing globals, menus and
 fields simply render nothing. Each file starts with a comment listing the
 field handles it expects.
 
+### Languages
+
+- Interface text ("Latest articles", "Nothing here yet.", the form's
+  Submit button…) comes from `__('sunrice::frontend.*')`, shipped in
+  English and Indonesian. Add a language or change the wording with
+  `php artisan vendor:publish --tag=sunrice-translations`, then edit
+  `lang/vendor/sunrice/{locale}/frontend.php`.
+- Layouts and partials read the page from `$sunricePage` (`->entry`,
+  `->term`, `->collection`, `->taxonomy`), not `$entry`/`$term`: Blade
+  hands a child template's variables to its layout, so after
+  `@foreach ($entries as $entry)` a listing's `$entry` is its last card.
+- The language switcher shows the names set under Settings → Languages
+  and links each language's version of the entry, term page or listing.
+- A listing's heading and intro are set per language in the collection
+  form; templates read them with `$collection->archiveText($locale)`.
+
 ## Reading data
 
 | Field type | `$entry->get('handle')` returns |

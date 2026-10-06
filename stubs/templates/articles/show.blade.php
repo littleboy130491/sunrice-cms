@@ -19,7 +19,7 @@
             @endif
             {{-- `author` is the CMS user who created the entry. --}}
             @if ($entry->author)
-                <span>by {{ $entry->author->name }}</span>
+                <span>{{ __('sunrice::frontend.by', ['name' => $entry->author->name]) }}</span>
             @endif
         </p>
 
@@ -56,7 +56,7 @@
     {{-- An "entries" field returns the picked entries, resolved for the active language. --}}
     @if (($related = $entry->get('related')) && $related->isNotEmpty())
         <section class="block">
-            <h2>Related</h2>
+            <h2>{{ __('sunrice::frontend.related') }}</h2>
             <ul class="cards">
                 @foreach ($related as $item)
                     @include('sunrice.partials.card', ['entry' => $item])
@@ -68,7 +68,7 @@
     {{-- Query any collection from a template. Only published entries are returned,
          in the active language with whole-entry fallback. --}}
     <section class="block">
-        <h2>Latest articles</h2>
+        <h2>{{ __('sunrice::frontend.latest_articles') }}</h2>
         <x-sunrice::entries collection="articles" :limit="4" order-by="-published_at">
             <ul class="cards">
                 {{-- One extra is fetched so there are still three after leaving out this article. --}}

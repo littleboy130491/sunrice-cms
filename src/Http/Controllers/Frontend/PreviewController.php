@@ -22,6 +22,8 @@ class PreviewController extends Controller
     public function __invoke(Request $request, Entry $entry, string $locale): Response
     {
         abort_unless(Locales::isAvailable($locale), 404);
+        // Menus, globals, dates and interface text in the previewed language.
+        app()->setLocale($locale);
 
         $entry->load('translations');
         $entry->resolveFor($locale);
@@ -63,6 +65,7 @@ class PreviewController extends Controller
                 'collection' => $entry->collection,
                 'locale' => $locale,
                 'pageType' => 'entry',
+                'sunricePage' => $ctx,
             ])
             ->header('X-Robots-Tag', 'noindex');
     }
