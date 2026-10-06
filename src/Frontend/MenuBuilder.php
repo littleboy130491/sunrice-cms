@@ -162,7 +162,7 @@ class MenuBuilder
             return null;
         }
 
-        return ['title' => $collection->title, 'url' => $this->urls->archive($collection, $locale)];
+        return ['title' => $collection->titleIn($locale), 'url' => $this->urls->archive($collection, $locale)];
     }
 
     /** @return array{title: ?string, url: string}|null */

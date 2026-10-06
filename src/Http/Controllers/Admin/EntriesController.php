@@ -107,6 +107,9 @@ class EntriesController extends Controller
             'visibleColumns' => TablePreferencesController::columnsFor($userId, 'entries', ['id', 'title', 'status', 'updated_at']),
             'can' => [
                 'create' => $request->user()->can('create', [Entry::class, $collection->id]),
+                // The listing page editor (heading, intro, listing blueprint fields).
+                'listing' => $collection->setting('has_archive', false)
+                    && ($request->user()->can("sunrice.entries.{$collection->id}.edit") || $request->user()->can("sunrice.entries.{$collection->id}.translate")),
             ],
         ]);
     }

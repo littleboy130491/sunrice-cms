@@ -63,6 +63,8 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
 
     // Entries (T8.3)
     Route::get('collections/{collection:handle}/entries', [Admin\EntriesController::class, 'index'])->name('entries.index');
+    Route::get('collections/{collection:handle}/listing', [Admin\ListingController::class, 'edit'])->name('listing.edit');
+    Route::put('collections/{collection:handle}/listing', [Admin\ListingController::class, 'update'])->name('listing.update');
     Route::get('collections/{collection:handle}/entries/export', [Admin\EntriesController::class, 'export'])->name('entries.export');
     Route::get('collections/{collection:handle}/entries/create', [Admin\EntriesController::class, 'create'])->name('entries.create');
     Route::post('collections/{collection:handle}/entries', [Admin\EntriesController::class, 'store'])->name('entries.store');

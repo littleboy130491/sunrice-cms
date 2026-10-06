@@ -13,7 +13,7 @@ interface Props {
     columns: ColumnDef[];
     rows: Paginated<Row>;
     meta: { search: string | null; filters: Record<string, string>; sort: string | null };
-    can: { create: boolean };
+    can: { create: boolean; listing?: boolean };
     visibleColumns?: string[];
 }
 
@@ -39,13 +39,20 @@ export default function EntriesIndex({ collection, columns, rows, meta, can, vis
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold tracking-tight">{collection.title}</h1>
-                {can.create && (
-                    <Button asChild>
-                        <Link href={adminUrl(`collections/${collection.handle}/entries/create`, adminPath)}>
-                            <Plus className="mr-1 h-4 w-4" /> New entry
-                        </Link>
-                    </Button>
-                )}
+                <div className="flex gap-2">
+                    {can.listing && (
+                        <Button variant="outline" asChild>
+                            <Link href={adminUrl(`collections/${collection.handle}/listing`, adminPath)}>Listing page</Link>
+                        </Button>
+                    )}
+                    {can.create && (
+                        <Button asChild>
+                            <Link href={adminUrl(`collections/${collection.handle}/entries/create`, adminPath)}>
+                                <Plus className="mr-1 h-4 w-4" /> New entry
+                            </Link>
+                        </Button>
+                    )}
+                </div>
             </div>
             <DataTable<Row>
                 columns={columns}

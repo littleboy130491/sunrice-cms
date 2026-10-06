@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Blueprint;
+use Sunrice\Models\Collection;
 use Sunrice\Models\Fieldset;
 use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
@@ -286,4 +287,38 @@ it('previews a translation with that language\'s menus and interface text', func
 
     get($url)->assertOk()->assertSee('News item')->assertSee('>Home</a>', false)
         ->assertSee('Latest articles')->assertDontSee('Beranda');
+});
+
+it('shows collection and taxonomy titles in the page language', function () {
+    actingAsSuperAdmin();
+    $blueprint = Blueprint::factory()->create();
+    $this->post('/cms/structure/collections', [
+        'handle' => 'berita', 'title' => 'Berita', 'blueprint_id' => $blueprint->id,
+        'settings' => ['has_archive' => true, 'titles' => ['en' => 'News', 'id' => 'ignored', 'xx' => 'ignored']],
+    ])->assertSessionHasNoErrors();
+    $news = Collection::query()->where('handle', 'berita')->firstOrFail();
+    expect($news->settings['titles'])->toBe(['en' => 'News']);
+
+    $this->post('/cms/structure/taxonomies', [
+        'handle' => 'topik', 'title' => 'Topik', 'collection_ids' => [$news->id],
+        'settings' => ['has_archive' => true, 'route' => '/topik/{slug}', 'titles' => ['en' => 'Topics']],
+    ])->assertSessionHasNoErrors();
+    $taxonomy = Taxonomy::query()->where('handle', 'topik')->firstOrFail();
+    $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
+    $term->translations()->first()->update(['name' => 'Laravel', 'slug' => 'laravel']);
+    createEntry($news, 'Kabar')->terms()->attach($term);
+
+    $menu = Menu::factory()->create(['handle' => 'main']);
+    MenuItem::query()->create([
+        'menu_id' => $menu->id, 'sort_order' => 0, 'type' => 'collection', 'target_id' => $news->id,
+        'labels' => [], 'new_tab' => false,
+    ]);
+    RouteMatcher::flush();
+    auth()->logout();
+
+    get('/berita')->assertOk()->assertSee('<h1>Berita</h1>', false)->assertSee('>Berita</a>', false);
+    get('/en/berita')->assertOk()->assertSee('<h1>News</h1>', false)->assertSee('>News</a>', false);
+
+    get('/topik/laravel')->assertOk()->assertSee('<title>Laravel — Topik</title>', false);
+    get('/en/topik/laravel')->assertOk()->assertSee('<title>Laravel — Topics</title>', false);
 });
