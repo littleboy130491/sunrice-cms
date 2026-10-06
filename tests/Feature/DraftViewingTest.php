@@ -94,8 +94,8 @@ it('gives terms a page link when the taxonomy has term pages', function () {
     $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
     $term->translations()->first()->update(['slug' => 'news']);
 
-    get('/cms/taxonomies/topics')->assertInertia(fn (Assert $page) => $page->where('terms.0.url', '/topics/news'));
+    get('/cms/taxonomies/topics')->assertInertia(fn (Assert $page) => $page->where('rows.data.0.url', '/topics/news'));
 
     $taxonomy->update(['settings' => ['has_archive' => false]]);
-    get('/cms/taxonomies/topics')->assertInertia(fn (Assert $page) => $page->where('terms.0.url', null));
+    get('/cms/taxonomies/topics')->assertInertia(fn (Assert $page) => $page->where('rows.data.0.url', null));
 });

@@ -52,7 +52,7 @@ class EntriesController extends Controller
 
         $query = Entry::query()
             ->where('collection_id', $collection->id)
-            ->with(['translations' => fn ($q) => $q->where('locale', Locales::main())]);
+            ->with(['translations' => fn ($q) => $q->where('locale', Locales::main()), 'author']);
         $table = $this->entriesTable($request, $collection, $query);
         $meta = $table->meta();
         [$defaultColumn] = $collection->defaultSort();
@@ -68,11 +68,20 @@ class EntriesController extends Controller
 
         $userId = $request->user()->getAuthIdentifier();
         $columns = [
-            new Column('id', 'ID', sortable: true, type: 'number'),
             new Column('title', 'Title', sortable: true),
             new Column('status', 'Status', type: 'badge'),
+            new Column('author', 'Created by'),
+            new Column('created_at', 'Created', sortable: true, type: 'date'),
             new Column('updated_at', 'Updated', sortable: true, type: 'date'),
         ];
+
+        // People who wrote entries here, for the "Created by" filter.
+        $authorIds = Entry::withTrashed()->where('collection_id', $collection->id)->whereNotNull('author_id')->distinct()->pluck('author_id');
+        /** @var class-string<Model> $userModel */
+        $userModel = config('sunrice.auth.user_model');
+        $authors = $authorIds->isEmpty() ? collect() : $userModel::query()->whereKey($authorIds)->get()
+            ->map(fn (Model $u) => ['value' => (string) $u->getKey(), 'label' => (string) $u->getAttribute('name')])
+            ->sortBy('label')->values();
 
         return Inertia::render('Entries/Index', [
             'collection' => $collection->only('id', 'handle', 'title', 'settings'),
@@ -89,13 +98,16 @@ class EntriesController extends Controller
                         $e->status === 'published' && $e->published_at?->isFuture() => 'scheduled',
                         default => $e->status,
                     },
+                    'author' => $e->author?->getAttribute('name') ?? '—',
+                    'created_at' => $e->created_at?->format('j M Y'),
                     'updated_at' => $e->updated_at?->diffForHumans(),
                 ];
             }),
+            'authors' => $authors,
             'meta' => $meta,
             // Ordered by hand, but a search, filter or column sort hides that order.
             'reorderPaused' => $mayReorder && ! $canReorder,
-            'visibleColumns' => TablePreferencesController::columnsFor($userId, 'entries', ['id', 'title', 'status', 'updated_at']),
+            'visibleColumns' => $this->visibleEntryColumns((int) $userId),
             'can' => [
                 'create' => $request->user()->can('create', [Entry::class, $collection->id]),
                 'reorder' => $canReorder,
@@ -113,6 +125,21 @@ class EntriesController extends Controller
      *
      * @param  Builder<Entry>  $query
      */
+    /**
+     * Columns this user shows. A choice saved before the list gained
+     * "Created" and "Created by" (it had an ID column) starts over.
+     *
+     * @return array<int, string>
+     */
+    protected function visibleEntryColumns(int $userId): array
+    {
+        $default = ['title', 'status', 'author', 'created_at', 'updated_at'];
+        $saved = TablePreferencesController::columnsFor($userId, 'entries', $default);
+        $known = array_values(array_intersect($saved, ['title', 'status', 'author', 'created_at', 'updated_at']));
+
+        return in_array('id', $saved, true) || $known === [] ? $default : $known;
+    }
+
     protected function entriesTable(Request $request, Collection $collection, Builder $query): TableQuery
     {
         $main = Locales::main();
@@ -137,6 +164,9 @@ class EntriesController extends Controller
                 'scheduled' => $q->where('status', 'published')->where('published_at', '>', now()),
                 default => $q->where('status', $value),
             })
+            ->filter('author', fn (Builder $q, mixed $value) => $value === 'none'
+                ? $q->whereNull('author_id')
+                : $q->where('author_id', $value))
             ->sortUsing('title', fn (Builder $q, string $direction) => $q->orderBy($mainTitle, $direction))
             ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at'])
             ->apply($request);

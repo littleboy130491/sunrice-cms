@@ -6,7 +6,7 @@ import { DataTable, type FilterDef } from '@/components/data-table/DataTable';
 import { adminUrl } from '@/lib/route';
 import type { ColumnDef, Paginated, SharedProps } from '@/types';
 
-interface Row { id: number; title: string; status: string; updated_at: string | null }
+interface Row { id: number; title: string; status: string; author: string; created_at: string | null; updated_at: string | null }
 
 interface Props {
     collection: { id: number; handle: string; title: string };
@@ -17,9 +17,11 @@ interface Props {
     /** Ordered by hand, but a search, filter or column sort is hiding that order. */
     reorderPaused?: boolean;
     visibleColumns?: string[];
+    /** People who created entries here, for the Created by filter. */
+    authors?: { value: string; label: string }[];
 }
 
-export default function EntriesIndex({ collection, columns, rows, meta, can, visibleColumns, reorderPaused }: Props) {
+export default function EntriesIndex({ collection, columns, rows, meta, can, visibleColumns, reorderPaused, authors = [] }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
 
     const filters: FilterDef[] = [
@@ -31,6 +33,9 @@ export default function EntriesIndex({ collection, columns, rows, meta, can, vis
                 { value: 'scheduled', label: 'Scheduled' },
             ],
         },
+        ...(authors.length > 0
+            ? [{ key: 'author', label: 'Created by', type: 'select' as const, options: [...authors, { value: 'none', label: 'No author' }] }]
+            : []),
         {
             key: 'trashed', label: 'Trash', type: 'trashed',
             options: [{ value: 'only', label: 'Trashed' }],
