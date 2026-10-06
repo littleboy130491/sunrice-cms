@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Sunrice\Database\Factories\TaxonomyFactory;
+use Sunrice\Models\Concerns\HasTranslatedTitle;
 
 /**
  * @property int $id
@@ -28,6 +29,8 @@ class Taxonomy extends Model
 {
     /** @use HasFactory<TaxonomyFactory> */
     use HasFactory;
+
+    use HasTranslatedTitle;
 
     protected $table = 'sunrice_taxonomies';
 

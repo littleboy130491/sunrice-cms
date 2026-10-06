@@ -34,6 +34,8 @@ class SaveCollection
             'settings.sluggable' => ['boolean'],
             'settings.archivable' => ['boolean'],
             'settings.has_single' => ['boolean'],
+            'settings.titles' => ['nullable', 'array'],
+            'settings.titles.*' => ['nullable', 'string', 'max:255'],
             'settings.has_archive' => ['boolean'],
             'settings.route' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9/_{}.-]*$#'],
             'settings.archive_route' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9/_.-]*$#'],
@@ -137,6 +139,12 @@ class SaveCollection
      */
     protected function cleanSettings(array $settings): array
     {
+        if (array_key_exists('titles', $settings)) {
+            $settings['titles'] = Collection::cleanTitles($settings['titles']);
+            if ($settings['titles'] === []) {
+                unset($settings['titles']);
+            }
+        }
         foreach (['archive_route', 'template', 'archive_template', 'per_page'] as $key) {
             if (array_key_exists($key, $settings) && ($settings[$key] === null || $settings[$key] === '')) {
                 unset($settings[$key]);

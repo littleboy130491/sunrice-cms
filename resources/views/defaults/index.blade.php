@@ -3,12 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <x-sunrice::seo :title="$collection->title ?? null" />
+    <x-sunrice::seo :title="isset($collection) ? $collection->titleIn($locale ?? null) : null" />
     <x-sunrice::code position="head" />
 </head>
 <body>
     <x-sunrice::code position="body_start" />
-    <h1>{{ $collection->title ?? 'Archive' }}</h1>
+    <h1>{{ isset($collection) ? $collection->titleIn($locale ?? null) : 'Archive' }}</h1>
     <ul>
         @foreach($entries as $entry)
             <li><a href="{{ $entry->url }}">{{ $entry->title }}</a></li>

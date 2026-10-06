@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Sunrice\Database\Factories\CollectionFactory;
 use Sunrice\Fields\BlueprintSchema;
+use Sunrice\Models\Concerns\HasTranslatedTitle;
 use Sunrice\Support\Locales;
 
 /**
@@ -36,6 +37,8 @@ class Collection extends Model
 {
     /** @use HasFactory<CollectionFactory> */
     use HasFactory;
+
+    use HasTranslatedTitle;
 
     protected $table = 'sunrice_collections';
 

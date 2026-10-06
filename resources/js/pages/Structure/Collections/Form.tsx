@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { adminUrl } from '@/lib/route';
 import { navIcon, navIconNames } from '@/components/app/nav-icon';
 import { InputError } from '@/components/app/input-error';
+import TranslatedTitles from '@/components/TranslatedTitles';
 import type { Json, SharedProps } from '@/types';
 
 interface CollectionShape {
@@ -43,6 +44,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             template: (collection?.settings?.template as string) ?? '',
             archive_template: (collection?.settings?.archive_template as string) ?? '',
             icon: (collection?.settings?.icon as string) ?? 'file-text',
+            titles: ((collection?.settings?.titles ?? {}) as Record<string, string>),
         },
         archive_data: Object.fromEntries(locales.available.map((lc) => [lc, {
             title: collection?.archive_data?.[lc]?.title ?? '',
@@ -81,6 +83,13 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                         }} required />
                         <InputError message={errors.title} />
                     </div>
+                    <TranslatedTitles
+                        value={settings.titles}
+                        onChange={(titles) => form.setData('settings', { ...settings, titles })}
+                        mainTitle={form.data.title}
+                        errors={errors}
+                        errorPrefix="settings.titles"
+                    />
                     <div className="grid gap-2">
                         <Label htmlFor="handle">Handle</Label>
                         <Input id="handle" value={form.data.handle} onChange={(e) => form.setData('handle', e.target.value)} required />

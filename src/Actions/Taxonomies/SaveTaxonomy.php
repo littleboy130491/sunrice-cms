@@ -33,6 +33,8 @@ class SaveTaxonomy
             'settings.has_archive' => ['boolean'],
             'settings.route' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9/_{}.-]*$#'],
             'settings.per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'settings.titles' => ['nullable', 'array'],
+            'settings.titles.*' => ['nullable', 'string', 'max:255'],
             'settings.template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'collection_ids' => ['array'],
             'collection_ids.*' => ['integer', Rule::exists('sunrice_collections', 'id')],
@@ -43,6 +45,12 @@ class SaveTaxonomy
         foreach (['per_page', 'template'] as $key) {
             if (array_key_exists($key, $settings) && ($settings[$key] === null || $settings[$key] === '')) {
                 unset($settings[$key]);
+            }
+        }
+        if (array_key_exists('titles', $settings)) {
+            $settings['titles'] = Taxonomy::cleanTitles($settings['titles']);
+            if ($settings['titles'] === []) {
+                unset($settings['titles']);
             }
         }
         if (isset($settings['per_page'])) {

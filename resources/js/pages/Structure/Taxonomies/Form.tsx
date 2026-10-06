@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { adminUrl } from '@/lib/route';
 import { InputError } from '@/components/app/input-error';
+import TranslatedTitles from '@/components/TranslatedTitles';
 import type { SharedProps } from '@/types';
 
 interface TaxonomyShape {
     id: number; handle: string; title: string; blueprint_id: number | null; hierarchical: boolean;
-    settings: { sluggable?: boolean; route?: string; has_archive?: boolean; per_page?: number; template?: string };
+    settings: { sluggable?: boolean; route?: string; has_archive?: boolean; per_page?: number; template?: string; titles?: Record<string, string> };
     collection_ids: number[];
 }
 
@@ -34,6 +35,7 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
             has_archive: !!taxonomy?.settings?.has_archive,
             per_page: taxonomy?.settings?.per_page ?? ('' as number | ''),
             template: taxonomy?.settings?.template ?? '',
+            titles: taxonomy?.settings?.titles ?? {},
         },
         collection_ids: taxonomy?.collection_ids ?? [],
     });
@@ -71,6 +73,13 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
                             <InputError message={errors.handle} />
                         </div>
                     </div>
+                    <TranslatedTitles
+                        value={form.data.settings.titles}
+                        onChange={(titles) => form.setData('settings', { ...form.data.settings, titles })}
+                        mainTitle={form.data.title}
+                        errors={errors}
+                        errorPrefix="settings.titles"
+                    />
                     <div className="grid gap-2">
                         <Label>Blueprint</Label>
                         <Select value={String(form.data.blueprint_id || '')} onValueChange={(v) => form.setData('blueprint_id', Number(v))}>

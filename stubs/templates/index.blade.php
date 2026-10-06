@@ -5,15 +5,18 @@
     Available: $entries (paginator of Entry, already resolved for $locale),
     $collection, $locale, $pageType.
 
+    $collection->titleIn($locale) is the collection's title in the active
+    language (Structure → Collections → Title per language).
+
     $collection->archiveText($locale) gives the listing heading and intro
     in the active language (falling back to the main language), set under
     Structure → Collections → Pages & URLs.
 --}}
 @php($listing = $collection->archiveText($locale))
-@extends('sunrice.layouts.app', ['seoTitle' => $listing['title'] ?: $collection->title])
+@extends('sunrice.layouts.app', ['seoTitle' => $listing['title'] ?: $collection->titleIn($locale)])
 
 @section('content')
-    <h1>{{ $listing['title'] ?: $collection->title }}</h1>
+    <h1>{{ $listing['title'] ?: $collection->titleIn($locale) }}</h1>
 
     @if ($listing['intro'])
         <p class="muted">{{ $listing['intro'] }}</p>
