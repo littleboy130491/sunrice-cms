@@ -121,7 +121,7 @@ return [
     |                  max_width / max_height  shrink larger images to fit
     |                  quality                 JPEG/WebP/AVIF quality, 1-100
     |                  backup                  keep the original before overwriting
-    |                  backup_disk             null = the asset's own disk
+    |                  backup_disk             private disk for the originals (null = the asset's own disk)
     |                  backup_directory        folder the originals are copied into
     |
     */
@@ -139,7 +139,7 @@ return [
             'max_height' => 2560,
             'quality' => 82,
             'backup' => true,
-            'backup_disk' => null,
+            'backup_disk' => 'local',
             'backup_directory' => 'sunrice-originals',
         ],
     ],

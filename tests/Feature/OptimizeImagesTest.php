@@ -11,12 +11,23 @@ use Sunrice\Models\Asset;
 
 beforeEach(function () {
     Storage::fake('public');
+    Storage::fake('local');
     actingAsSuperAdmin();
 });
 
 function backupPathFor(Asset $asset): string
 {
     return OptimizeImage::backupLocation($asset)[1];
+}
+
+function backupExists(Asset $asset): bool
+{
+    return Storage::disk('local')->exists(backupPathFor($asset));
+}
+
+function backupContents(Asset $asset): ?string
+{
+    return Storage::disk('local')->get(backupPathFor($asset));
 }
 
 it('shrinks large images, backs up the original and can restore it', function () {
@@ -34,7 +45,7 @@ it('shrinks large images, backs up the original and can restore it', function ()
         ->and($height)->toBeGreaterThanOrEqual(666)->toBeLessThanOrEqual(667)
         ->and([$asset->width, $asset->height])->toBe([$width, $height])
         ->and($asset->version)->toBe($version + 1)
-        ->and(Storage::disk('public')->get(backupPathFor($asset)))->toBe($original);
+        ->and(backupContents($asset))->toBe($original);
 
     $this->artisan('sunrice:optimize-images', ['--restore' => true])
         ->expectsOutputToContain('Restored 1 original image(s)')
@@ -43,6 +54,15 @@ it('shrinks large images, backs up the original and can restore it', function ()
     $asset->refresh();
     expect(Storage::disk('public')->get($asset->path))->toBe($original)
         ->and([$asset->width, $asset->height])->toBe([3000, 2000])
+        ->and(backupExists($asset))->toBeFalse();
+});
+
+it('keeps backups on the private local disk by default', function () {
+    $asset = app(UploadAsset::class)->handle(UploadedFile::fake()->image('big.jpg', 3000, 2000));
+
+    $this->artisan('sunrice:optimize-images', ['--max-width' => 1000])->assertSuccessful();
+
+    expect(backupExists($asset))->toBeTrue()
         ->and(Storage::disk('public')->exists(backupPathFor($asset)))->toBeFalse();
 });
 
@@ -57,7 +77,7 @@ it('uses the configured defaults and never overwrites an existing backup', funct
     // A second, stricter run keeps the very first original as the backup.
     $this->artisan('sunrice:optimize-images', ['--max-width' => 600])->assertSuccessful();
     expect($asset->refresh()->width)->toBe(600)
-        ->and(Storage::disk('public')->get(backupPathFor($asset)))->toBe($original);
+        ->and(backupContents($asset))->toBe($original);
 });
 
 it('skips the backup with --no-backup and writes nothing on --dry-run', function () {
@@ -68,14 +88,14 @@ it('skips the backup with --no-backup and writes nothing on --dry-run', function
     $this->artisan('sunrice:optimize-images', ['--id' => [$first->id], '--max-width' => 1000, '--no-backup' => true])
         ->assertSuccessful();
     expect($first->refresh()->width)->toBe(1000)
-        ->and(Storage::disk('public')->exists(backupPathFor($first)))->toBeFalse();
+        ->and(backupExists($first))->toBeFalse();
 
     $this->artisan('sunrice:optimize-images', ['--id' => [$second->id], '--max-width' => 1000, '--dry-run' => true])
         ->expectsOutputToContain('Would optimize 1 image(s)')
         ->assertSuccessful();
     expect(Storage::disk('public')->get($second->path))->toBe($secondBytes)
         ->and($second->refresh()->width)->toBe(3000)
-        ->and(Storage::disk('public')->exists(backupPathFor($second)))->toBeFalse();
+        ->and(backupExists($second))->toBeFalse();
 });
 
 it('leaves GIFs untouched and rejects invalid options', function () {
@@ -91,9 +111,9 @@ it('leaves GIFs untouched and rejects invalid options', function () {
 it('drops the backup when the asset file is replaced', function () {
     $asset = app(UploadAsset::class)->handle(UploadedFile::fake()->image('big.jpg', 3000, 2000));
     $this->artisan('sunrice:optimize-images', ['--max-width' => 1000])->assertSuccessful();
-    expect(Storage::disk('public')->exists(backupPathFor($asset)))->toBeTrue();
+    expect(backupExists($asset))->toBeTrue();
 
     app(ReplaceAsset::class)->handle($asset->refresh(), UploadedFile::fake()->image('new.jpg', 800, 600));
 
-    expect(Storage::disk('public')->exists(backupPathFor($asset)))->toBeFalse();
+    expect(backupExists($asset))->toBeFalse();
 });

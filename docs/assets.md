@@ -42,7 +42,7 @@ Defaults live in `sunrice.assets.optimize`:
 | `max_width` / `max_height` | `2560` | Images larger than this are scaled down to fit (aspect ratio kept). |
 | `quality` | `82` | JPEG, WebP and AVIF quality (1–100). PNGs are re-encoded losslessly. |
 | `backup` | `true` | Copy each original before overwriting it. |
-| `backup_disk` | `null` | Disk for the copies; `null` uses the asset's own disk. |
+| `backup_disk` | `local` | Disk for the copies. The private `local` disk keeps originals off the web; `null` uses the asset's own disk. |
 | `backup_directory` | `sunrice-originals` | Folder the copies go into, mirroring the asset path. |
 
 Notes:
@@ -52,6 +52,6 @@ Notes:
 - The backup always holds the file as first uploaded: later runs never
   overwrite it. `--restore` puts it back and deletes the backup.
 - Replacing or permanently deleting an asset also removes its backup.
-- Backups on the `public` disk are publicly reachable, like the originals
-  were. Set `backup_disk` to a private disk (e.g. `local`) to keep them
-  private.
+- Backups go to the private `local` disk by default, so they are not
+  reachable by URL. Point `backup_disk` at another disk (e.g. S3) if the
+  app runs on several servers or ephemeral storage.
