@@ -41,7 +41,7 @@ export default function Submissions({ form, submissions, filters }: Props) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold tracking-tight">Submissions: {form.title}</h1>
+                <h1 className="sunrice-page-title">Submissions: {form.title}</h1>
                 <div className="flex gap-2">
                     {can(`sunrice.forms.${form.id}.edit`) && (
                         <Button variant="outline" asChild>

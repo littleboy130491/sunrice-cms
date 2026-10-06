@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import FieldRenderer from '@/fields/FieldRenderer';
 import { adminUrl } from '@/lib/route';
@@ -87,54 +87,52 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
 
     return (
         <div className="flex max-w-3xl flex-col gap-4">
-            <h1 className="text-xl font-semibold tracking-tight">{isNew ? 'New global' : `Edit ${globalSet.title}`}</h1>
+            <h1 className="sunrice-page-title">{isNew ? 'New global' : `Edit ${globalSet.title}`}</h1>
 
             {isNew ? (
-                <Card>
-                    <CardContent className="flex flex-col gap-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label>Title</Label>
-                                <Input value={meta.title} onChange={(e) => setMeta({
-                                    ...meta,
-                                    title: e.target.value,
-                                    handle: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''),
-                                })} />
-                                <InputError message={errors.title} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label>Handle</Label>
-                                <Input value={meta.handle} onChange={(e) => setMeta({ ...meta, handle: e.target.value })} />
-                                <InputError message={errors.handle} />
-                            </div>
+                <CollapsibleCard title="Details" storageKey="global:details" hasErrors={Object.keys(errors).length > 0} contentClassName="flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-2">
+                            <Label>Title</Label>
+                            <Input value={meta.title} onChange={(e) => setMeta({
+                                ...meta,
+                                title: e.target.value,
+                                handle: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''),
+                            })} />
+                            <InputError message={errors.title} />
                         </div>
                         <div className="grid gap-2">
-                            <Label>Group</Label>
-                            <Select value={meta.group} onValueChange={(v) => setMeta({ ...meta, group: v })}>
-                                <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="global">Global</SelectItem>
-                                    <SelectItem value="template_part">Template part</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Label>Handle</Label>
+                            <Input value={meta.handle} onChange={(e) => setMeta({ ...meta, handle: e.target.value })} />
+                            <InputError message={errors.handle} />
                         </div>
-                        <div className="grid gap-2">
-                            <Label>Blueprint</Label>
-                            <Select value={String(meta.blueprint_id || '')} onValueChange={(v) => setMeta({ ...meta, blueprint_id: Number(v) })}>
-                                <SelectTrigger className="w-64"><SelectValue placeholder="Choose…" /></SelectTrigger>
-                                <SelectContent>
-                                    {blueprints.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.title}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                            <InputError message={errors.blueprint_id} />
-                        </div>
-                        <label className="flex items-center gap-2 text-sm">
-                            <Checkbox checked={meta.translatable} onCheckedChange={(c) => setMeta({ ...meta, translatable: !!c })} />
-                            Translatable
-                        </label>
-                        <Button onClick={submitMeta} className="w-32" disabled={processing}>Create</Button>
-                    </CardContent>
-                </Card>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Group</Label>
+                        <Select value={meta.group} onValueChange={(v) => setMeta({ ...meta, group: v })}>
+                            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="global">Global</SelectItem>
+                                <SelectItem value="template_part">Template part</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label>Blueprint</Label>
+                        <Select value={String(meta.blueprint_id || '')} onValueChange={(v) => setMeta({ ...meta, blueprint_id: Number(v) })}>
+                            <SelectTrigger className="w-64"><SelectValue placeholder="Choose…" /></SelectTrigger>
+                            <SelectContent>
+                                {blueprints.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.title}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors.blueprint_id} />
+                    </div>
+                    <label className="flex items-center gap-2 text-sm">
+                        <Checkbox checked={meta.translatable} onCheckedChange={(c) => setMeta({ ...meta, translatable: !!c })} />
+                        Translatable
+                    </label>
+                    <Button onClick={submitMeta} className="w-32" disabled={processing}>Create</Button>
+                </CollapsibleCard>
             ) : (
                 <>
                     {globalSet.translatable && (
@@ -144,11 +142,9 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
                             </TabsList>
                         </Tabs>
                     )}
-                    <Card>
-                        <CardContent>
-                            <FieldRenderer fields={fields} values={data} errors={valueErrors(errors)} onChange={setData} />
-                        </CardContent>
-                    </Card>
+                    <CollapsibleCard title="Content" storageKey="global:content" hasErrors={Object.keys(errors).length > 0}>
+                        <FieldRenderer fields={fields} values={data} errors={valueErrors(errors)} onChange={setData} />
+                    </CollapsibleCard>
                     <Button onClick={submitMeta} className="w-32" disabled={processing}>{processing ? 'Saving…' : 'Save'}</Button>
 
                     <details className="rounded-md border p-4">

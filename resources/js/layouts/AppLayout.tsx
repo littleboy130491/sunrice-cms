@@ -19,7 +19,8 @@ function sidebarDefaultOpen(): boolean {
 const shownFlashIds = new Set<string>();
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-    const { flash } = usePage<SharedProps>().props;
+    const page = usePage<SharedProps>();
+    const { flash } = page.props;
     const match = useNavMatch();
 
     React.useEffect(() => {
@@ -51,9 +52,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <SidebarProvider defaultOpen={sidebarDefaultOpen()}>
                 <Head title={match?.item.label ?? 'Dashboard'} />
                 <AppSidebar />
-                <SidebarInset className="overflow-x-hidden">
+                <SidebarInset className="sunrice-shell min-w-0 overflow-x-hidden border border-border/60 shadow-[0_4px_30px_-12px_rgb(0_0_0/0.08)]">
                     <AppHeader />
-                    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col p-4 md:p-6">{children}</main>
+                    <main key={page.component} className="sunrice-page-enter mx-auto flex w-full max-w-7xl flex-1 flex-col p-5 md:p-8 lg:p-10">{children}</main>
                 </SidebarInset>
                 <Toaster position="top-right" />
             </SidebarProvider>

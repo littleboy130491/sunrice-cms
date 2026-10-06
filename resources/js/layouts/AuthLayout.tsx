@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Head } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
 import { AppLogoIcon } from '@/components/app/app-logo';
+import { AtmosphereArt } from '@/components/app/atmosphere-art';
 
 interface AuthLayoutProps {
     children: React.ReactNode;
@@ -11,20 +12,34 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({ children, title = 'Log in to Sunrice', description = 'Enter your email and password below to log in.' }: AuthLayoutProps) {
     return (
-        <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
+        <div className="sunrice-shell grid min-h-svh bg-background p-4 lg:grid-cols-2 lg:gap-4">
             <Head title={title} />
-            <div className="w-full max-w-sm">
-                <div className="flex flex-col gap-8">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                            <AppLogoIcon className="size-5" />
-                        </div>
-                        <div className="space-y-2 text-center">
-                            <h1 className="text-xl font-medium">{title}</h1>
-                            <p className="text-center text-sm text-muted-foreground">{description}</p>
-                        </div>
+            <aside className="sunrice-atmosphere relative hidden flex-col justify-between overflow-hidden rounded-xl p-10 lg:flex xl:p-14">
+                <div className="flex items-center gap-3 text-lg font-semibold tracking-tight">
+                    <AppLogoIcon className="size-6" /> Sunrice.
+                </div>
+                <div className="relative z-10 mt-12">
+                    <p className="mb-5 text-xs font-medium tracking-[0.18em] uppercase">A little space to create</p>
+                    <h2 className="max-w-md text-5xl leading-[1.08] font-medium tracking-[-0.05em] xl:text-6xl">Good content.<br /><span className="opacity-60">Beautifully managed.</span></h2>
+                    <p className="mt-6 max-w-xs text-sm leading-relaxed opacity-70">One calm workspace for your content, your team, and everything you’re ready to share.</p>
+                </div>
+                <AtmosphereArt className="my-4 h-72 w-full self-center xl:h-80" />
+                <p className="relative z-10 text-xs opacity-60">Your content, in good hands.</p>
+            </aside>
+            <div className="flex flex-col items-center justify-center px-4 py-12 sm:px-8">
+                <div className="w-full max-w-sm">
+                    <div className="mb-12 flex items-center gap-2 text-lg font-semibold tracking-tight lg:hidden">
+                        <AppLogoIcon className="size-6" /> Sunrice.
                     </div>
-                    {children}
+                    <div className="flex flex-col gap-8">
+                        <div className="space-y-3">
+                            <p className="text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Your content workspace</p>
+                            <h1 className="text-3xl font-medium tracking-[-0.04em]">{title}</h1>
+                            <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+                        </div>
+                        {children}
+                    </div>
+                    <p className="mt-10 text-xs text-muted-foreground">Powered by Sunrice CMS</p>
                 </div>
             </div>
             <Toaster position="top-right" />

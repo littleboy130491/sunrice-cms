@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
+import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { adminUrl } from '@/lib/route';
 import { InputError } from '@/components/app/input-error';
 import TranslatedTitles from '@/components/TranslatedTitles';
@@ -54,10 +54,10 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
     };
 
     return (
-        <Card className="max-w-2xl">
-            <CardContent>
+        <div className="max-w-2xl space-y-6">
+            <h1 className="sunrice-page-title">{taxonomy ? `Edit ${taxonomy.title}` : 'New taxonomy'}</h1>
+            <CollapsibleCard title="Taxonomy settings" storageKey="taxonomy:settings" hasErrors={Object.keys(errors).length > 0}>
                 <form onSubmit={submit} className="flex flex-col gap-4">
-                    <h1 className="text-xl font-semibold tracking-tight">{taxonomy ? `Edit ${taxonomy.title}` : 'New taxonomy'}</h1>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="title">Title</Label>
@@ -161,7 +161,7 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
                         <Button type="button" variant="outline" onClick={() => router.get(adminUrl('structure/taxonomies', adminPath))}>Cancel</Button>
                     </div>
                 </form>
-            </CardContent>
-        </Card>
+            </CollapsibleCard>
+        </div>
     );
 }

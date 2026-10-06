@@ -15,7 +15,7 @@ export default function FieldsetsIndex({ fieldsets }: { fieldsets: Row[] }) {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold tracking-tight">Fieldsets</h1>
+                <h1 className="sunrice-page-title">Fieldsets</h1>
                 {can('sunrice.fieldsets.create') && (
                     <Button asChild><Link href={adminUrl('structure/fieldsets/create', adminPath)}><Plus className="mr-1 h-4 w-4" /> New fieldset</Link></Button>
                 )}

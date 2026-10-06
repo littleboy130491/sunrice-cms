@@ -40,7 +40,7 @@ export default function EntriesIndex({ collection, columns, rows, meta, can, vis
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold tracking-tight">{collection.title}</h1>
+                <h1 className="sunrice-page-title">{collection.title}</h1>
                 <div className="flex gap-2">
                     {can.listing && (
                         <Button variant="outline" asChild>

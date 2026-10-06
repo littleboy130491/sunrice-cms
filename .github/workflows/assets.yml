@@ -25,6 +25,7 @@ jobs:
         run: |
           npm ci
           npm run typecheck
+          npm run test:frontend
           npm run build
 
       - name: Fail when dist/ is out of date

@@ -28,7 +28,7 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
+            <SidebarHeader className="pt-4 pb-5">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
@@ -40,7 +40,7 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
 
-            <SidebarContent>
+            <SidebarContent className="gap-5">
                 <SidebarGroup className="px-2 py-0">
                     <SidebarMenu>
                         <SidebarMenuItem>
@@ -56,7 +56,7 @@ export function AppSidebar() {
 
                 {(navigation ?? []).map((group: NavGroup) => (
                     <SidebarGroup key={group.label} className="px-2 py-0">
-                        <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+                        <SidebarGroupLabel className="mb-1 text-[10px] font-semibold tracking-[0.14em] uppercase">{group.label}</SidebarGroupLabel>
                         <SidebarMenu>
                             {group.items.map((item) => {
                                 const Icon = navIcon(item.icon);
@@ -80,7 +80,7 @@ export function AppSidebar() {
                 ))}
             </SidebarContent>
 
-            <SidebarFooter>
+            <SidebarFooter className="border-t border-sidebar-border/60 py-3">
                 <NavUser />
             </SidebarFooter>
             <SidebarRail />

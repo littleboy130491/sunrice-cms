@@ -3,7 +3,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -73,7 +73,7 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight">{collection.title}: listing page</h1>
+                        <h1 className="sunrice-page-title">{collection.title}: listing page</h1>
                         <p className="text-sm text-muted-foreground">The page that lists this collection's entries.</p>
                     </div>
                 </div>
@@ -100,13 +100,9 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
                 </Tabs>
             )}
 
-            <fieldset disabled={!editable} className="flex flex-col gap-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Heading &amp; intro</CardTitle>
-                        {secondary && <CardDescription>Empty ones use the {mainLocale.toUpperCase()} text.</CardDescription>}
-                    </CardHeader>
-                    <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-col gap-6">
+                <CollapsibleCard title="Heading &amp; intro" description={secondary && <>Empty ones use the {mainLocale.toUpperCase()} text.</>} storageKey="listing:heading-amp-intro" hasErrors={Object.keys(errors).length > 0} contentClassName="flex flex-col gap-4">
+                    <fieldset disabled={!editable} className="flex min-w-0 flex-col gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="listing-title">Heading</Label>
                             <Input id="listing-title" value={form.title} placeholder={secondary ? values[mainLocale]?.title || collection.title : collection.title}
@@ -120,24 +116,23 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
                                 onChange={(e) => setForm({ ...form, intro: e.target.value })} />
                             <InputError message={errors.intro} />
                         </div>
-                    </CardContent>
-                </Card>
+                    </fieldset>
+                </CollapsibleCard>
 
                 {fields.length > 0 ? (
-                    <Card>
-                        <CardHeader><CardTitle>Content</CardTitle></CardHeader>
-                        <CardContent>
+                    <CollapsibleCard title="Content" storageKey="listing:content" hasErrors={Object.keys(errors).length > 0}>
+                        <fieldset disabled={!editable} className="min-w-0">
                             <TranslationModeProvider secondary={secondary} mainLocale={mainLocale}>
                                 <FieldRenderer fields={fields} values={form.data} errors={errors} onChange={(data) => setForm({ ...form, data })} />
                             </TranslationModeProvider>
-                        </CardContent>
-                    </Card>
+                        </fieldset>
+                    </CollapsibleCard>
                 ) : (
                     <p className="text-sm text-muted-foreground">
                         Want more on this page, such as a hero image? Choose a listing blueprint in the collection's settings.
                     </p>
                 )}
-            </fieldset>
+            </div>
 
             {editable && (
                 <div><Button type="submit" disabled={processing}>{processing ? 'Saving…' : 'Save listing page'}</Button></div>

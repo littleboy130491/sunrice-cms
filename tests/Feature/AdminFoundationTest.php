@@ -12,6 +12,8 @@ use Sunrice\Admin\Export\CsvExporter;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Admin\Table\TableQuery;
 use Sunrice\Models\Entry;
+use Sunrice\Models\Form;
+use Sunrice\Models\FormSubmission;
 use Sunrice\Models\Setting;
 use Sunrice\Notifications\ResetAdminPassword;
 use Sunrice\Permissions\SyncPermissions;
@@ -81,6 +83,38 @@ it('rate limits repeated failed logins', function () {
 
     $this->post('/cms/login', ['email' => 'a@x.com', 'password' => 'right'])
         ->assertSessionHasErrors('email');
+});
+
+it('provides empty dashboard lists for a new workspace', function () {
+    actingAsSuperAdmin();
+
+    $this->get('/cms')->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('Dashboard')
+        ->where('collections', [])
+        ->where('recentEdits', [])
+        ->where('recentSubmissions', []));
+});
+
+it('scopes dashboard collection counts and activity to the users permissions', function () {
+    $visible = createCollection('pages');
+    $hidden = createCollection('private');
+    createEntry($visible, 'Visible entry');
+    createEntry($visible, 'Draft entry', [], 'draft');
+    createEntry($hidden, 'Private entry');
+    $form = Form::create(['handle' => 'contact', 'title' => 'Contact', 'fields' => []]);
+    FormSubmission::create(['form_id' => $form->id, 'data' => ['message' => 'Private message']]);
+    app(SyncPermissions::class)->handle();
+    $user = User::create(['name' => 'Editor', 'email' => 'editor@example.com', 'password' => bcrypt('password')]);
+    $user->givePermissionTo(['sunrice.access-admin', "sunrice.entries.{$visible->id}.view"]);
+    $this->actingAs($user, 'web');
+
+    $this->get('/cms')->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('Dashboard')
+        ->has('collections', 1)
+        ->where('collections.0.handle', 'pages')
+        ->where('collections.0.entries', 2)
+        ->has('recentEdits', 2)
+        ->where('recentSubmissions', []));
 });
 
 it('emails a password reset link that points at the CMS reset page', function () {
