@@ -17,13 +17,17 @@ function sidebarDefaultOpen(): boolean {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-    const { flash } = usePage<SharedProps>().props;
+    const { flash, errors } = usePage<SharedProps>().props;
     const match = useNavMatch();
 
     React.useEffect(() => {
         if (flash?.success) toast.success(flash.success);
         if (flash?.error) toast.error(flash.error);
     }, [flash?.success, flash?.error]);
+
+    React.useEffect(() => {
+        Object.values(errors ?? {}).forEach((message) => toast.error(message));
+    }, [errors]);
 
     return (
         <TooltipProvider delayDuration={0}>

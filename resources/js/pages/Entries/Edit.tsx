@@ -106,12 +106,15 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         if (isNew) {
-            router.post(adminUrl(`collections/${collection.handle}/entries`, adminPath), {
-                title: form.data.title,
-                slug: form.data.slug,
-                data: form.data.data,
-                seo: form.data.seo,
-                blueprint_id: form.data.blueprint_id || null,
+            form.transform((data) => ({
+                title: data.title,
+                slug: data.slug,
+                data: data.data,
+                seo: data.seo,
+                blueprint_id: data.blueprint_id || null,
+            }));
+            form.post(adminUrl(`collections/${collection.handle}/entries`, adminPath), {
+                onFinish: () => form.transform((data) => data),
             });
             return;
         }
