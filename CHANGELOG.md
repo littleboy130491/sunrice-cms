@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Fixed: `sunrice:install` failed on a fresh app because the
+  spatie/laravel-permission tables were never created. It now publishes
+  spatie's migration when the tables are missing, before migrating. It also
+  no longer creates a super admin user that can't hold the Super Admin role
+  (user model without `HasRoles`); it warns and skips instead.
 - **Shared layout, translated text** — secondary languages now store only
   their translated text and render inside the main language's layout, so
   adding, reordering or hiding blocks and swapping images happens once for
