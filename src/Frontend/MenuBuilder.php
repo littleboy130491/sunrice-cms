@@ -195,6 +195,7 @@ class MenuBuilder
                 }
 
                 $label = $item->labels[$locale] ?? $item->labels[Locales::main()] ?? $target['title'] ?? '';
+
                 return new MenuNode(
                     label: $label,
                     url: $target['url'],
