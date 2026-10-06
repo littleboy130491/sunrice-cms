@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -25,6 +26,7 @@ use Sunrice\Actions\Entries\RestoreEntry;
 use Sunrice\Actions\Entries\RestoreRevision;
 use Sunrice\Actions\Entries\ReturnTranslationToDraft;
 use Sunrice\Actions\Entries\SaveDraft;
+use Sunrice\Actions\Entries\SyncEntryTerms;
 use Sunrice\Actions\Entries\TrashEntry;
 use Sunrice\Actions\Entries\UnpublishEntry;
 use Sunrice\Actions\Support\Reorder;
@@ -220,9 +222,18 @@ class EntriesController extends Controller
             'data' => ['array'],
             'seo' => ['array'],
             'blueprint_id' => ['nullable', 'integer', 'exists:sunrice_blueprints,id'],
+            'term_ids' => ['sometimes', 'array'],
+            'term_ids.*' => ['integer'],
         ]);
 
-        $entry = $create->handle($collection, $validated, $request->user()->getAuthIdentifier(), $validated['blueprint_id'] ?? null);
+        $entry = DB::transaction(function () use ($collection, $validated, $request, $create): Entry {
+            $entry = $create->handle($collection, $validated, $request->user()->getAuthIdentifier(), $validated['blueprint_id'] ?? null);
+            if (array_key_exists('term_ids', $validated)) {
+                app(SyncEntryTerms::class)->handle($entry, $validated['term_ids']);
+            }
+
+            return $entry;
+        });
 
         return redirect()->route('sunrice.admin.entries.edit', $entry)
             ->with('success', 'Entry created.');
@@ -255,7 +266,15 @@ class EntriesController extends Controller
             'data' => ['array'],
             'seo' => ['array'],
             'is_ready' => ['nullable', 'boolean'],
+            'term_ids' => ['sometimes', 'array'],
+            'term_ids.*' => ['integer'],
         ]);
+
+        // Terms belong to the entry, not a language: editors only (not
+        // translate-only users), saved right away rather than as a draft.
+        if (array_key_exists('term_ids', $validated) && $request->user()->can('update', $entry)) {
+            app(SyncEntryTerms::class)->handle($entry, $validated['term_ids']);
+        }
 
         // Marking a translation Ready puts it live, which translate-only
         // users can't do.
@@ -589,6 +608,8 @@ class EntriesController extends Controller
                 'blueprint_id' => $entry->blueprint_id,
                 'author_id' => $entry->author_id,
                 'term_ids' => $entry->terms->pluck('id'),
+                // {taxonomy id: [term ids]} for the Taxonomies card.
+                'terms_by_taxonomy' => (object) $entry->terms->groupBy('taxonomy_id')->map(fn ($terms) => $terms->pluck('id')->values())->all(),
                 'translations' => $translations,
             ],
             'blueprint' => $blueprint === null ? null : array_merge(
@@ -596,7 +617,9 @@ class EntriesController extends Controller
                 [['handle' => 'seo', 'label' => 'SEO', 'fields' => static::seoFields()]],
             ),
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
-            'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title')),
+            'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title') + [
+                'single' => in_array($t->id, array_map('intval', (array) $collection->setting('single_term_taxonomies', [])), true),
+            ]),
             'locales' => Locales::available(),
             'mainLocale' => Locales::main(),
             'can' => $entry === null ? null : [

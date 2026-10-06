@@ -45,6 +45,8 @@ class SaveCollection
             'settings.per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'settings.template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'settings.archive_template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
+            'settings.single_term_taxonomies' => ['nullable', 'array'],
+            'settings.single_term_taxonomies.*' => ['integer'],
             'settings.icon' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/'],
             'settings.archive_entries_in' => ['nullable', 'string', 'max:100'],
             'taxonomy_ids' => ['array'],

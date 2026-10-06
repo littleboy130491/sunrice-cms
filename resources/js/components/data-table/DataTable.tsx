@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CollapsibleCard } from '@/components/app/collapsible-card';
+import { Card } from '@/components/ui/card';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     ColumnDef as TanColumnDef,
@@ -276,7 +276,7 @@ export function DataTable<T extends { id: number | string }>({
                 </div>
             </div>
 
-            <CollapsibleCard title="Results" storageKey={`table:${tableKey}`} contentClassName="p-0">
+            <Card className="gap-0 overflow-hidden py-0">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                     <div className="overflow-hidden">
                     <Table>
@@ -391,7 +391,7 @@ export function DataTable<T extends { id: number | string }>({
                         </div>
                     )}
                 </div>
-            </CollapsibleCard>
+            </Card>
         </div>
     );
 }

@@ -47,6 +47,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             sort_direction: (collection?.settings?.sort_direction as string) ?? '',
             archive_blueprint_id: (collection?.settings?.archive_blueprint_id as number | undefined) ?? ('' as number | ''),
             titles: ((collection?.settings?.titles ?? {}) as Record<string, string>),
+            single_term_taxonomies: ((collection?.settings?.single_term_taxonomies ?? []) as number[]),
         },
         taxonomy_ids: collection?.taxonomy_ids ?? [],
     });
@@ -120,17 +121,38 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                 </div>
                 <div className="grid gap-2">
                     <Label>Taxonomies</Label>
-                    {taxonomies.map((t) => (
-                        <label key={t.id} className="flex items-center gap-2 text-sm">
-                            <Checkbox
-                                checked={form.data.taxonomy_ids.includes(t.id)}
-                                onCheckedChange={(c) =>
-                                    form.setData('taxonomy_ids', c ? [...form.data.taxonomy_ids, t.id] : form.data.taxonomy_ids.filter((id) => id !== t.id))
-                                }
-                            />
-                            {t.title}
-                        </label>
-                    ))}
+                    <p className="text-xs text-muted-foreground">Entries pick terms of these taxonomies in the editor's Taxonomies card.</p>
+                    {taxonomies.map((t) => {
+                        const attached = form.data.taxonomy_ids.includes(t.id);
+                        const single = settings.single_term_taxonomies.includes(t.id);
+                        return (
+                            <div key={t.id} className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+                                <label className="flex items-center gap-2 text-sm">
+                                    <Checkbox
+                                        checked={attached}
+                                        onCheckedChange={(c) =>
+                                            form.setData('taxonomy_ids', c ? [...form.data.taxonomy_ids, t.id] : form.data.taxonomy_ids.filter((id) => id !== t.id))
+                                        }
+                                    />
+                                    {t.title}
+                                </label>
+                                {attached && (
+                                    <Select
+                                        value={single ? 'one' : 'many'}
+                                        onValueChange={(v) => setSetting('single_term_taxonomies', v === 'one'
+                                            ? [...settings.single_term_taxonomies.filter((id) => id !== t.id), t.id]
+                                            : settings.single_term_taxonomies.filter((id) => id !== t.id))}
+                                    >
+                                        <SelectTrigger size="sm" className="w-36" aria-label={`${t.title}: terms per entry`}><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="many">Many terms</SelectItem>
+                                            <SelectItem value="one">One term</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            </div>
+                        );
+                    })}
                     <InputError message={errors.taxonomy_ids ?? Object.entries(errors).find(([k]) => k.startsWith('taxonomy_ids.'))?.[1]} />
                 </div>
             </CollapsibleCard>
