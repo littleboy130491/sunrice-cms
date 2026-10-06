@@ -10,9 +10,9 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property string $source
- * @property string $target
- * @property int $status_code
+ * @property string $old_path
+ * @property string $locale
+ * @property int $entry_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */

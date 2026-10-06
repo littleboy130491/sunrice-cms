@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
+import { cn } from '@/lib/utils';
 import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -184,11 +185,19 @@ export default function TermsPage({ taxonomy, terms, locales, mainLocale, bluepr
                                 <InputError message={errors.parent_id} />
                             </div>
                         )}
-                        <Tabs value={tab} onValueChange={setTab}>
+                        <Tabs value={tab} onValueChange={setTab} activationMode="manual">
                             <TabsList>
                                 {locales.map((l) => (
-                                    <TabsTrigger key={l} value={l} className={localeHasError(l) ? 'text-destructive' : undefined}>
-                                        {l}{l !== main && <span className="ml-1 text-[10px] text-muted-foreground">(optional)</span>}
+                                    <TabsTrigger
+                                        key={l}
+                                        value={l}
+                                        title={l === main ? 'Main language' : 'Optional: leave empty to use the main language'}
+                                        className={cn('gap-1.5 uppercase', localeHasError(l) && 'text-destructive')}
+                                    >
+                                        {l}
+                                        {l !== main && (form.translations[l]?.title ?? '').trim() !== '' && (
+                                            <span className="size-1.5 rounded-full bg-emerald-500" aria-label="translated" />
+                                        )}
                                     </TabsTrigger>
                                 ))}
                             </TabsList>

@@ -73,20 +73,25 @@ class Taxonomy extends Model
 
     /**
      * URL patterns of the term archive pages, each with the collection
-     * whose entries it lists (null = entries of every collection):
+     * whose entries it lists (null = entries of every collection). The
+     * route setting is a pattern (default `{collection}/{taxonomy}/{slug}`):
      *
-     * - a custom route: one archive across all collections;
-     * - otherwise one archive per attached collection, at
-     *   /{collection}/{taxonomy}/{slug};
-     * - attached to none: /{taxonomy}/{slug}.
+     * - with {collection}: one archive per attached collection, the
+     *   placeholder replaced by the collection's handle, e.g.
+     *   `{collection}/topik/{slug}` → /artikel/topik/{slug}, /proyek/topik/{slug};
+     * - without it: one archive across all collections, e.g. `topik/{slug}`;
+     * - {taxonomy} is the taxonomy's handle;
+     * - attached to no collection, {collection} is dropped.
      *
      * @return array<int, array{route: string, collection: Collection|null}>
      */
     public function termRoutes(): array
     {
-        $custom = Collection::normalizeRoute($this->setting('route'));
-        if ($custom !== null) {
-            return [['route' => $custom, 'collection' => null]];
+        $pattern = Collection::normalizeRoute($this->setting('route')) ?? '/{collection}/{taxonomy}/{slug}';
+        $pattern = str_replace('{taxonomy}', $this->handle, $pattern);
+
+        if (! str_contains($pattern, '{collection}')) {
+            return [['route' => $pattern, 'collection' => null]];
         }
 
         $collections = $this->relationLoaded('collections')
@@ -94,11 +99,11 @@ class Taxonomy extends Model
             : $this->collections()->orderBy('sort_order')->orderBy('title')->get();
 
         if ($collections->isEmpty()) {
-            return [['route' => '/'.$this->handle.'/{slug}', 'collection' => null]];
+            return [['route' => Collection::normalizeRoute(str_replace('{collection}', '', $pattern)) ?? '/{slug}', 'collection' => null]];
         }
 
         return $collections
-            ->map(fn (Collection $c) => ['route' => '/'.$c->handle.'/'.$this->handle.'/{slug}', 'collection' => $c])
+            ->map(fn (Collection $c) => ['route' => str_replace('{collection}', $c->handle, $pattern), 'collection' => $c])
             ->all();
     }
 

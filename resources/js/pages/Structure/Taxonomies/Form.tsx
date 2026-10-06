@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { adminUrl } from '@/lib/route';
 import { InputError } from '@/components/app/input-error';
+import { TemplateHelp } from '@/components/app/template-help';
 import TranslatedTitles from '@/components/TranslatedTitles';
 import type { SharedProps } from '@/types';
 
@@ -123,37 +124,39 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
                     </label>
                     {form.data.settings.has_archive && (
                         <div className="grid gap-2">
-                            <Label htmlFor="route">Term route prefix (optional)</Label>
+                            <Label htmlFor="route">Term page URL</Label>
                             <Input
                                 id="route"
                                 className="font-mono text-sm"
                                 value={form.data.settings.route}
-                                placeholder={attached.length > 0 ? `/${attached[0].handle}/${handle}/{slug}` : `/${handle}/{slug}`}
+                                placeholder="{collection}/{taxonomy}/{slug}"
                                 onChange={(e) => form.setData('settings', { ...form.data.settings, route: e.target.value })}
                             />
-                            <p className="text-xs text-muted-foreground">
-                                {attached.length > 0 ? (
-                                    <>Leave empty for one page per collection: {attached.map((c) => <code key={c.id} className="mr-1">/{c.handle}/{handle}/&#123;slug&#125;</code>)} each listing that collection's entries. </>
-                                ) : (
-                                    <>Leave empty for <code>/{handle}/&#123;slug&#125;</code>. </>
-                                )}
-                                A prefix such as <code>topics</code> gives a single page per term across all collections.
-                            </p>
-                            <InputError message={errors['settings.route']} />
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="per_page">Entries per page</Label>
-                                    <Input id="per_page" type="number" min={1} max={100} placeholder="12" value={form.data.settings.per_page}
-                                        onChange={(e) => form.setData('settings', { ...form.data.settings, per_page: e.target.value === '' ? '' : Number(e.target.value) })} />
-                                    <InputError message={errors['settings.per_page']} />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="template">Template</Label>
-                                    <Input id="template" className="font-mono text-sm" placeholder="Automatic" value={form.data.settings.template}
-                                        onChange={(e) => form.setData('settings', { ...form.data.settings, template: e.target.value })} />
-                                    <InputError message={errors['settings.template']} />
-                                </div>
+                            <div className="grid gap-1.5 text-xs leading-relaxed text-muted-foreground">
+                                <p>
+                                    A URL pattern. <code className="text-foreground">&#123;collection&#125;</code> gives each attached collection its own page per term,
+                                    listing only that collection's entries; without it there is one page per term across all collections.{' '}
+                                    <code className="text-foreground">&#123;taxonomy&#125;</code> is this taxonomy's handle and{' '}
+                                    <code className="text-foreground">&#123;slug&#125;</code> the term's slug. Examples: <code>&#123;collection&#125;/topik/&#123;slug&#125;</code>,{' '}
+                                    <code>topik/&#123;slug&#125;</code>.
+                                </p>
+                                <p>
+                                    {form.data.settings.route ? 'Term pages:' : 'Leave empty for the default. Term pages:'}{' '}
+                                    {termUrls(form.data.settings.route ?? '', handle, attached.map((c) => c.handle)).map((url) => (
+                                        <code key={url} className="mr-2 inline-block text-foreground">{url}</code>
+                                    ))}
+                                </p>
                             </div>
+                            <InputError message={errors['settings.route']} />
+                            <Label htmlFor="per_page">Entries per page</Label>
+                            <Input id="per_page" type="number" min={1} max={100} className="w-32" placeholder="12" value={form.data.settings.per_page}
+                                onChange={(e) => form.setData('settings', { ...form.data.settings, per_page: e.target.value === '' ? '' : Number(e.target.value) })} />
+                            <InputError message={errors['settings.per_page']} />
+                            <Label htmlFor="template">Term page template</Label>
+                            <Input id="template" className="font-mono text-sm" placeholder={`e.g. taxonomies.${handle}`} value={form.data.settings.template}
+                                onChange={(e) => form.setData('settings', { ...form.data.settings, template: e.target.value })} />
+                            <TemplateHelp example={`taxonomies.${handle}`} defaults={[`sunrice.taxonomies.${handle}.show`, 'sunrice.taxonomies.show']} />
+                            <InputError message={errors['settings.template']} />
                         </div>
                     )}
                     <div className="flex gap-2">
@@ -164,4 +167,17 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
             </CollapsibleCard>
         </div>
     );
+}
+
+/** The term page URLs a route pattern produces (mirrors Taxonomy::termRoutes). */
+function termUrls(route: string, taxonomy: string, collections: string[]): string[] {
+    const normalize = (r: string) => {
+        let out = '/' + r.trim().replace(/\/+/g, '/').replace(/^\/|\/$/g, '');
+        if (!out.includes('{slug}')) out = out.replace(/\/$/, '') + '/{slug}';
+        return out.replace(/\/+/g, '/');
+    };
+    const pattern = normalize(route.trim() === '' ? '{collection}/{taxonomy}/{slug}' : route).replaceAll('{taxonomy}', taxonomy);
+    if (!pattern.includes('{collection}')) return [pattern];
+    if (collections.length === 0) return [normalize(pattern.replace('{collection}', ''))];
+    return collections.map((c) => pattern.replace('{collection}', c));
 }

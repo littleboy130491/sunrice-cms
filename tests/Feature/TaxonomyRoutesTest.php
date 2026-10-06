@@ -74,6 +74,17 @@ it('uses one page across collections with a custom route', function () {
     get('/blog/category/updates')->assertNotFound();
 });
 
+it('gives each collection its own term page with a {collection} pattern', function () {
+    $term = categoryWithEntries(['has_archive' => true, 'route' => '{collection}/topik/{slug}']);
+
+    get('/blog/topik/updates')->assertOk()->assertSee('Blog post')->assertDontSee('News item');
+    get('/news/topik/updates')->assertOk()->assertSee('News item')->assertDontSee('Blog post');
+    get('/blog/category/updates')->assertNotFound();
+
+    $term->resolveFor('id');
+    expect($term->urlIn($this->news))->toBe('/news/topik/updates');
+});
+
 it('falls back to /{taxonomy}/{slug} when attached to no collection', function () {
     $taxonomy = Taxonomy::factory()->create(['handle' => 'tags', 'settings' => ['has_archive' => true]]);
     $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { adminUrl } from '@/lib/route';
 import { navIcon, navIconNames } from '@/components/app/nav-icon';
+import { TemplateHelp } from '@/components/app/template-help';
 import { InputError } from '@/components/app/input-error';
 import TranslatedTitles from '@/components/TranslatedTitles';
 import type { Json, SharedProps } from '@/types';
@@ -194,7 +195,8 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                         </p>
                         <InputError message={errors['settings.route']} />
                         <Label htmlFor="template">Entry template</Label>
-                        <Input id="template" className="font-mono text-sm" value={settings.template} placeholder="Automatic" onChange={(e) => setSetting('template', e.target.value)} />
+                        <Input id="template" className="font-mono text-sm" value={settings.template} placeholder={`e.g. ${handle}.article`} onChange={(e) => setSetting('template', e.target.value)} />
+                        <TemplateHelp example={`${handle}.article`} defaults={[`sunrice.${handle}.show`, 'sunrice.show']} />
                         <InputError message={errors['settings.template']} />
                     </div>
                 )}
@@ -221,20 +223,15 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                         <Label htmlFor="archive_route">Listing URL</Label>
                         <Input id="archive_route" className="font-mono text-sm" value={settings.archive_route} placeholder={`/${handle}`} onChange={(e) => setSetting('archive_route', e.target.value)} />
                         <InputError message={errors['settings.archive_route']} />
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="per_page">Entries per page</Label>
-                                <Input id="per_page" type="number" min={1} max={100} value={settings.per_page} placeholder="12"
-                                    onChange={(e) => setSetting('per_page', e.target.value === '' ? '' : Number(e.target.value))} />
-                                <InputError message={errors['settings.per_page']} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="archive_template">Listing template</Label>
-                                <Input id="archive_template" className="font-mono text-sm" value={settings.archive_template} placeholder="Automatic"
-                                    onChange={(e) => setSetting('archive_template', e.target.value)} />
-                                <InputError message={errors['settings.archive_template']} />
-                            </div>
-                        </div>
+                        <Label htmlFor="per_page">Entries per page</Label>
+                        <Input id="per_page" type="number" min={1} max={100} className="w-32" value={settings.per_page} placeholder="12"
+                            onChange={(e) => setSetting('per_page', e.target.value === '' ? '' : Number(e.target.value))} />
+                        <InputError message={errors['settings.per_page']} />
+                        <Label htmlFor="archive_template">Listing template</Label>
+                        <Input id="archive_template" className="font-mono text-sm" value={settings.archive_template} placeholder={`e.g. ${handle}.listing`}
+                            onChange={(e) => setSetting('archive_template', e.target.value)} />
+                        <TemplateHelp example={`${handle}.listing`} defaults={[`sunrice.${handle}.index`, 'sunrice.index']} />
+                        <InputError message={errors['settings.archive_template']} />
                     </div>
                 )}
             </CollapsibleCard>
