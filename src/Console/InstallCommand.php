@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
+use Sunrice\Actions\Assets\UploadAsset;
 use Sunrice\Database\Seeders\RolesSeeder;
 use Sunrice\Permissions\SyncPermissions;
 
@@ -35,6 +36,7 @@ class InstallCommand extends Command
         $this->callSilently('vendor:publish', ['--tag' => 'sunrice-assets', '--force' => true]);
         $this->publishPermissionMigration();
         $this->call('migrate', ['--force' => true]);
+        $this->linkStorage();
 
         $result = $sync->handle();
         $this->components->twoColumnDetail('Permissions', "{$result['created']} created");
@@ -71,6 +73,20 @@ class InstallCommand extends Command
      * migrations (an app may already have them), so publish spatie's
      * migration unless the tables exist or the app already published it.
      */
+    /**
+     * Uploaded assets on the public disk are served through
+     * public/storage; without the link every image URL is broken.
+     */
+    protected function linkStorage(): void
+    {
+        if (! UploadAsset::needsStorageLink()) {
+            return;
+        }
+
+        $this->callSilently('storage:link');
+        $this->components->twoColumnDetail('Storage link', UploadAsset::needsStorageLink() ? 'could not be created: run php artisan storage:link' : 'public/storage created');
+    }
+
     protected function publishPermissionMigration(): void
     {
         $table = config('permission.table_names.permissions', 'permissions');

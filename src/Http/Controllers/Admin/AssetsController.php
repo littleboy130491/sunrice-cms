@@ -77,6 +77,7 @@ class AssetsController extends Controller
             'filters' => $request->only(['folder', 'search', 'type', 'trashed']),
             'maxUploadKb' => UploadAsset::maxKilobytes(),
             'allowedExtensions' => UploadAsset::allowedExtensions(),
+            'storageLinkMissing' => UploadAsset::needsStorageLink(),
         ]);
     }
 

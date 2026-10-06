@@ -14,6 +14,7 @@ use Sunrice\Actions\Structure\DeleteBlueprint;
 use Sunrice\Actions\Structure\SaveBlueprint;
 use Sunrice\Fields\FieldRegistry;
 use Sunrice\Models\Blueprint;
+use Sunrice\Models\Collection;
 use Sunrice\Models\Fieldset;
 
 class BlueprintsController extends Controller
@@ -27,9 +28,16 @@ class BlueprintsController extends Controller
 
     public function index(): Response
     {
+        $listings = [];
+        foreach (Collection::query()->get(['id', 'title', 'settings']) as $collection) {
+            if ($id = $collection->setting('archive_blueprint_id')) {
+                $listings[(int) $id][] = ['type' => 'Listing page', 'title' => $collection->title];
+            }
+        }
+
         return Inertia::render('Structure/Blueprints/Index', [
             'blueprints' => Blueprint::query()
-                ->withCount('collections')
+                ->with(['collections:id,title,blueprint_id', 'taxonomies:id,title,blueprint_id', 'globalSets:id,title,blueprint_id'])
                 ->orderBy('title')
                 ->get()
                 ->map(fn (Blueprint $b) => [
@@ -37,7 +45,13 @@ class BlueprintsController extends Controller
                     'handle' => $b->handle,
                     'title' => $b->title,
                     'fields_count' => count($b->fields ?? []),
-                    'collections_count' => $b->collections_count,
+                    // Where it's used, by name: collections, taxonomies, globals, listing pages.
+                    'used_by' => [
+                        ...$b->collections->map(fn ($c) => ['type' => 'Collection', 'title' => $c->title]),
+                        ...$b->taxonomies->map(fn ($t) => ['type' => 'Taxonomy', 'title' => $t->title]),
+                        ...$b->globalSets->map(fn ($g) => ['type' => 'Global', 'title' => $g->title]),
+                        ...($listings[$b->id] ?? []),
+                    ],
                 ]),
         ]);
     }

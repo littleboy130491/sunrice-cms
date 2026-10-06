@@ -90,6 +90,13 @@ class UploadAsset
         'jsp', 'asp', 'aspx', 'htaccess', 'htpasswd',
     ];
 
+    /** Used when the config has no allowed_extensions list. */
+    public const DEFAULT_EXTENSIONS = [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg', 'ico',
+        'pdf', 'txt', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp', 'rtf',
+        'zip', 'mp4', 'webm', 'mov', 'm4v', 'mp3', 'wav', 'ogg', 'm4a', 'woff', 'woff2', 'json',
+    ];
+
     /**
      * Size, type and extension checks shared by upload and replace.
      *
@@ -116,8 +123,23 @@ class UploadAsset
     public static function allowedExtensions(): array
     {
         $allowed = array_map('strtolower', (array) config('sunrice.assets.allowed_extensions', []));
+        // An empty list would refuse every file: treat it as "use the defaults".
+        if ($allowed === []) {
+            $allowed = static::DEFAULT_EXTENSIONS;
+        }
 
         return array_values(array_diff($allowed, static::BLOCKED_EXTENSIONS));
+    }
+
+    /**
+     * Assets on the "public" disk are served from public/storage, a link
+     * made by `php artisan storage:link`. True when that link is missing.
+     */
+    public static function needsStorageLink(): bool
+    {
+        return config('sunrice.assets.disk', 'public') === 'public'
+            && config('filesystems.disks.public.driver') === 'local'
+            && ! file_exists(public_path('storage'));
     }
 
     /**

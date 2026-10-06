@@ -20,6 +20,7 @@ use Sunrice\Models\Asset;
 use Sunrice\Models\AssetFolder;
 use Sunrice\Models\Reference;
 use Sunrice\Permissions\SyncPermissions;
+use Sunrice\SunriceServiceProvider;
 use Workbench\App\Models\User;
 
 use function Pest\Laravel\delete;
@@ -313,4 +314,25 @@ it('lets asset managers manage folders without being super admin', function () {
     delete("/cms/asset-folders/{$folder->id}")->assertSessionHas('success');
 
     expect(AssetFolder::query()->count())->toBe(0);
+});
+
+it('accepts uploads when the app config has no allowed_extensions list', function () {
+    // An app that published config/sunrice.php before the setting existed.
+    config(['sunrice.assets' => ['disk' => 'public']]);
+
+    post('/cms/assets', ['file' => UploadedFile::fake()->image('photo.jpg')])
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('success', 'Uploaded photo.jpg.');
+});
+
+it('fills nested config keys missing from a published config file', function () {
+    $merged = SunriceServiceProvider::mergeMissing(
+        ['assets' => ['disk' => 'public', 'allowed_extensions' => ['jpg', 'png']], 'locales' => ['available' => ['id', 'en']]],
+        ['assets' => ['disk' => 's3'], 'locales' => ['available' => ['id']]],
+    );
+
+    expect($merged)->toBe([
+        'assets' => ['disk' => 's3', 'allowed_extensions' => ['jpg', 'png']],
+        'locales' => ['available' => ['id']],
+    ]);
 });
