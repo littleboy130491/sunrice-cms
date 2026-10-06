@@ -5,20 +5,22 @@
     Available: $entries (paginator of Entry, already resolved for $locale),
     $collection, $locale, $pageType.
 
-    $collection->archive_data holds the listing heading (`title`) and
-    intro (`intro`) set under Structure → Collections → Pages & URLs.
+    $collection->archiveText($locale) gives the listing heading and intro
+    in the active language (falling back to the main language), set under
+    Structure → Collections → Pages & URLs.
 --}}
-@extends('sunrice.layouts.app', ['seoTitle' => ($collection->archive_data['title'] ?? null) ?: $collection->title])
+@php($listing = $collection->archiveText($locale))
+@extends('sunrice.layouts.app', ['seoTitle' => $listing['title'] ?: $collection->title])
 
 @section('content')
-    <h1>{{ $collection->archive_data['title'] ?? $collection->title }}</h1>
+    <h1>{{ $listing['title'] ?: $collection->title }}</h1>
 
-    @if (! empty($collection->archive_data['intro']))
-        <p class="muted">{{ $collection->archive_data['intro'] }}</p>
+    @if ($listing['intro'])
+        <p class="muted">{{ $listing['intro'] }}</p>
     @endif
 
     @if ($entries->isEmpty())
-        <p class="muted">Nothing here yet.</p>
+        <p class="muted">{{ __('sunrice::frontend.nothing_yet') }}</p>
     @else
         <ul class="cards">
             @foreach ($entries as $entry)

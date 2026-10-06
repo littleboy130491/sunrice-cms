@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Sunrice\Database\Factories\CollectionFactory;
 use Sunrice\Fields\BlueprintSchema;
+use Sunrice\Support\Locales;
 
 /**
  * @property int $id
@@ -101,6 +102,44 @@ class Collection extends Model
         }
 
         return $route;
+    }
+
+    /**
+     * The listing page's heading and intro in a language, falling back
+     * to the main language: ['title' => ?string, 'intro' => ?string].
+     *
+     * @return array{title: string|null, intro: string|null}
+     */
+    public function archiveText(?string $locale = null): array
+    {
+        $byLocale = static::archiveByLocale($this->archive_data);
+        $locale ??= Locales::current();
+        $own = $byLocale[$locale] ?? [];
+        $main = $byLocale[Locales::main()] ?? [];
+
+        return [
+            'title' => ($own['title'] ?? null) ?: ($main['title'] ?? null),
+            'intro' => ($own['intro'] ?? null) ?: ($main['intro'] ?? null),
+        ];
+    }
+
+    /**
+     * archive_data as {locale: {title, intro}}. Older data stored one
+     * {title, intro} for all languages: it counts as the main language.
+     *
+     * @param  array<string, mixed>|null  $data
+     * @return array<string, array<string, string>>
+     */
+    public static function archiveByLocale(?array $data): array
+    {
+        $data ??= [];
+        if (array_key_exists('title', $data) || array_key_exists('intro', $data)) {
+            $legacy = array_filter(['title' => $data['title'] ?? null, 'intro' => $data['intro'] ?? null], 'is_string');
+            $data = array_diff_key($data, ['title' => 1, 'intro' => 1]);
+            $data[Locales::main()] = ($data[Locales::main()] ?? []) + $legacy;
+        }
+
+        return array_filter($data, 'is_array');
     }
 
     public function archiveSchema(): ?BlueprintSchema

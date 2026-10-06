@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Blueprint;
@@ -103,7 +104,7 @@ it('renders the articles override, archive and term archive', function () {
         ->assertOk()
         ->assertSee('First post')
         ->assertSee('A short summary')
-        ->assertSee('Latest articles')
+        ->assertSee('Artikel terbaru')
         ->assertSee('Second post')
         ->assertSee('href="'.$term->fresh()->url.'"', false);
 
@@ -159,7 +160,7 @@ it('serves archives and term pages next to a collection at the site root', funct
     get('/topics/laravel')->assertOk()->assertSee('Older post');
 
     // "Latest articles" lists the newest first, without the article itself.
-    get('/articles/older-post')->assertOk()->assertSeeInOrder(['Latest articles', 'Newest post']);
+    get('/articles/older-post')->assertOk()->assertSeeInOrder(['Artikel terbaru', 'Newest post']);
 });
 
 it('links tags only for taxonomies with term pages', function () {
@@ -233,4 +234,56 @@ it('returns form errors to the right form, in the page language, with labels', f
         ->assertRedirect(url('/contact').'#sunrice-form-contact');
     expect(FormSubmission::query()->first()->locale)->toBe('en');
     $this->get('/contact')->assertSee('sunrice-form-success', false);
+});
+
+it('describes listing pages by the page itself, not the last card of the loop', function () {
+    config(['sunrice.locales.names' => ['id' => 'Bahasa Indonesia', 'en' => 'English']]);
+    $articles = createCollection('articles', ['has_archive' => true]);
+    $articles->update(['archive_data' => [
+        'id' => ['title' => 'Semua berita', 'intro' => 'Setiap minggu'],
+        'en' => ['title' => 'All the news'],
+    ]]);
+    $post = createEntry($articles, 'Kabar');
+    $post->translations()->create([
+        'collection_id' => $articles->id, 'locale' => 'en', 'title' => 'News item',
+        'slug' => 'news-item', 'data' => [], 'is_ready' => true, 'content_published_at' => now(),
+    ]);
+    RouteMatcher::flush();
+
+    // Main language: Indonesian text, switcher links to the listing, not to the post.
+    get('/articles')->assertOk()
+        ->assertSee('<h1>Semua berita</h1>', false)
+        ->assertSee('Setiap minggu')
+        ->assertSee('<link rel="canonical" href="'.url('/articles').'">', false)
+        ->assertSee('<link rel="alternate" hreflang="en" href="'.url('/en/articles').'">', false)
+        ->assertSee('href="/en/articles" hreflang="en" lang="en"', false)
+        ->assertSee('>English</a>', false)
+        ->assertDontSee('/en/articles/news-item" hreflang', false);
+
+    // English: its own heading, the main-language intro, English interface text.
+    $empty = createCollection('notes', ['has_archive' => true]);
+    RouteMatcher::flush();
+    get('/en/articles')->assertOk()->assertSee('<h1>All the news</h1>', false)->assertSee('Setiap minggu');
+    get('/en/notes')->assertOk()->assertSee('Nothing here yet.');
+    get('/notes')->assertOk()->assertSee('Belum ada konten.');
+});
+
+it('previews a translation with that language\'s menus and interface text', function () {
+    $articles = createCollection('articles');
+    $post = createEntry($articles, 'Kabar');
+    $post->translations()->create([
+        'collection_id' => $articles->id, 'locale' => 'en', 'title' => 'News item',
+        'slug' => 'news-item', 'data' => [], 'is_ready' => false,
+    ]);
+    $menu = Menu::factory()->create(['handle' => 'main']);
+    MenuItem::query()->create([
+        'menu_id' => $menu->id, 'sort_order' => 0, 'type' => 'url', 'url' => '/',
+        'labels' => ['id' => 'Beranda', 'en' => 'Home'], 'new_tab' => false,
+    ]);
+    RouteMatcher::flush();
+
+    $url = URL::signedRoute('sunrice.frontend.preview', ['entry' => $post->id, 'locale' => 'en']);
+
+    get($url)->assertOk()->assertSee('News item')->assertSee('>Home</a>', false)
+        ->assertSee('Latest articles')->assertDontSee('Beranda');
 });

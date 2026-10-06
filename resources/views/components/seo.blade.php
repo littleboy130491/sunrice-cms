@@ -14,6 +14,11 @@
 @endif
 <meta property="og:url" content="{{ $canonical }}">
 <meta property="og:locale" content="{{ str_replace('-', '_', $locale) }}">
+@foreach(array_keys($alternates) as $alternateLocale)
+@if($alternateLocale !== 'x-default' && $alternateLocale !== $locale)
+<meta property="og:locale:alternate" content="{{ str_replace('-', '_', $alternateLocale) }}">
+@endif
+@endforeach
 @if($image)
 <meta property="og:image" content="{{ $image }}">
 @endif

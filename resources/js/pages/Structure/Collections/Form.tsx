@@ -16,7 +16,8 @@ interface CollectionShape {
     title: string;
     blueprint_id: number | null;
     settings: Record<string, Json>;
-    archive_data?: Record<string, Json> | null;
+    /** Listing heading and intro per language. */
+    archive_data?: Record<string, { title?: string; intro?: string }> | null;
     taxonomy_ids: number[];
 }
 
@@ -27,7 +28,7 @@ interface Props {
 }
 
 export default function CollectionsForm({ collection, blueprints, taxonomies }: Props) {
-    const { adminPath } = usePage<SharedProps>().props;
+    const { adminPath, locales } = usePage<SharedProps>().props;
     const form = useForm({
         handle: collection?.handle ?? '',
         title: collection?.title ?? '',
@@ -43,10 +44,10 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             archive_template: (collection?.settings?.archive_template as string) ?? '',
             icon: (collection?.settings?.icon as string) ?? 'file-text',
         },
-        archive_data: {
-            title: (collection?.archive_data?.title as string) ?? '',
-            intro: (collection?.archive_data?.intro as string) ?? '',
-        },
+        archive_data: Object.fromEntries(locales.available.map((lc) => [lc, {
+            title: collection?.archive_data?.[lc]?.title ?? '',
+            intro: collection?.archive_data?.[lc]?.intro ?? '',
+        }])) as Record<string, { title: string; intro: string }>,
         taxonomy_ids: collection?.taxonomy_ids ?? [],
     });
 
@@ -168,15 +169,26 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                     </label>
                     {settings.has_archive && (
                         <div className="grid gap-2 pl-7">
-                            <Label htmlFor="archive_title">Listing heading</Label>
-                            <Input id="archive_title" value={form.data.archive_data.title} placeholder={form.data.title || 'Collection title'}
-                                onChange={(e) => form.setData('archive_data', { ...form.data.archive_data, title: e.target.value })} />
-                            <InputError message={errors['archive_data.title']} />
-                            <Label htmlFor="archive_intro">Listing intro</Label>
-                            <textarea id="archive_intro" rows={3} className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-                                value={form.data.archive_data.intro}
-                                onChange={(e) => form.setData('archive_data', { ...form.data.archive_data, intro: e.target.value })} />
-                            <InputError message={errors['archive_data.intro']} />
+                            {locales.available.map((lc) => {
+                                const text = form.data.archive_data[lc] ?? { title: '', intro: '' };
+                                const set = (patch: Partial<typeof text>) =>
+                                    form.setData('archive_data', { ...form.data.archive_data, [lc]: { ...text, ...patch } });
+                                const multi = locales.available.length > 1;
+                                const suffix = multi ? ` (${lc.toUpperCase()})` : '';
+                                return (
+                                    <div key={lc} className="grid gap-2">
+                                        <Label htmlFor={`archive_title_${lc}`}>Listing heading{suffix}</Label>
+                                        <Input id={`archive_title_${lc}`} value={text.title}
+                                            placeholder={lc === locales.main ? (form.data.title || 'Collection title') : `Uses the ${locales.main.toUpperCase()} heading`}
+                                            onChange={(e) => set({ title: e.target.value })} />
+                                        <InputError message={errors[`archive_data.${lc}.title`]} />
+                                        <Label htmlFor={`archive_intro_${lc}`}>Listing intro{suffix}</Label>
+                                        <textarea id={`archive_intro_${lc}`} rows={3} className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                                            value={text.intro} onChange={(e) => set({ intro: e.target.value })} />
+                                        <InputError message={errors[`archive_data.${lc}.intro`]} />
+                                    </div>
+                                );
+                            })}
                             <Label htmlFor="archive_route">Listing URL</Label>
                             <Input id="archive_route" className="font-mono text-sm" value={settings.archive_route} placeholder={`/${handle}`} onChange={(e) => setSetting('archive_route', e.target.value)} />
                             <InputError message={errors['settings.archive_route']} />

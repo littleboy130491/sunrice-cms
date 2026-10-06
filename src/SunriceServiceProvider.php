@@ -59,6 +59,7 @@ class SunriceServiceProvider extends PackageServiceProvider
             ->name('sunrice')
             ->hasConfigFile()
             ->hasViews()
+            ->hasTranslations()
             ->discoversMigrations()
             ->runsMigrations();
     }

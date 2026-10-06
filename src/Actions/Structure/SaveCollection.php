@@ -10,6 +10,7 @@ use Illuminate\Validation\ValidationException;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Collection;
 use Sunrice\Permissions\SyncPermissions;
+use Sunrice\Support\Locales;
 
 class SaveCollection
 {
@@ -41,9 +42,11 @@ class SaveCollection
             'settings.archive_template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'settings.icon' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/'],
             'settings.archive_entries_in' => ['nullable', 'string', 'max:100'],
+            // Listing heading and intro per language: {locale: {title, intro}}.
             'archive_data' => ['nullable', 'array'],
-            'archive_data.title' => ['nullable', 'string', 'max:255'],
-            'archive_data.intro' => ['nullable', 'string', 'max:2000'],
+            'archive_data.*' => ['array'],
+            'archive_data.*.title' => ['nullable', 'string', 'max:255'],
+            'archive_data.*.intro' => ['nullable', 'string', 'max:2000'],
             'taxonomy_ids' => ['array'],
             'taxonomy_ids.*' => ['integer', Rule::exists('sunrice_taxonomies', 'id')],
         ], [], [
@@ -68,11 +71,7 @@ class SaveCollection
             'settings' => $settings,
         ]);
         if (array_key_exists('archive_data', $validated)) {
-            // Listing page heading and intro; other stored keys are kept.
-            $collection->archive_data = array_filter(
-                array_merge($collection->archive_data ?? [], (array) $validated['archive_data']),
-                fn ($value) => $value !== null && $value !== '',
-            );
+            $collection->archive_data = $this->archiveData($collection, (array) $validated['archive_data']);
         }
         $collection->save();
 
@@ -105,6 +104,29 @@ class SaveCollection
         }
 
         return $settings;
+    }
+
+    /**
+     * Merge the posted listing text into what is stored, per language,
+     * dropping blanks. Unknown languages are ignored.
+     *
+     * @param  array<string, mixed>  $posted
+     * @return array<string, array<string, string>>
+     */
+    protected function archiveData(Collection $collection, array $posted): array
+    {
+        $stored = Collection::archiveByLocale($collection->archive_data);
+        foreach ($posted as $locale => $text) {
+            if (! Locales::isAvailable((string) $locale) || ! is_array($text)) {
+                continue;
+            }
+            $stored[$locale] = array_filter(
+                array_merge($stored[$locale] ?? [], array_intersect_key($text, array_flip(['title', 'intro']))),
+                fn ($value) => is_string($value) && $value !== '',
+            );
+        }
+
+        return array_filter($stored);
     }
 
     /**

@@ -183,6 +183,10 @@ class PageController extends Controller
         return response()->view($view, $viewData + [
             'locale' => $context->locale,
             'pageType' => $context->pageType,
+            // What this page is, for layouts and partials. Unlike $entry or
+            // $term it can't be overwritten by a template's own @foreach
+            // ($entry in a listing loop leaks into the layout).
+            'sunricePage' => $context,
         ]);
     }
 }

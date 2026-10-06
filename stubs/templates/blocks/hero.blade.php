@@ -15,7 +15,7 @@
          links to entries already point at the entry's URL in the active language. --}}
     @if (! empty($block->button['url']))
         <a class="button" href="{{ $block->button['url'] }}" @if (! empty($block->button['new_tab'])) target="_blank" rel="noopener" @endif>
-            {{ ($block->button['label'] ?? null) ?: 'Learn more' }}
+            {{ ($block->button['label'] ?? null) ?: __('sunrice::frontend.learn_more') }}
         </a>
     @endif
 </section>

@@ -30,7 +30,7 @@
 @section('content')
     <article>
         @if ($entry->isFallback)
-            <p class="muted"><em>This page is not translated yet; showing the original version.</em></p>
+            <p class="muted"><em>{{ __('sunrice::frontend.not_translated') }}</em></p>
         @endif
 
         <h1>{{ $entry->title }}</h1>
