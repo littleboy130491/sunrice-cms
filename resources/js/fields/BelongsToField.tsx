@@ -6,6 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { adminUrl } from '@/lib/route';
 import type { FieldProps } from './types';
 import type { SharedProps } from '@/types';
+import { fetchJson } from '@/lib/fetch-json';
+import { toast } from 'sonner';
 
 interface Option { id: number | string; label: string }
 
@@ -23,10 +25,12 @@ export default function BelongsToField({ field, value, onChange }: FieldProps) {
     React.useEffect(() => {
         if (!resource) return;
         const handle = setTimeout(() => {
-            fetch(adminUrl(`api/resources/${resource}/options/${field.handle}?q=${encodeURIComponent(query)}`, adminPath))
-                .then((r) => r.json())
+            fetchJson<{ options?: Option[] }>(adminUrl(`api/resources/${resource}/options/${field.handle}?q=${encodeURIComponent(query)}`, adminPath))
                 .then((d) => setOptions(d.options ?? []))
-                .catch(() => setOptions([]));
+                .catch((e) => {
+                    setOptions([]);
+                    toast.error(e instanceof Error ? e.message : 'Could not load options.');
+                });
         }, 200);
         return () => clearTimeout(handle);
     }, [query, resource, field.handle, adminPath]);

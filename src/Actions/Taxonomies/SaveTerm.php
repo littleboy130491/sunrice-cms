@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sunrice\Actions\Taxonomies;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Sunrice\Events\ContentChanged;
@@ -29,6 +30,16 @@ class SaveTerm
             }
         }
 
+        // Languages left blank in the form are skipped rather than failing
+        // validation, unless the term already has that translation.
+        $existing = $term?->translations()->pluck('locale')->all() ?? [];
+        foreach ($attributes['translations'] ?? [] as $locale => $t) {
+            $blank = trim((string) ($t['title'] ?? '')) === '' && trim((string) ($t['slug'] ?? '')) === '';
+            if ($blank && $locale !== Locales::main() && ! in_array($locale, $existing, true)) {
+                unset($attributes['translations'][$locale]);
+            }
+        }
+
         $validated = validator($attributes, [
             'parent_id' => [
                 'nullable', 'integer',
@@ -38,7 +49,7 @@ class SaveTerm
             'translations.*.title' => ['required', 'string', 'max:255'],
             'translations.*.slug' => ['nullable', 'string', 'max:255'],
             'translations.*.data' => ['array'],
-        ])->after(function ($v) {
+        ], [], ['translations.*.title' => 'title', 'translations.*.slug' => 'slug'])->after(function ($v) {
             foreach ($v->safe()?->toArray()['translations'] ?? [] as $locale => $t) {
                 if (! Locales::isAvailable($locale)) {
                     $v->errors()->add("translations.{$locale}", 'Unknown locale.');
@@ -46,6 +57,14 @@ class SaveTerm
             }
         })->validate();
 
+        return DB::transaction(fn () => $this->persist($taxonomy, $validated, $term));
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    protected function persist(Taxonomy $taxonomy, array $validated, ?Term $term): Term
+    {
         $term ??= new Term;
         $term->taxonomy_id = $taxonomy->id;
         $term->parent_id = Arr::get($validated, 'parent_id');

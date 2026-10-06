@@ -11,6 +11,7 @@ use Sunrice\Models\Collection;
 
 use function Pest\Laravel\get;
 use function Pest\Laravel\post;
+use function Pest\Laravel\put;
 
 beforeEach(function () {
     $this->admin = actingAsSuperAdmin();
@@ -76,4 +77,20 @@ it('saves the sidebar icon', function () {
 
     $items = collect(app(Navigation::class)->for($this->admin))->firstWhere('label', 'Content')['items'];
     expect(collect($items)->firstWhere('label', 'Blog')['icon'])->toBe('newspaper');
+});
+
+it('saves archive settings and keeps settings the form does not send', function () {
+    saveCollection('news', ['has_archive' => true, 'archive_route' => 'berita/', 'per_page' => '6', 'template' => ''])->assertSessionHasNoErrors();
+    $collection = Collection::query()->where('handle', 'news')->firstOrFail();
+    expect($collection->settings)->toMatchArray(['has_archive' => true, 'archive_route' => '/berita', 'per_page' => 6])
+        ->and($collection->settings)->not->toHaveKey('template');
+
+    $collection->update(['settings' => $collection->settings + ['archive_blueprint_id' => 5]]);
+    put("/cms/structure/collections/{$collection->id}", [
+        'title' => 'News', 'settings' => ['has_archive' => false, 'per_page' => ''],
+    ])->assertSessionHasNoErrors();
+    expect($collection->fresh()->settings)->toMatchArray(['has_archive' => false, 'archive_blueprint_id' => 5, 'archive_route' => '/berita'])
+        ->and($collection->fresh()->settings)->not->toHaveKey('per_page');
+
+    saveCollection('bad', ['per_page' => 500, 'template' => '<script>'])->assertSessionHasErrors(['settings.per_page', 'settings.template']);
 });

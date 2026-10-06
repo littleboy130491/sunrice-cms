@@ -9,7 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import FieldRenderer from '@/fields/FieldRenderer';
 import { adminUrl } from '@/lib/route';
-import type { AdminTab, SharedProps } from '@/types'; import type { Json } from '@/types';
+import { InputError } from '@/components/app/input-error';
+import { useCan } from '@/lib/can';
+import type { AdminTab, Json, SharedProps } from '@/types';
 
 interface TermRow {
     id: number;
@@ -22,19 +24,26 @@ interface Props {
     taxonomy: { id: number; handle: string; title: string; hierarchical: boolean };
     terms: TermRow[];
     locales: string[];
+    mainLocale?: string;
     blueprint: AdminTab[] | null;
 }
 
-export default function TermsPage({ taxonomy, terms, locales, blueprint }: Props) {
+export default function TermsPage({ taxonomy, terms, locales, mainLocale, blueprint }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
-    const main = locales[0];
+    const can = useCan();
+    const main = mainLocale ?? locales[0];
     const [open, setOpen] = React.useState(false);
+    const [tab, setTab] = React.useState(main);
+    const [errors, setErrors] = React.useState<Record<string, string>>({});
+    const [processing, setProcessing] = React.useState(false);
     const [editing, setEditing] = React.useState<TermRow | null>(null);
     const [form, setForm] = React.useState<{ parent_id: number | null; translations: Record<string, { title: string; slug: string; data: Record<string, Json> }> }>({ parent_id: null, translations: {} });
 
     const openCreate = () => {
         setEditing(null);
         setForm({ parent_id: null, translations: Object.fromEntries(locales.map((l) => [l, { title: '', slug: '', data: {} }])) });
+        setErrors({});
+        setTab(main);
         setOpen(true);
     };
 
@@ -46,16 +55,31 @@ export default function TermsPage({ taxonomy, terms, locales, blueprint }: Props
                 locales.map((l) => [l, term.translations[l] ?? { title: '', slug: '', data: {} }]),
             ),
         });
+        setErrors({});
+        setTab(main);
         setOpen(true);
     };
 
     const submit = () => {
+        const options = {
+            preserveScroll: true,
+            onStart: () => setProcessing(true),
+            onFinish: () => setProcessing(false),
+            onSuccess: () => { setOpen(false); setErrors({}); },
+            onError: (e: Record<string, string>) => {
+                setErrors(e);
+                // Jump to the first language with a problem.
+                const bad = locales.find((l) => Object.keys(e).some((k) => k.startsWith(`translations.${l}`)));
+                if (bad) setTab(bad);
+            },
+        };
         if (editing) {
-            router.put(adminUrl(`terms/${editing.id}`, adminPath), form, { preserveScroll: true, onSuccess: () => setOpen(false) });
+            router.put(adminUrl(`terms/${editing.id}`, adminPath), form, options);
         } else {
-            router.post(adminUrl(`taxonomies/${taxonomy.handle}/terms`, adminPath), form, { preserveScroll: true, onSuccess: () => setOpen(false) });
+            router.post(adminUrl(`taxonomies/${taxonomy.handle}/terms`, adminPath), form, options);
         }
     };
+    const localeHasError = (l: string) => Object.keys(errors).some((k) => k.startsWith(`translations.${l}`));
 
     const fields = (blueprint ?? []).flatMap((t) => t.fields ?? []);
 
@@ -63,23 +87,25 @@ export default function TermsPage({ taxonomy, terms, locales, blueprint }: Props
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold tracking-tight">{taxonomy.title} — terms</h1>
-                <Button onClick={openCreate}><Plus className="mr-1 h-4 w-4" /> New term</Button>
+                {can(`sunrice.terms.${taxonomy.id}.create`) && <Button onClick={openCreate}><Plus className="mr-1 h-4 w-4" /> New term</Button>}
             </div>
 
             <ul className="flex flex-col gap-1">
                 {terms.map((t) => (
                     <li key={t.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-                        <button type="button" className="flex items-center gap-2 text-sm" onClick={() => openEdit(t)}>
+                        <button type="button" className="flex items-center gap-2 text-sm" onClick={() => can(`sunrice.terms.${taxonomy.id}.edit`) && openEdit(t)}>
                             {t.translations[main]?.title ?? `#${t.id}`}
                             {t.parent_id && <span className="text-xs text-muted-foreground">child of #{t.parent_id}</span>}
                             <span className="text-xs text-muted-foreground">({t.count} entries)</span>
                         </button>
-                        <Button
-                            variant="ghost" size="icon" className="text-destructive"
-                            onClick={() => window.confirm('Delete term?') && router.delete(adminUrl(`terms/${t.id}`, adminPath), { preserveScroll: true })}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {can(`sunrice.terms.${taxonomy.id}.delete`) && (
+                            <Button
+                                variant="ghost" size="icon" className="text-destructive"
+                                onClick={() => window.confirm('Delete term?') && router.delete(adminUrl(`terms/${t.id}`, adminPath), { preserveScroll: true })}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
                     </li>
                 ))}
                 {terms.length === 0 && <li className="py-8 text-center text-sm text-muted-foreground">No terms.</li>}
@@ -101,11 +127,16 @@ export default function TermsPage({ taxonomy, terms, locales, blueprint }: Props
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                <InputError message={errors.parent_id} />
                             </div>
                         )}
-                        <Tabs defaultValue={main}>
+                        <Tabs value={tab} onValueChange={setTab}>
                             <TabsList>
-                                {locales.map((l) => <TabsTrigger key={l} value={l}>{l}</TabsTrigger>)}
+                                {locales.map((l) => (
+                                    <TabsTrigger key={l} value={l} className={localeHasError(l) ? 'text-destructive' : undefined}>
+                                        {l}{l !== main && <span className="ml-1 text-[10px] text-muted-foreground">(optional)</span>}
+                                    </TabsTrigger>
+                                ))}
                             </TabsList>
                             {locales.map((l) => (
                                 <TabsContent key={l} value={l} className="flex flex-col gap-3 pt-3">
@@ -118,6 +149,7 @@ export default function TermsPage({ taxonomy, terms, locales, blueprint }: Props
                                                 translations: { ...form.translations, [l]: { ...form.translations[l], title: e.target.value } },
                                             })}
                                         />
+                                        <InputError message={errors[`translations.${l}.title`] ?? errors[`translations.${l}`]} />
                                     </div>
                                     <div className="grid gap-2">
                                         <Label>Slug</Label>
@@ -127,12 +159,17 @@ export default function TermsPage({ taxonomy, terms, locales, blueprint }: Props
                                                 ...form,
                                                 translations: { ...form.translations, [l]: { ...form.translations[l], slug: e.target.value } },
                                             })}
+                                            placeholder="Generated from the title"
                                         />
+                                        <InputError message={errors[`translations.${l}.slug`]} />
                                     </div>
                                     {fields.length > 0 && (
                                         <FieldRenderer
                                             fields={fields}
                                             values={form.translations[l]?.data ?? {}}
+                                            errors={Object.fromEntries(Object.entries(errors)
+                                                .filter(([k]) => k.startsWith(`translations.${l}.data.`))
+                                                .map(([k, v]) => [k.replace(`translations.${l}.`, ''), v]))}
                                             onChange={(values) => setForm({
                                                 ...form,
                                                 translations: { ...form.translations, [l]: { ...form.translations[l], data: values } },
@@ -142,7 +179,8 @@ export default function TermsPage({ taxonomy, terms, locales, blueprint }: Props
                                 </TabsContent>
                             ))}
                         </Tabs>
-                        <Button onClick={submit}>Save term</Button>
+                        <InputError message={errors.translations} />
+                        <Button onClick={submit} disabled={processing}>{processing ? 'Saving…' : 'Save term'}</Button>
                     </div>
                 </DialogContent>
             </Dialog>

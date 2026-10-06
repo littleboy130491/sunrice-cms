@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { adminUrl } from '@/lib/route';
 import type { SharedProps } from '@/types';
+import { fetchJson } from '@/lib/fetch-json';
 
 interface AssetRow {
     id: number;
@@ -104,9 +105,13 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
 
     const openDetail = async (asset: AssetRow) => {
         setDetail(asset);
-        const res = await fetch(adminUrl(`assets/${asset.id}`, adminPath), { headers: { Accept: 'application/json' } });
-        const json = await res.json();
-        setUsages(json.usages ?? []);
+        setUsages([]);
+        try {
+            const json = await fetchJson<{ usages?: typeof usages }>(adminUrl(`assets/${asset.id}`, adminPath));
+            setUsages(json.usages ?? []);
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Could not load where this asset is used.');
+        }
     };
 
     const saveMeta = () => {

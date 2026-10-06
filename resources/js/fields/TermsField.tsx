@@ -7,6 +7,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { adminUrl } from '@/lib/route';
 import type { FieldProps } from './types';
 import type { SharedProps } from '@/types';
+import { fetchJson } from '@/lib/fetch-json';
+import { toast } from 'sonner';
 
 interface TermOption {
     id: number;
@@ -26,9 +28,12 @@ export default function TermsField({ field, value, onChange }: FieldProps) {
         const t = setTimeout(async () => {
             const params = new URLSearchParams({ taxonomy });
             if (query) params.set('q', query);
-            const res = await fetch(`${adminUrl('api/terms', adminPath)}?${params}`, { headers: { Accept: 'application/json' } });
-            const json = await res.json();
-            setOptions(json.data ?? []);
+            try {
+                const json = await fetchJson<{ data?: TermOption[] }>(`${adminUrl('api/terms', adminPath)}?${params}`);
+                setOptions(json.data ?? []);
+            } catch (e) {
+                toast.error(e instanceof Error ? e.message : 'Could not load terms.');
+            }
         }, 200);
         return () => clearTimeout(t);
     }, [open, query, taxonomy, adminPath]);

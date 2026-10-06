@@ -5,6 +5,8 @@ interface Props {
     fields: AdminField[];
     values: Record<string, Json>;
     errors?: Record<string, string>;
+    /** Where this list's errors live, e.g. `data` or `seo`. */
+    pathPrefix?: string;
     onChange: (values: Record<string, Json>) => void;
 }
 
@@ -13,12 +15,13 @@ interface Props {
  * components are looked up in the fieldComponents map; containers
  * recurse through FieldList.
  */
-export default function FieldRenderer({ fields, values, errors, onChange }: Props) {
+export default function FieldRenderer({ fields, values, errors, pathPrefix = 'data', onChange }: Props) {
     return (
         <FieldList
             fields={fields}
             values={values}
             errors={errors}
+            pathPrefix={pathPrefix}
             onChange={(handle, v) => onChange({ ...values, [handle]: v as Json })}
         />
     );

@@ -6,6 +6,8 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { adminUrl } from '@/lib/route';
 import type { SharedProps } from '@/types';
+import { fetchJson } from '@/lib/fetch-json';
+import { toast } from 'sonner';
 
 export interface PickedEntry {
     id: number;
@@ -36,12 +38,16 @@ export default function EntryPicker({ collections = [], multiple = false, value,
             const params = new URLSearchParams();
             collections.forEach((c) => params.append('collections[]', c));
             if (query) params.set('q', query);
-            const res = await fetch(`${adminUrl('api/entries', adminPath)}?${params}`, { headers: { Accept: 'application/json' } });
-            const json = await res.json();
-            setResults(json.data ?? []);
+            try {
+                const json = await fetchJson<{ data?: PickedEntry[] }>(`${adminUrl('api/entries', adminPath)}?${params}`);
+                setResults(json.data ?? []);
+            } catch (e) {
+                toast.error(e instanceof Error ? e.message : 'Could not load entries.');
+            }
         }, 200);
         return () => clearTimeout(t);
-    }, [open, query, collections, adminPath]);
+        // Compare collections by value: callers often pass a new array each render.
+    }, [open, query, collections.join(','), adminPath]);
 
     const toggle = (entry: PickedEntry) => {
         if (multiple) {

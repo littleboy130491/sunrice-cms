@@ -32,11 +32,22 @@ class SaveTaxonomy
             'settings.sluggable' => ['boolean'],
             'settings.has_archive' => ['boolean'],
             'settings.route' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9/_{}.-]*$#'],
+            'settings.per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'settings.template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'collection_ids' => ['array'],
             'collection_ids.*' => ['integer', Rule::exists('sunrice_collections', 'id')],
         ])->validate();
 
-        $settings = Arr::get($validated, 'settings', $taxonomy->settings ?? []);
+        // Merge over the stored settings so keys the form doesn't edit survive.
+        $settings = array_merge($taxonomy->settings ?? [], Arr::get($validated, 'settings', []));
+        foreach (['per_page', 'template'] as $key) {
+            if (array_key_exists($key, $settings) && ($settings[$key] === null || $settings[$key] === '')) {
+                unset($settings[$key]);
+            }
+        }
+        if (isset($settings['per_page'])) {
+            $settings['per_page'] = (int) $settings['per_page'];
+        }
         // Empty: per-collection pages at /{collection}/{taxonomy}/{slug}.
         $route = Collection::normalizeRoute($settings['route'] ?? null);
         if ($route === null) {

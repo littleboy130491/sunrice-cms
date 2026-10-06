@@ -229,6 +229,7 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                                 }}
                             />
                         </div>
+                        <InputError message={errors['seo.image']} />
                         <p className="text-xs text-muted-foreground">Shown when a page is shared and has no image of its own.</p>
                     </div>
                 </CardContent>

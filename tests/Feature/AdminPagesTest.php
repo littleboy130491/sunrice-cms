@@ -141,6 +141,29 @@ it('creates taxonomies and terms via admin routes', function () {
     expect(Term::find($term->id))->toBeNull();
 });
 
+it('skips blank optional languages and saves terms all-or-nothing', function () {
+    $taxonomy = Taxonomy::create(['handle' => 'tags', 'title' => 'Tags']);
+
+    post("/cms/taxonomies/{$taxonomy->handle}/terms", [
+        'translations' => ['id' => ['title' => 'Satu', 'slug' => ''], 'en' => ['title' => '', 'slug' => '']],
+    ])->assertSessionHasNoErrors();
+    $first = Term::where('taxonomy_id', $taxonomy->id)->first();
+    expect($first->translations)->toHaveCount(1);
+
+    post("/cms/taxonomies/{$taxonomy->handle}/terms", [
+        'translations' => ['id' => ['title' => '', 'slug' => '']],
+    ])->assertSessionHasErrors('translations.id.title');
+
+    // The English slug clashes: nothing of the new term is kept.
+    post("/cms/taxonomies/{$taxonomy->handle}/terms", [
+        'translations' => ['id' => ['title' => 'Dua'], 'en' => ['title' => 'Two', 'slug' => 'satu']],
+    ])->assertSessionHasNoErrors();
+    post("/cms/taxonomies/{$taxonomy->handle}/terms", [
+        'translations' => ['id' => ['title' => 'Tiga'], 'en' => ['title' => 'Three', 'slug' => 'satu']],
+    ])->assertSessionHasErrors('translations.en.slug');
+    expect(Term::where('taxonomy_id', $taxonomy->id)->count())->toBe(2);
+});
+
 // ---------------- entries ----------------
 
 it('creates, edits, publishes and trashes an entry through the admin', function () {

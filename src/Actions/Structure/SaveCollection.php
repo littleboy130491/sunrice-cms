@@ -32,14 +32,27 @@ class SaveCollection
             'settings.translatable' => ['boolean'],
             'settings.sluggable' => ['boolean'],
             'settings.archivable' => ['boolean'],
+            'settings.has_single' => ['boolean'],
+            'settings.has_archive' => ['boolean'],
             'settings.route' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9/_{}.-]*$#'],
+            'settings.archive_route' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9/_.-]*$#'],
+            'settings.per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'settings.template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
+            'settings.archive_template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'settings.icon' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/'],
             'settings.archive_entries_in' => ['nullable', 'string', 'max:100'],
             'taxonomy_ids' => ['array'],
             'taxonomy_ids.*' => ['integer', Rule::exists('sunrice_taxonomies', 'id')],
+        ], [], [
+            'settings.route' => 'route prefix',
+            'settings.archive_route' => 'archive URL',
+            'settings.per_page' => 'entries per page',
+            'settings.template' => 'template',
+            'settings.archive_template' => 'archive template',
         ])->validate();
 
-        $settings = Arr::get($validated, 'settings', $collection->settings ?? []);
+        // Merge over the stored settings so keys the form doesn't edit survive.
+        $settings = $this->cleanSettings(array_merge($collection->settings ?? [], Arr::get($validated, 'settings', [])));
         $handle = $validated['handle'] ?? $collection?->handle;
         $settings = $this->normalizeRoute($settings, (string) $handle);
         $this->ensureUniqueRoute($settings, (string) $handle, $collection);
@@ -79,6 +92,29 @@ class SaveCollection
             unset($settings['route']);
         } else {
             $settings['route'] = $route;
+        }
+
+        return $settings;
+    }
+
+    /**
+     * Drop blanks (so defaults apply) and tidy the archive URL.
+     *
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>
+     */
+    protected function cleanSettings(array $settings): array
+    {
+        foreach (['archive_route', 'template', 'archive_template', 'per_page'] as $key) {
+            if (array_key_exists($key, $settings) && ($settings[$key] === null || $settings[$key] === '')) {
+                unset($settings[$key]);
+            }
+        }
+        if (isset($settings['archive_route'])) {
+            $settings['archive_route'] = '/'.trim((string) $settings['archive_route'], '/');
+        }
+        if (isset($settings['per_page'])) {
+            $settings['per_page'] = (int) $settings['per_page'];
         }
 
         return $settings;
