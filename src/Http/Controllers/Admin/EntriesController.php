@@ -121,13 +121,6 @@ class EntriesController extends Controller
     }
 
     /**
-     * The entries list query: search, status filter and sorting from the
-     * request, else the collection's own order. Shared by the list and
-     * its CSV export so both show the same entries.
-     *
-     * @param  Builder<Entry>  $query
-     */
-    /**
      * Columns this user shows. A choice saved before the list gained
      * "Created" and "Created by" (it had an ID column) starts over.
      *
@@ -142,6 +135,13 @@ class EntriesController extends Controller
         return in_array('id', $saved, true) || $known === [] ? $default : $known;
     }
 
+    /**
+     * The entries list query: search, status filter and sorting from the
+     * request, else the collection's own order. Shared by the list and
+     * its CSV export so both show the same entries.
+     *
+     * @param  Builder<Entry>  $query
+     */
     protected function entriesTable(Request $request, Collection $collection, Builder $query): TableQuery
     {
         $main = Locales::main();

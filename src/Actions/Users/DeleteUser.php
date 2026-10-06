@@ -48,7 +48,7 @@ class DeleteUser
 
         DB::transaction(function () use ($user, $mode, $reassignTo): void {
             $id = $user->getKey();
-            $newOwner = $mode === 'reassign' ? $reassignTo?->getKey() : null;
+            $newOwner = $mode === 'reassign' && $reassignTo !== null ? $reassignTo->getKey() : null;
 
             if ($mode === 'delete') {
                 Entry::query()->where('author_id', $id)->each(function (Entry $entry): void {
