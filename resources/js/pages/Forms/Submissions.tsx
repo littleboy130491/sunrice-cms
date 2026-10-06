@@ -1,4 +1,4 @@
-import { router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +12,11 @@ interface Props {
     submissions: {
         data: { id: number; data: Record<string, unknown>; created_at: string }[];
         links: { url: string | null; label: string; active: boolean }[];
+        current_page: number;
+        last_page: number;
+        total: number;
+        prev_page_url: string | null;
+        next_page_url: string | null;
     };
     filters: { search?: string; from?: string; to?: string };
 }
@@ -30,11 +35,18 @@ export default function Submissions({ form, submissions, filters }: Props) {
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <h1 className="text-xl font-semibold tracking-tight">Submissions: {form.title}</h1>
-                {can(`sunrice.forms.${form.id}.export-submissions`) && (
-                    <Button variant="outline" asChild>
-                        <a href={adminUrl(`forms/${form.id}/submissions/export`, adminPath)}>Export CSV</a>
-                    </Button>
-                )}
+                <div className="flex gap-2">
+                    {can(`sunrice.forms.${form.id}.edit`) && (
+                        <Button variant="outline" asChild>
+                            <Link href={adminUrl(`forms/${form.handle}`, adminPath)}>Edit form</Link>
+                        </Button>
+                    )}
+                    {can(`sunrice.forms.${form.id}.export-submissions`) && (
+                        <Button variant="outline" asChild>
+                            <a href={adminUrl(`forms/${form.id}/submissions/export`, adminPath)}>Export CSV</a>
+                        </Button>
+                    )}
+                </div>
             </div>
             <div className="flex gap-2">
                 <Input
@@ -64,8 +76,22 @@ export default function Submissions({ form, submissions, filters }: Props) {
                             ))}
                         </TableRow>
                     ))}
+                    {submissions.data.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={handles.length + 2} className="h-24 text-center text-muted-foreground">No submissions{filters.search ? ' match your search' : ' yet'}.</TableCell>
+                        </TableRow>
+                    )}
                 </TableBody>
             </Table>
+            {submissions.last_page > 1 && (
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>Page {submissions.current_page} of {submissions.last_page} · {submissions.total} submissions</span>
+                    <div className="flex gap-2">
+                        <Button variant="outline" size="sm" disabled={!submissions.prev_page_url} onClick={() => submissions.prev_page_url && router.get(submissions.prev_page_url, {}, { preserveScroll: true })}>Previous</Button>
+                        <Button variant="outline" size="sm" disabled={!submissions.next_page_url} onClick={() => submissions.next_page_url && router.get(submissions.next_page_url, {}, { preserveScroll: true })}>Next</Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

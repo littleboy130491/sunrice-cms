@@ -22,13 +22,19 @@ class FormsController extends Controller
         Gate::authorize('sunrice.access-admin');
 
         return Inertia::render('Forms/Index', [
-            'forms' => Form::query()->orderBy('handle')->get()
+            'forms' => Form::query()->withCount('submissions')->orderBy('handle')->get()
+                ->filter(fn (Form $form) => request()->user()->can('view', $form))
                 ->map(fn (Form $form) => [
                     'id' => $form->id,
                     'handle' => $form->handle,
                     'title' => $form->title,
-                    'submissions_count' => $form->submissions()->count(),
-                ])->all(),
+                    'submissions_count' => $form->submissions_count,
+                    'can' => [
+                        'edit' => request()->user()->can('update', $form),
+                        'submissions' => request()->user()->can('viewSubmissions', $form),
+                        'delete' => request()->user()->can('delete', $form),
+                    ],
+                ])->values()->all(),
         ]);
     }
 

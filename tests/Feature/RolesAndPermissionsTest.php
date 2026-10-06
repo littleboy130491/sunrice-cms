@@ -6,9 +6,11 @@ use Inertia\Testing\AssertableInertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use Sunrice\Admin\Navigation;
 use Sunrice\Database\Seeders\RolesSeeder;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Entry;
+use Sunrice\Models\Form;
 use Sunrice\Permissions\PermissionRegistry;
 use Sunrice\Permissions\SyncPermissions;
 use Sunrice\Support\Locales;
@@ -199,4 +201,20 @@ it('can seed the default roles while installing', function () {
     artisan('sunrice:install', ['--no-user' => true, '--roles' => true])->assertSuccessful();
 
     expect(Role::query()->whereIn('name', ['Administrator', 'Editor', 'Author', 'Translator'])->count())->toBe(4);
+});
+
+it('sends submission viewers to submissions, not the form builder', function () {
+    $form = Form::query()->create([
+        'handle' => 'contact', 'title' => 'Contact',
+        'fields' => [['handle' => 'name', 'type' => 'text']], 'settings' => [],
+    ]);
+    $user = userWith(["sunrice.forms.{$form->id}.view-submissions"]);
+
+    $items = collect(app(Navigation::class)->for($user))->firstWhere('label', 'Forms')['items'];
+    expect($items[0]['href'])->toBe("forms/{$form->id}/submissions");
+
+    get('/cms/forms')->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('forms.0.can', ['edit' => false, 'submissions' => true, 'delete' => false]));
+    get("/cms/forms/{$form->id}/submissions")->assertOk();
+    get("/cms/forms/{$form->handle}")->assertForbidden();
 });

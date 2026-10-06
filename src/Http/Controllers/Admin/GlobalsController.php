@@ -102,8 +102,9 @@ class GlobalsController extends Controller
         ]);
 
         $globalSet->update($validated);
+        ContentChanged::dispatch('global_saved');
 
-        return back()->with('success', 'Saved.');
+        return back()->with('success', 'Global settings saved.');
     }
 
     public function destroy(GlobalSet $globalSet): RedirectResponse

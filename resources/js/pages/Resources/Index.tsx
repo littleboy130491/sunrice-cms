@@ -1,7 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DataTable } from '@/components/data-table/DataTable';
+import { DataTable, type FilterDef } from '@/components/data-table/DataTable';
 import { adminUrl } from '@/lib/route';
 import type { ColumnDef, Paginated, SharedProps } from '@/types';
 
@@ -11,9 +11,11 @@ interface Props {
     rows: Paginated<{ id: string | number; [key: string]: unknown }>;
     meta: { search: string | null; filters: Record<string, string>; sort: string | null };
     can: { create: boolean };
+    visibleColumns?: string[];
+    filters?: FilterDef[];
 }
 
-export default function ResourceIndex({ resource, columns, rows, meta, can }: Props) {
+export default function ResourceIndex({ resource, columns, rows, meta, can, visibleColumns, filters }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
 
     return (
@@ -33,6 +35,8 @@ export default function ResourceIndex({ resource, columns, rows, meta, can }: Pr
                 rows={rows}
                 meta={meta}
                 tableKey={`resource.${resource.key}`}
+                visibleColumns={visibleColumns}
+                filters={filters}
                 exportUrl={adminUrl(`resources/${resource.key}/export`, adminPath)}
                 bulkUrl={adminUrl(`resources/${resource.key}/bulk`, adminPath)}
                 bulkActions={[{ key: 'delete', label: 'Delete', variant: 'destructive', confirm: 'Delete selected records?' }]}

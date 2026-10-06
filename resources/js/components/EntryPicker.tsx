@@ -26,6 +26,27 @@ interface Props {
 /**
  * Searchable entry picker backed by `GET {admin}/api/entries`.
  */
+/**
+ * Titles for already-picked entry ids, for showing a value that only
+ * stores ids. Unknown ids fall back to "Entry #id".
+ */
+export function useEntryTitles(ids: number[]): Record<number, string> {
+    const { adminPath } = usePage<SharedProps>().props;
+    const [titles, setTitles] = React.useState<Record<number, string>>({});
+    const key = ids.filter((id) => !(id in titles)).join(',');
+
+    React.useEffect(() => {
+        if (!key) return;
+        const params = new URLSearchParams();
+        key.split(',').forEach((id) => params.append('ids[]', id));
+        fetchJson<{ data?: PickedEntry[] }>(`${adminUrl('api/entries', adminPath)}?${params}`)
+            .then((json) => setTitles((t) => ({ ...t, ...Object.fromEntries((json.data ?? []).map((e) => [e.id, e.title])) })))
+            .catch(() => undefined);
+    }, [key, adminPath]);
+
+    return titles;
+}
+
 export default function EntryPicker({ collections = [], multiple = false, value, onChange, placeholder = 'Pick entry…' }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const [open, setOpen] = React.useState(false);

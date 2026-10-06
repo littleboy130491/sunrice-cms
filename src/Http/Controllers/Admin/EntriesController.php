@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Http\Controllers\Admin;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
@@ -50,9 +51,29 @@ class EntriesController extends Controller
             ->where('collection_id', $collection->id)
             ->with(['translations' => fn ($q) => $q->where('locale', Locales::main())]);
 
+        $main = Locales::main();
+        $mainTitle = EntryTranslation::query()
+            ->select('title')
+            ->whereColumn('entry_id', (new Entry)->qualifyColumn('id'))
+            ->where('locale', $main)
+            ->limit(1);
+
         $table = TableQuery::for($query)
-            ->searchable(['id'])
-            ->filterable(['status'])
+            ->searchUsing(function (Builder $q, string $term): void {
+                $q->where(function (Builder $q) use ($term): void {
+                    $q->whereHas('translations', fn (Builder $t) => $t->whereLike('title', "%{$term}%"));
+                    if (ctype_digit($term)) {
+                        $q->orWhere('id', (int) $term);
+                    }
+                });
+            })
+            // Scheduled = published with a future date; Published = live now.
+            ->filter('status', fn (Builder $q, mixed $value) => match ($value) {
+                'published' => $q->where('status', 'published')->where(fn (Builder $q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now())),
+                'scheduled' => $q->where('status', 'published')->where('published_at', '>', now()),
+                default => $q->where('status', $value),
+            })
+            ->sortUsing('title', fn (Builder $q, string $direction) => $q->orderBy($mainTitle, $direction))
             ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at'])
             ->apply($request);
 
@@ -74,7 +95,11 @@ class EntriesController extends Controller
                 return [
                     'id' => $e->id,
                     'title' => $t === null ? '—' : $t->title,
-                    'status' => $e->trashed() ? 'trashed' : $e->status,
+                    'status' => match (true) {
+                        $e->trashed() => 'trashed',
+                        $e->status === 'published' && $e->published_at?->isFuture() => 'scheduled',
+                        default => $e->status,
+                    },
                     'updated_at' => $e->updated_at?->diffForHumans(),
                 ];
             }),

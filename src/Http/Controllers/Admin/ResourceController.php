@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Http\Controllers\Admin;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -15,7 +16,9 @@ use Illuminate\Support\Facades\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Admin\Export\CsvExporter;
+use Sunrice\Admin\Table\Column;
 use Sunrice\Admin\Table\TableQuery;
+use Sunrice\Resources\Filter;
 use Sunrice\Resources\Resource;
 use Sunrice\Sunrice;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -58,9 +61,7 @@ class ResourceController extends Controller
         $class = $this->resource($resource);
 
         $query = $class::query($class::model()::query()->with($class::with()));
-        $table = TableQuery::for($query)
-            ->searchable($class::searchable())
-            ->apply($request);
+        $table = $this->table($class, $query)->apply($request);
 
         return Inertia::render('Resources/Index', [
             'resource' => [
@@ -71,6 +72,12 @@ class ResourceController extends Controller
             'columns' => $class::columns(),
             'rows' => $table->paginate($request),
             'meta' => $table->meta(),
+            'filters' => array_values(array_filter(array_map(fn (Filter $f) => $this->filterMeta($f), $class::filters()))),
+            'visibleColumns' => TablePreferencesController::columnsFor(
+                (int) $request->user()->getAuthIdentifier(),
+                "resource.{$resource}",
+                array_column($class::columns(), 'key'),
+            ),
             'can' => [
                 'create' => $request->user()->can("sunrice.resources.{$resource}.create"),
             ],
@@ -164,11 +171,56 @@ class ResourceController extends Controller
         $this->checkAbility($request, $resource, 'export');
         $class = $this->resource($resource);
 
-        $table = TableQuery::for($class::query($class::model()::query()->with($class::with())))
-            ->searchable($class::searchable())
-            ->apply($request);
+        $table = $this->table($class, $class::query($class::model()::query()->with($class::with())))->apply($request);
 
         return $csv->download($table, $class::columns(), "{$resource}.csv");
+    }
+
+    /**
+     * The index query with the resource's search, filters and sortable columns.
+     *
+     * @param  class-string<resource>  $class
+     * @param  Builder<Model>  $query
+     */
+    protected function table(string $class, Builder $query): TableQuery
+    {
+        $table = TableQuery::for($query)
+            ->searchable($class::searchable())
+            ->sortable(array_values(array_map(
+                fn (Column $c) => $c->key,
+                array_filter($class::columns(), fn (Column $c) => $c->sortable),
+            )));
+        foreach ($class::filters() as $filter) {
+            $table->filter($filter->column, fn (Builder $q, mixed $value) => $filter->apply($q, $value));
+        }
+
+        return $table;
+    }
+
+    /**
+     * A filter as the table's filter dropdowns expect it, or null for
+     * kinds the table can't show (date ranges).
+     *
+     * @return array{key: string, label: string, type: string, options: array<int, array{value: string, label: string}>}|null
+     */
+    protected function filterMeta(Filter $filter): ?array
+    {
+        $meta = $filter->toMeta();
+        $options = match ($meta['type']) {
+            'boolean' => ['1' => 'Yes', '0' => 'No'],
+            'select' => $meta['options'],
+            default => null,
+        };
+        if ($options === null) {
+            return null;
+        }
+
+        return [
+            'key' => $meta['key'],
+            'label' => $meta['label'],
+            'type' => 'select',
+            'options' => array_map(fn ($value, $label) => ['value' => (string) $value, 'label' => (string) $label], array_keys($options), $options),
+        ];
     }
 
     /**

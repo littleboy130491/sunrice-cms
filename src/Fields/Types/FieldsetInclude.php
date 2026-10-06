@@ -18,4 +18,11 @@ class FieldsetInclude extends FieldType
     {
         return 'fieldset';
     }
+
+    public function settingsSchema(): array
+    {
+        return [
+            ['handle' => 'fieldset', 'type' => 'fieldset', 'label' => 'Fieldset to include'],
+        ];
+    }
 }

@@ -396,3 +396,32 @@ it('limits term search to taxonomies the user may use', function () {
 
     get('/cms/api/terms?taxonomy=cats')->assertOk()->assertJsonPath('data.0.title', 'Berita');
 });
+
+it('searches entries by title, sorts by title and filters scheduled entries', function () {
+    $collection = createCollection('posts');
+    createEntry($collection, 'Banana');
+    createEntry($collection, 'Apple');
+    $later = createEntry($collection, 'Cherry');
+    $later->update(['published_at' => now()->addWeek()]);
+
+    get('/cms/collections/posts/entries?search=ban')->assertInertia(fn (Assert $page) => $page
+        ->has('rows.data', 1)->where('rows.data.0.title', 'Banana'));
+
+    get('/cms/collections/posts/entries?sort=title')->assertInertia(fn (Assert $page) => $page
+        ->where('rows.data.0.title', 'Apple')->where('meta.sort', 'title'));
+
+    get('/cms/collections/posts/entries?filters[status]=scheduled')->assertInertia(fn (Assert $page) => $page
+        ->has('rows.data', 1)->where('rows.data.0.title', 'Cherry')->where('rows.data.0.status', 'scheduled'));
+
+    get('/cms/collections/posts/entries?filters[status]=published')->assertInertia(fn (Assert $page) => $page
+        ->has('rows.data', 2));
+});
+
+it('updates global settings through the meta route', function () {
+    $blueprint = Blueprint::factory()->create();
+    $set = GlobalSet::create(['handle' => 'site', 'title' => 'Site', 'group' => 'global', 'blueprint_id' => $blueprint->id]);
+
+    put("/cms/globals/{$set->id}/meta", ['title' => 'Site info', 'blueprint_id' => $blueprint->id, 'translatable' => true])
+        ->assertSessionHas('success');
+    expect($set->fresh()->title)->toBe('Site info')->and($set->fresh()->translatable)->toBeTrue();
+});

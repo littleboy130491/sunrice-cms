@@ -6,6 +6,7 @@ namespace Sunrice\Fields\Types;
 
 use Sunrice\Fields\FieldType;
 use Sunrice\Fields\HydrationContext;
+use Sunrice\Models\Collection;
 
 /**
  * Relationship to other entries. config: collections (array of
@@ -47,5 +48,17 @@ class Entries extends FieldType
             ->filter(fn (array $r) => $r['target_id'] > 0)
             ->values()
             ->all();
+    }
+
+    public function settingsSchema(): array
+    {
+        return [
+            [
+                'handle' => 'collections', 'type' => 'multiselect', 'label' => 'Collections (none = any)',
+                'options' => Collection::query()->orderBy('title')->get(['handle', 'title'])
+                    ->map(fn (Collection $c) => ['value' => $c->handle, 'label' => $c->title])->all(),
+            ],
+            ['handle' => 'max', 'type' => 'number', 'label' => 'Maximum entries'],
+        ];
     }
 }

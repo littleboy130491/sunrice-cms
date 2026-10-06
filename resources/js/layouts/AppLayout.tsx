@@ -16,11 +16,19 @@ function sidebarDefaultOpen(): boolean {
     return !document.cookie.split('; ').includes('sidebar_state=false');
 }
 
+const shownFlashIds = new Set<string>();
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { flash } = usePage<SharedProps>().props;
     const match = useNavMatch();
 
     React.useEffect(() => {
+        // Back/forward restores old page props, flash included: show each
+        // flashed message once.
+        if (flash?.id) {
+            if (shownFlashIds.has(flash.id)) return;
+            shownFlashIds.add(flash.id);
+        }
         if (flash?.success) toast.success(flash.success);
         if (flash?.error) toast.error(flash.error);
     }, [flash?.id, flash?.success, flash?.error]);

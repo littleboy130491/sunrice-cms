@@ -105,6 +105,7 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::post('globals', [Admin\GlobalsController::class, 'store'])->name('globals.store');
     Route::get('globals/{globalSet}/edit', [Admin\GlobalsController::class, 'edit'])->name('globals.edit');
     Route::put('globals/{globalSet}', [Admin\GlobalsController::class, 'update'])->name('globals.update');
+    Route::put('globals/{globalSet}/meta', [Admin\GlobalsController::class, 'updateMeta'])->name('globals.update-meta');
     Route::delete('globals/{globalSet}', [Admin\GlobalsController::class, 'destroy'])->name('globals.destroy');
 
     // Site settings

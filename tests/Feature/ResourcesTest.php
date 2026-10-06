@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\Gate;
+use Inertia\Testing\AssertableInertia;
 use Sunrice\Models\Permission;
 use Sunrice\Permissions\SyncPermissions;
 use Sunrice\Sunrice;
@@ -92,4 +93,28 @@ it('exports resource rows to CSV', function () {
     get('/cms/resources/products/export')
         ->assertOk()
         ->assertHeader('Content-Disposition', 'attachment; filename=products.csv');
+});
+
+it('applies resource filters and sortable columns on the index', function () {
+    Product::query()->create(['title' => 'B kettle', 'sku' => 'K-1', 'price' => 10, 'active' => true]);
+    Product::query()->create(['title' => 'A fan', 'sku' => 'F-1', 'price' => 20, 'active' => false]);
+
+    get('/cms/resources/products?filters[active]=1')->assertInertia(fn (AssertableInertia $page) => $page
+        ->has('rows.data', 1)
+        ->where('rows.data.0.title', 'B kettle')
+        ->where('meta.filters.active', '1')
+        ->where('filters.0.key', 'active')
+        ->where('visibleColumns', ['title', 'sku', 'price', 'active']));
+
+    get('/cms/resources/products?sort=title')->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('rows.data.0.title', 'A fan')
+        ->where('meta.sort', 'title'));
+});
+
+it('saves table column choices as JSON', function () {
+    $this->putJson('/cms/table-preferences/resource.products', ['columns' => ['title', 'price']])
+        ->assertOk()->assertJson(['columns' => ['title', 'price']]);
+
+    get('/cms/resources/products')->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('visibleColumns', ['title', 'price']));
 });

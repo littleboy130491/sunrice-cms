@@ -26,6 +26,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useTableQuery } from './useTableQuery';
 import { adminUrl } from '@/lib/route';
 import type { ColumnDef, Paginated, SharedProps } from '@/types';
+import { toast } from 'sonner';
 
 export interface FilterDef {
     key: string;
@@ -46,6 +47,8 @@ interface Props<T extends { id: number | string }> {
     rows: Paginated<T>;
     meta: { search: string | null; filters: Record<string, string>; sort: string | null };
     tableKey: string;
+    /** The user's saved column choice for this table, if any. */
+    visibleColumns?: string[];
     filters?: FilterDef[];
     bulkActions?: BulkAction[];
     bulkUrl?: string;
@@ -90,6 +93,7 @@ export function DataTable<T extends { id: number | string }>({
     rows,
     meta,
     tableKey,
+    visibleColumns: savedColumns,
     filters = [],
     bulkActions = [],
     bulkUrl,
@@ -108,7 +112,7 @@ export function DataTable<T extends { id: number | string }>({
     });
 
     const [visible, setVisible] = React.useState<string[]>(() =>
-        (rows as { visibleColumns?: string[] }).visibleColumns ?? allColumns.map((c) => c.key),
+        savedColumns && savedColumns.length > 0 ? savedColumns : allColumns.map((c) => c.key),
     );
     const [selection, setSelection] = React.useState<Record<string, boolean>>({});
     const [orderedData, setOrderedData] = React.useState<T[]>(rows.data);
@@ -128,7 +132,15 @@ export function DataTable<T extends { id: number | string }>({
 
     const saveColumns = (keys: string[]) => {
         setVisible(keys);
-        router.put(adminUrl(`table-preferences/${tableKey}`, adminPath), { columns: keys }, { preserveState: true });
+        // A JSON endpoint, so not an Inertia visit (that would show an error modal).
+        const xsrf = decodeURIComponent(document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] ?? '');
+        fetch(adminUrl(`table-preferences/${tableKey}`, adminPath), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest', 'X-XSRF-TOKEN': xsrf },
+            body: JSON.stringify({ columns: keys }),
+        })
+            .then((res) => { if (!res.ok) throw new Error(); })
+            .catch(() => toast.error('Could not save your column choice.'));
     };
 
     const toggleSort = (key: string) => {

@@ -6,6 +6,7 @@ namespace Sunrice\Fields\Types;
 
 use Sunrice\Fields\FieldType;
 use Sunrice\Fields\HydrationContext;
+use Sunrice\Models\Collection;
 
 /**
  * Internal (entry) or external link. Stored:
@@ -41,7 +42,7 @@ class Link extends FieldType
         return [
             'type' => $type,
             'url' => $type === 'url' ? ($value['url'] ?? null) : null,
-            'entry_id' => $type === 'entry' ? ($value['entry_id'] ?? null) : null,
+            'entry_id' => $type === 'entry' ? ($value['entry_id'] ?? $value['entry'] ?? null) : null,
             'label' => $value['label'] ?? null,
             'new_tab' => (bool) ($value['new_tab'] ?? false),
         ];
@@ -78,5 +79,16 @@ class Link extends FieldType
         }
 
         return [];
+    }
+
+    public function settingsSchema(): array
+    {
+        return [
+            [
+                'handle' => 'collections', 'type' => 'multiselect', 'label' => 'Entry links: collections (none = any)',
+                'options' => Collection::query()->orderBy('title')->get(['handle', 'title'])
+                    ->map(fn (Collection $c) => ['value' => $c->handle, 'label' => $c->title])->all(),
+            ],
+        ];
     }
 }

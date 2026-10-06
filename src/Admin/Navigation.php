@@ -59,7 +59,9 @@ class Navigation
         }
         $forms = Form::query()->orderBy('handle')->get()
             ->filter(fn (Form $form) => $user->can('view', $form))
-            ->map(fn (Form $form) => ['label' => $form->title, 'href' => "forms/{$form->handle}", 'icon' => 'inbox'])
+            // Submissions are what most people come for; editors without
+            // that permission go to the form builder.
+            ->map(fn (Form $form) => ['label' => $form->title, 'href' => $user->can('viewSubmissions', $form) ? "forms/{$form->id}/submissions" : "forms/{$form->handle}", 'icon' => 'inbox'])
             ->values()->all();
         if ($forms !== []) {
             $groups[] = ['label' => 'Forms', 'items' => $forms];
