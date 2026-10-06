@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Permissions;
 
+use Spatie\Permission\Contracts\Permission as PermissionContract;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -55,7 +56,7 @@ class SyncPermissions
      * Give each newly created replacement permission to whoever held the
      * permission it replaces.
      *
-     * @param  array<string, Permission>  $created
+     * @param  array<string, PermissionContract>  $created
      * @param  array<int, string>  $existing
      */
     protected function carryOverLegacy(array $created, array $existing, string $guard): void
