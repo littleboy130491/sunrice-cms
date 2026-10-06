@@ -57,7 +57,7 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
         <Card className="max-w-2xl">
             <CardContent>
                 <form onSubmit={submit} className="flex flex-col gap-4">
-                    <h1 className="text-xl font-semibold tracking-tight">{taxonomy ? `Edit ${taxonomy.title}` : 'New taxonomy'}</h1>
+                    <h1 className="sunrice-page-title">{taxonomy ? `Edit ${taxonomy.title}` : 'New taxonomy'}</h1>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="title">Title</Label>

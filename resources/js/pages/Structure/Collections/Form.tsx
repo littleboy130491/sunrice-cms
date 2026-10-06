@@ -66,7 +66,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
 
     return (
         <form onSubmit={submit} className="flex max-w-2xl flex-col gap-6">
-            <h1 className="text-xl font-semibold tracking-tight">{collection ? `Edit ${collection.title}` : 'New collection'}</h1>
+            <h1 className="sunrice-page-title">{collection ? `Edit ${collection.title}` : 'New collection'}</h1>
             <Card>
                 <CardHeader><CardTitle>Basics</CardTitle></CardHeader>
                 <CardContent className="flex flex-col gap-4">

@@ -23,8 +23,8 @@ function initials(user: User | null): string {
 function UserInfo({ user }: { user: User | null }) {
     return (
         <>
-            <Avatar className="size-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-sidebar-accent text-xs font-medium">{initials(user)}</AvatarFallback>
+            <Avatar className="size-8 rounded-full">
+                <AvatarFallback className="rounded-full bg-sidebar-accent text-xs font-medium text-sidebar-accent-foreground">{initials(user)}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user?.name ?? user?.email}</span>

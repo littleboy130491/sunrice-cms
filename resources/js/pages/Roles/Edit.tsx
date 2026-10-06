@@ -39,7 +39,7 @@ export default function RoleEdit({ role, permissionGroups }: { role: { id: numbe
 
     return (
         <form onSubmit={submit} className="flex max-w-3xl flex-col gap-4">
-            <h1 className="text-xl font-semibold tracking-tight">{editable ? 'Edit role' : role.name}</h1>
+            <h1 className="sunrice-page-title">{editable ? 'Edit role' : role.name}</h1>
             {!editable && <p className="text-sm text-muted-foreground">This role can't be edited. Super admins always have every permission.</p>}
             <div className="grid max-w-sm gap-2">
                 <Label>Name</Label>

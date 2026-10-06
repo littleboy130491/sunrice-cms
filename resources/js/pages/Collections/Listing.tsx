@@ -73,7 +73,7 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight">{collection.title}: listing page</h1>
+                        <h1 className="sunrice-page-title">{collection.title}: listing page</h1>
                         <p className="text-sm text-muted-foreground">The page that lists this collection's entries.</p>
                     </div>
                 </div>

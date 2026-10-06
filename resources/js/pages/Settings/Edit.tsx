@@ -88,7 +88,7 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
     return (
         <form onSubmit={submit} className="flex max-w-3xl flex-col gap-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold tracking-tight">Settings</h1>
+                <h1 className="sunrice-page-title">Settings</h1>
                 <Button type="submit" disabled={form.processing}>
                     {form.processing && <LoaderCircle className="animate-spin" />} Save settings
                 </Button>

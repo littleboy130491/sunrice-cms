@@ -87,7 +87,7 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
 
     return (
         <div className="flex max-w-3xl flex-col gap-4">
-            <h1 className="text-xl font-semibold tracking-tight">{isNew ? 'New global' : `Edit ${globalSet.title}`}</h1>
+            <h1 className="sunrice-page-title">{isNew ? 'New global' : `Edit ${globalSet.title}`}</h1>
 
             {isNew ? (
                 <Card>

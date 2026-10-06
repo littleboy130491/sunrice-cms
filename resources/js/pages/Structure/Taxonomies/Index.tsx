@@ -16,7 +16,7 @@ export default function TaxonomiesIndex({ taxonomies }: { taxonomies: Row[] }) {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold tracking-tight">Taxonomies</h1>
+                <h1 className="sunrice-page-title">Taxonomies</h1>
                 {can('sunrice.taxonomies.create') && (
                     <Button asChild><Link href={adminUrl('structure/taxonomies/create', adminPath)}><Plus className="mr-1 h-4 w-4" /> New taxonomy</Link></Button>
                 )}

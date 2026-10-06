@@ -19,7 +19,7 @@ export function AppHeader() {
     const isDeeper = itemUrl !== null && path !== itemUrl;
 
     return (
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-sidebar-border/50 px-4 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:px-6">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border/60 px-5 md:px-8 lg:px-10">
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
             <Breadcrumb>

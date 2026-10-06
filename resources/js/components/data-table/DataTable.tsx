@@ -198,12 +198,12 @@ export function DataTable<T extends { id: number | string }>({
     const allSelected = orderedData.length > 0 && orderedData.every((r) => selection[String(r.id)]);
 
     return (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
                 <div className="relative w-full max-w-xs">
                     <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                        className="h-8 pl-8"
+                        className="pl-9"
                         placeholder={searchPlaceholder}
                         aria-label="Search"
                         value={state.search}
@@ -216,7 +216,7 @@ export function DataTable<T extends { id: number | string }>({
                         value={state.filters[f.key] ?? ''}
                         onValueChange={(v) => update({ filters: { ...state.filters, [f.key]: v === '__all' ? '' : v } })}
                     >
-                        <SelectTrigger size="sm" className="w-36 border-dashed">
+                        <SelectTrigger className="w-36">
                             <SelectValue placeholder={f.label} />
                         </SelectTrigger>
                         <SelectContent>
@@ -232,14 +232,14 @@ export function DataTable<T extends { id: number | string }>({
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-muted-foreground">{selectedIds.length} selected</span>
                             {bulkActions.map((a) => (
-                                <Button key={a.key} size="sm" variant={a.variant ?? 'outline'} onClick={() => runBulk(a)}>
+                                <Button key={a.key} variant={a.variant ?? 'outline'} onClick={() => runBulk(a)}>
                                     {a.label}
                                 </Button>
                             ))}
                         </div>
                     )}
                     {exportUrl && (
-                        <Button variant="outline" size="sm" asChild>
+                        <Button variant="outline" asChild>
                             <a href={exportHref() ?? '#'}>
                                 <Download /> Export
                             </a>
@@ -247,7 +247,7 @@ export function DataTable<T extends { id: number | string }>({
                     )}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline">
                                 <Settings2 /> Columns
                             </Button>
                         </DropdownMenuTrigger>
@@ -273,9 +273,9 @@ export function DataTable<T extends { id: number | string }>({
             </div>
 
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                <div className="overflow-hidden rounded-lg border">
+                <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_2px_12px_-5px_rgb(35_25_60/0.06)]">
                 <Table>
-                    <TableHeader className="bg-muted/50">
+                    <TableHeader className="bg-muted/60">
                         <TableRow className="hover:bg-transparent">
                             {reorderable && <TableHead className="w-8" />}
                             <TableHead className="w-8">

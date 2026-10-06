@@ -244,7 +244,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                         </Link>
                     </Button>
                     <div className="min-w-0 space-y-1">
-                        <h1 className="truncate text-xl font-semibold tracking-tight">
+                        <h1 className="truncate sunrice-page-title">
                             {isNew ? `New ${collection.title} entry` : form.data.title || 'Untitled'}
                         </h1>
                         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">

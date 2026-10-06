@@ -122,7 +122,7 @@ export default function TermsPage({ taxonomy, terms, locales, mainLocale, bluepr
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold tracking-tight">{taxonomy.title} — terms</h1>
+                <h1 className="sunrice-page-title">{taxonomy.title} — terms</h1>
                 {can(`sunrice.terms.${taxonomy.id}.create`) && <Button onClick={openCreate}><Plus className="mr-1 h-4 w-4" /> New term</Button>}
             </div>
 
