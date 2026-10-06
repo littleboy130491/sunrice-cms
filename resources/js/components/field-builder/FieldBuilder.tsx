@@ -7,6 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
+import {
+    DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { Json } from '@/types';
 
 export interface BuilderField {
@@ -169,8 +174,10 @@ function SettingControl({
 }
 
 function FieldRow({
-    field, index, fieldTypes, fieldsets, depth, translatable, onUpdate, onRemove,
+    field, index, fieldTypes, fieldsets, depth, translatable, onUpdate, onRemove, dragHandle,
 }: {
+    /** Props for the drag handle (from useSortable). */
+    dragHandle?: React.HTMLAttributes<HTMLButtonElement>;
     field: BuilderField;
     index: number;
     fieldTypes: FieldTypeDef[];
@@ -188,13 +195,20 @@ function FieldRow({
     return (
         <div className="rounded-md border bg-card">
             <div className="flex items-center gap-2 px-2 py-1.5">
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <button type="button" className="cursor-grab touch-none rounded p-0.5 text-muted-foreground hover:text-foreground active:cursor-grabbing" aria-label="Drag to reorder" {...dragHandle}>
+                    <GripVertical className="h-4 w-4" />
+                </button>
                 <button type="button" className="flex flex-1 items-center gap-2 text-left text-sm" onClick={() => setOpen(!open)}>
                     {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     <span className="font-medium">{field.label || field.handle || '(unnamed)'}</span>
                     <span className="text-xs text-muted-foreground">{field.type}{includedFieldset(field) ? ` → ${includedFieldset(field)}` : ''}</span>
                 </button>
-                <button type="button" className="text-muted-foreground hover:text-destructive" onClick={onRemove}>
+                <button
+                    type="button"
+                    className="rounded p-0.5 text-muted-foreground hover:text-destructive"
+                    aria-label={`Remove ${field.label || field.handle || 'field'}`}
+                    onClick={() => window.confirm(`Remove the field "${field.label || field.handle}"? Saved content in it stays in the database but is no longer shown.`) && onRemove()}
+                >
                     <Trash2 className="h-4 w-4" />
                 </button>
             </div>
@@ -267,6 +281,20 @@ function FieldRow({
     );
 }
 
+function SortableField({ id, children }: { id: string; children: (dragHandle: React.HTMLAttributes<HTMLButtonElement>) => React.ReactNode }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={{ transform: CSS.Transform.toString(transform), transition }}
+            className={isDragging ? 'relative z-10 opacity-80 shadow-lg' : undefined}
+        >
+            {children({ ...attributes, ...listeners } as React.HTMLAttributes<HTMLButtonElement>)}
+        </div>
+    );
+}
+
 export default function FieldBuilder({ value, onChange, fieldTypes, fieldsets, depth = 0, translatable = false }: Props) {
     const add = (type: string) => {
         const next: BuilderField = {
@@ -282,39 +310,54 @@ export default function FieldBuilder({ value, onChange, fieldTypes, fieldsets, d
         onChange([...value, next]);
     };
 
-    const update = (index: number, patch: Partial<BuilderField>) =>
-        onChange(value.map((f, i) => (i === index ? { ...f, ...patch } : f)));
-
-    const move = (index: number, dir: -1 | 1) => {
-        const to = index + dir;
-        if (to < 0 || to >= value.length) return;
-        const next = [...value];
-        [next[index], next[to]] = [next[to], next[index]];
-        onChange(next);
+    // Stable ids for drag and drop: kept per field object, carried over on edits.
+    const ids = React.useRef(new WeakMap<BuilderField, string>());
+    const idOf = (field: BuilderField) => {
+        let id = ids.current.get(field);
+        if (!id) {
+            id = Math.random().toString(36).slice(2);
+            ids.current.set(field, id);
+        }
+        return id;
+    };
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    );
+    const onDragEnd = ({ active, over }: DragEndEvent) => {
+        if (!over || active.id === over.id) return;
+        const from = value.findIndex((f) => idOf(f) === active.id);
+        const to = value.findIndex((f) => idOf(f) === over.id);
+        if (from >= 0 && to >= 0) onChange(arrayMove(value, from, to));
     };
 
     return (
         <div className="flex flex-col gap-2">
-            {value.map((field, i) => (
-                <div key={i} className="flex items-start gap-1">
-                    <div className="flex flex-col pt-1">
-                        <button type="button" className="text-muted-foreground" onClick={() => move(i, -1)}>↑</button>
-                        <button type="button" className="text-muted-foreground" onClick={() => move(i, 1)}>↓</button>
-                    </div>
-                    <div className="flex-1">
-                        <FieldRow
-                            field={field}
-                            index={i}
-                            fieldTypes={fieldTypes}
-                            fieldsets={fieldsets}
-                            depth={depth}
-                            translatable={translatable}
-                            onUpdate={(patch) => update(i, patch)}
-                            onRemove={() => onChange(value.filter((_, j) => j !== i))}
-                        />
-                    </div>
-                </div>
-            ))}
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                <SortableContext items={value.map(idOf)} strategy={verticalListSortingStrategy}>
+                    {value.map((field, i) => (
+                        <SortableField key={idOf(field)} id={idOf(field)}>
+                            {(dragHandle) => (
+                                <FieldRow
+                                    field={field}
+                                    index={i}
+                                    fieldTypes={fieldTypes}
+                                    fieldsets={fieldsets}
+                                    depth={depth}
+                                    translatable={translatable}
+                                    dragHandle={dragHandle}
+                                    onUpdate={(patch) => {
+                                        const next = { ...field, ...patch };
+                                        ids.current.set(next, idOf(field));
+                                        onChange(value.map((f, j) => (j === i ? next : f)));
+                                    }}
+                                    onRemove={() => onChange(value.filter((_, j) => j !== i))}
+                                />
+                            )}
+                        </SortableField>
+                    ))}
+                </SortableContext>
+            </DndContext>
 
             <Select onValueChange={add}>
                 <SelectTrigger className="w-48">

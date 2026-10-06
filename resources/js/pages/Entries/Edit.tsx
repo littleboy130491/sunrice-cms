@@ -12,6 +12,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputError } from '@/components/app/input-error';
 import { CollapsibleCard } from '@/components/app/collapsible-card';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 import { useBreadcrumbs } from '@/components/app/breadcrumbs';
 import FieldRenderer from '@/fields/FieldRenderer';
 import { TranslationModeProvider } from '@/fields/translation-mode';
@@ -123,10 +124,17 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         seo: initial(mainLocale).seo,
     });
 
+    const formRef = React.useRef<HTMLFormElement>(null);
+    useUnsavedChanges(canEdit && form.isDirty && !form.processing, () => formRef.current?.requestSubmit());
+
     const switchLocale = (lc: string) => {
+        // Each language is saved separately: don't drop this one's edits silently.
+        if (canEdit && form.isDirty && !window.confirm(`You have unsaved changes in ${locale.toUpperCase()}. Switch language and discard them?`)) return;
         setLocale(lc);
         const t = initial(lc);
-        form.setData({ locale: lc, title: t.title, slug: t.slug, data: t.data, seo: t.seo });
+        const next = { ...form.data, locale: lc, title: t.title, slug: t.slug, data: t.data, seo: t.seo };
+        form.setData(next);
+        form.setDefaults(next);
         form.clearErrors();
     };
 
@@ -156,6 +164,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                 blueprint_id: d.blueprint_id || null,
             }));
             form.post(adminUrl(`collections/${collection.handle}/entries`, adminPath), {
+                onSuccess: () => form.setDefaults(),
                 onFinish: () => form.transform((d) => d),
             });
             return;
@@ -319,7 +328,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                 </p>
             )}
 
-            <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <form ref={formRef} onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
                 <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-6 disabled:opacity-80">
                     {contentTabs.map((tab, index) => (
                         <CollapsibleCard key={tab.handle} title={tab.label} storageKey={`entry:${collection.handle}:${tab.handle}`} contentClassName="flex flex-col gap-6">
@@ -443,10 +452,23 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                 </div>
                             )}
                             {canEdit && (
-                                <Button type="submit" variant={isNew ? 'default' : 'outline'} disabled={form.processing} className="w-full">
-                                    {form.processing && <LoaderCircle className="animate-spin" />}
-                                    {isNew ? 'Create draft' : 'Save draft'}
-                                </Button>
+                                <div className="grid gap-1.5">
+                                    <Button
+                                        type="submit"
+                                        variant={isNew || form.isDirty ? 'default' : 'outline'}
+                                        disabled={form.processing || (!isNew && !form.isDirty)}
+                                        className="w-full"
+                                    >
+                                        {form.processing && <LoaderCircle className="animate-spin" />}
+                                        {isNew ? 'Create draft' : form.isDirty ? 'Save draft' : 'Saved'}
+                                    </Button>
+                                    <p className="text-center text-xs text-muted-foreground">
+                                        {form.isDirty ? (
+                                            <span className="inline-flex items-center gap-1.5"><span className="size-1.5 rounded-full bg-amber-500" /> Unsaved changes</span>
+                                        ) : !isNew && 'All changes saved'}
+                                        <span className="hidden sm:inline"> · Ctrl/⌘ S</span>
+                                    </p>
+                                </div>
                             )}
                     </CollapsibleCard>
 

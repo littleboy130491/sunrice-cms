@@ -61,12 +61,12 @@ export default function MenusIndex({ menus }: { menus: Row[] }) {
                 )}
             </div>
             <Table>
-                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Handle</TableHead><TableHead>Items</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead className="max-md:hidden">Handle</TableHead><TableHead>Items</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
                 <TableBody>
                     {menus.map((m) => (
                         <TableRow key={m.id}>
                             <TableCell><Link className="font-medium hover:underline" href={adminUrl(`menus/${m.id}`, adminPath)}>{m.title}</Link></TableCell>
-                            <TableCell><code className="text-xs">{m.handle}</code></TableCell>
+                            <TableCell className="max-md:hidden"><code className="text-xs">{m.handle}</code></TableCell>
                             <TableCell>{m.items_count}</TableCell>
                             <TableCell>
                                 {can('sunrice.menus.delete') && (

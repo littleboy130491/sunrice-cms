@@ -66,13 +66,17 @@ export default function UsersIndex({ users, roles }: { users: UserRow[]; roles: 
                 {can('sunrice.users.create') && <Button onClick={openCreate}><Plus className="mr-1 h-4 w-4" /> New user</Button>}
             </div>
             <Table>
-                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Email</TableHead><TableHead>Roles</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Name</TableHead><TableHead className="max-md:hidden">Email</TableHead><TableHead className="max-md:hidden">Roles</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
                 <TableBody>
                     {users.map((u) => (
                         <TableRow key={u.id}>
-                            <TableCell>{can('sunrice.users.edit') ? <button type="button" className="font-medium hover:underline" onClick={() => openEdit(u)}>{u.name}</button> : <span className="font-medium">{u.name}</span>}</TableCell>
-                            <TableCell>{u.email}</TableCell>
                             <TableCell>
+                                {can('sunrice.users.edit') ? <button type="button" className="font-medium hover:underline" onClick={() => openEdit(u)}>{u.name}</button> : <span className="font-medium">{u.name}</span>}
+                                {/* On phones the email sits under the name. */}
+                                <div className="text-xs text-muted-foreground md:hidden">{u.email}</div>
+                            </TableCell>
+                            <TableCell className="max-md:hidden">{u.email}</TableCell>
+                            <TableCell className="max-md:hidden">
                                 <div className="flex flex-wrap gap-1">{u.roles.map((r) => <Badge key={r} variant="secondary">{r}</Badge>)}</div>
                             </TableCell>
                             <TableCell>

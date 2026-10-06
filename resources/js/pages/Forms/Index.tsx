@@ -33,7 +33,7 @@ export default function FormsIndex({ forms }: Props) {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Title</TableHead>
-                        <TableHead>Handle</TableHead>
+                        <TableHead className="max-md:hidden">Handle</TableHead>
                         <TableHead>Submissions</TableHead>
                         <TableHead className="w-48" />
                     </TableRow>
@@ -48,7 +48,7 @@ export default function FormsIndex({ forms }: Props) {
                                     </Link>
                                 ) : form.title}
                             </TableCell>
-                            <TableCell className="text-muted-foreground">{form.handle}</TableCell>
+                            <TableCell className="text-muted-foreground max-md:hidden">{form.handle}</TableCell>
                             <TableCell>{form.submissions_count}</TableCell>
                             <TableCell className="flex justify-end gap-1">
                                 {form.can.submissions && (

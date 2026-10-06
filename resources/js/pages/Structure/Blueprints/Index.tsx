@@ -21,13 +21,13 @@ export default function BlueprintsIndex({ blueprints }: { blueprints: Row[] }) {
                 )}
             </div>
             <Table>
-                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Handle</TableHead><TableHead>Fields</TableHead><TableHead>Used by</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead className="max-md:hidden">Handle</TableHead><TableHead className="max-md:hidden">Fields</TableHead><TableHead>Used by</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
                 <TableBody>
                     {blueprints.map((b) => (
                         <TableRow key={b.id}>
                             <TableCell><Link className="font-medium hover:underline" href={adminUrl(`structure/blueprints/${b.id}/edit`, adminPath)}>{b.title}</Link></TableCell>
-                            <TableCell><code className="text-xs">{b.handle}</code></TableCell>
-                            <TableCell>{b.fields_count}</TableCell>
+                            <TableCell className="max-md:hidden"><code className="text-xs">{b.handle}</code></TableCell>
+                            <TableCell className="max-md:hidden">{b.fields_count}</TableCell>
                             <TableCell>
                                 {b.used_by.length === 0 ? (
                                     <span className="text-muted-foreground">Not used</span>

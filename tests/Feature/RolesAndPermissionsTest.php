@@ -210,8 +210,8 @@ it('sends submission viewers to submissions, not the form builder', function () 
     ]);
     $user = userWith(["sunrice.forms.{$form->id}.view-submissions"]);
 
-    $items = collect(app(Navigation::class)->for($user))->firstWhere('label', 'Forms')['items'];
-    expect($items[0]['href'])->toBe("forms/{$form->id}/submissions");
+    $items = collect(app(Navigation::class)->for($user))->firstWhere('label', 'Structure')['items'];
+    expect(collect($items)->pluck('href')->all())->toBe(['forms']);
 
     get('/cms/forms')->assertInertia(fn (AssertableInertia $page) => $page
         ->where('forms.0.can', ['edit' => false, 'submissions' => true, 'delete' => false]));

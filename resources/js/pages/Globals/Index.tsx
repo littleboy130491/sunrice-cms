@@ -22,14 +22,14 @@ export default function GlobalsIndex({ globals }: { globals: Row[] }) {
                 )}
             </div>
             <Table>
-                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead>Handle</TableHead><TableHead>Group</TableHead><TableHead>Blueprint</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Title</TableHead><TableHead className="max-md:hidden">Handle</TableHead><TableHead className="max-md:hidden">Group</TableHead><TableHead className="max-md:hidden">Blueprint</TableHead><TableHead className="w-24" /></TableRow></TableHeader>
                 <TableBody>
                     {globals.map((g) => (
                         <TableRow key={g.id}>
                             <TableCell><Link className="font-medium hover:underline" href={adminUrl(`globals/${g.id}/edit`, adminPath)}>{g.title}</Link></TableCell>
-                            <TableCell><code className="text-xs">{g.handle}</code></TableCell>
-                            <TableCell><Badge variant="secondary">{g.group}</Badge></TableCell>
-                            <TableCell>{g.blueprint?.title ?? '—'}</TableCell>
+                            <TableCell className="max-md:hidden"><code className="text-xs">{g.handle}</code></TableCell>
+                            <TableCell className="max-md:hidden"><Badge variant="secondary">{g.group}</Badge></TableCell>
+                            <TableCell className="max-md:hidden">{g.blueprint?.title ?? '—'}</TableCell>
                             <TableCell>
                                 {can('sunrice.globals.delete') && (
                                     <Button

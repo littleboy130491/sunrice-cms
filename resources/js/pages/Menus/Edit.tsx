@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { router, usePage } from '@inertiajs/react';
-import { ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ExternalLink, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -129,9 +129,31 @@ export default function MenuEdit({ menu, items, collections, taxonomies }: Props
     const label = (i: Item) => i.labels?.[locales.main] || Object.values(i.labels ?? {})[0] || i.target_title || i.url || `#${i.id}`;
     const selectedCollection = collections.find((c) => String(c.id) === form.collectionId);
 
-    const row = (item: Item, nested: boolean) => (
-        <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
-            <span className="flex min-w-0 items-center gap-2 text-sm">
+    // Move an item up or down among its siblings; the whole tree order is sent.
+    const move = (item: Item, dir: -1 | 1) => {
+        const siblings = item.parent_id === null ? roots : childrenOf(item.parent_id);
+        const i = siblings.findIndex((s) => s.id === item.id);
+        const j = i + dir;
+        if (j < 0 || j >= siblings.length) return;
+        const reordered = [...siblings];
+        [reordered[i], reordered[j]] = [reordered[j], reordered[i]];
+        const order: { id: number; parent_id: number | null }[] = [];
+        for (const root of item.parent_id === null ? reordered : roots) {
+            order.push({ id: root.id, parent_id: null });
+            for (const child of item.parent_id === root.id ? reordered : childrenOf(root.id)) {
+                order.push({ id: child.id, parent_id: root.id });
+            }
+        }
+        router.post(adminUrl(`menus/${menu.id}/items/reorder`, adminPath), { items: order }, { preserveScroll: true });
+    };
+
+    const row = (item: Item, nested: boolean) => {
+        const siblings = item.parent_id === null ? roots : childrenOf(item.parent_id);
+        const position = siblings.findIndex((s) => s.id === item.id);
+
+        return (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
+            <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
                 <span className="truncate font-medium">{label(item)}</span>
                 <Badge variant="secondary">{TYPE_LABELS[item.type]}</Badge>
                 {item.type === 'url' ? (
@@ -143,13 +165,16 @@ export default function MenuEdit({ menu, items, collections, taxonomies }: Props
             </span>
             {canEdit && (
                 <span className="flex shrink-0 items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => move(item, -1)} disabled={position <= 0} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="sm" onClick={() => move(item, 1)} disabled={position >= siblings.length - 1} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></Button>
                     <Button variant="ghost" size="sm" onClick={() => openEdit(item)} aria-label="Edit"><Pencil className="h-3.5 w-3.5" /></Button>
                     {!nested && <Button variant="ghost" size="sm" onClick={() => openCreate(item.id)} aria-label="Add child"><Plus className="h-3.5 w-3.5" /></Button>}
                     <Button variant="ghost" size="sm" className="text-destructive" onClick={() => remove(item.id)} aria-label="Remove"><Trash2 className="h-4 w-4" /></Button>
                 </span>
             )}
         </div>
-    );
+        );
+    };
 
     return (
         <div className="flex flex-col gap-4">

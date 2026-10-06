@@ -9,6 +9,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
+use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
 
 class DashboardController extends Controller
@@ -44,14 +45,19 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             'collections' => $collections,
             'recentEdits' => $recentEdits,
+            // Only forms whose submissions this user may read.
             'recentSubmissions' => FormSubmission::query()
-                ->with('form:id,title')
+                ->whereIn('form_id', Form::query()->get()->filter(fn (Form $f) => request()->user()->can('viewSubmissions', $f))->pluck('id'))
+                ->with('form:id,title,fields')
                 ->latest()
                 ->limit(8)
                 ->get()
                 ->map(fn (FormSubmission $s) => [
                     'id' => $s->id,
+                    'form_id' => $s->form_id,
                     'form' => $s->form?->title,
+                    // A one-line summary: the first filled-in field.
+                    'summary' => collect((array) $s->data)->first(fn ($v) => is_string($v) && trim($v) !== ''),
                     'created_at' => $s->created_at?->diffForHumans(),
                 ])
                 ->all(),

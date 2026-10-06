@@ -215,7 +215,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                         <div className="grid gap-2 pl-7">
                             <Label>Listing blueprint</Label>
                             <Select value={String(settings.archive_blueprint_id || 'none')} onValueChange={(v) => setSetting('archive_blueprint_id', v === 'none' ? '' : Number(v))}>
-                                <SelectTrigger className="w-64"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="w-full sm:w-80"><SelectValue /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">None (heading and intro only)</SelectItem>
                                     {blueprints.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.title}</SelectItem>)}
