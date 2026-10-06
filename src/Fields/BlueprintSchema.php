@@ -17,7 +17,6 @@ use Sunrice\Models\Fieldset;
 class BlueprintSchema
 {
     /** @var array<int, array<string, mixed>> */
-    /** @var array<int, array<string, mixed>> */
     protected array $fields;
 
     /**
@@ -167,11 +166,18 @@ class BlueprintSchema
                 $this->collectRules($children, $childPrefix, $rules);
             }
 
+            if (($field['type'] ?? null) === 'repeater') {
+                $rules[$key.'.*._key'] = ['nullable', 'string', 'max:100'];
+                $rules[$key.'.*._hidden'] = ['nullable', 'boolean'];
+            }
+
             if (($field['type'] ?? null) === 'flexible') {
                 $allowed = array_values($field['config']['fieldsets'] ?? []);
                 $rules[$key.'.*.id'] = ['string'];
                 $rules[$key.'.*.type'] = $allowed === [] ? ['string'] : ['string', Rule::in($allowed)];
                 $rules[$key.'.*.values'] = ['array'];
+                $rules[$key.'.*.key'] = ['nullable', 'string', 'max:100'];
+                $rules[$key.'.*.hidden'] = ['nullable', 'boolean'];
             }
         }
     }
@@ -282,7 +288,8 @@ class BlueprintSchema
     public function toAdminSchema(): array
     {
         return array_map(
-            fn (array $field) => $this->fieldType($field)->toAdminSchema($field),
+            fn (array $field) => ['translatable' => TranslationOverlay::isTranslatable($field)]
+                + $this->fieldType($field)->toAdminSchema($field),
             $this->fields,
         );
     }

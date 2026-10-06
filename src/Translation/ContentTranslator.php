@@ -7,6 +7,7 @@ namespace Sunrice\Translation;
 use Closure;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Sunrice\Fields\TranslationOverlay;
 use Sunrice\Models\Entry;
 use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\GlobalSet;
@@ -14,6 +15,7 @@ use Sunrice\Models\MenuItem;
 use Sunrice\Models\Term;
 use Sunrice\Models\TermTranslation;
 use Sunrice\Support\HtmlSanitizer;
+use Sunrice\Support\Locales;
 use Sunrice\Support\SlugValidator;
 
 /**
@@ -21,8 +23,8 @@ use Sunrice\Support\SlugValidator;
  *
  * - Entries: the result is saved as the translation's draft and the
  *   translation is never marked Ready, so editors review it and publish
- *   as usual. Non-text fields (images, links, toggles...) are copied from
- *   the source so the translated entry is complete.
+ *   as usual. Only translated text is stored; the layout and non-text
+ *   fields keep coming from the main language (TranslationOverlay).
  * - Terms, translatable globals and menu labels are written directly.
  *
  * Existing translations are kept unless $force is set. A target value that
@@ -77,14 +79,16 @@ class ContentTranslator
             return;
         }
 
+        $fields = $entry->activeBlueprint()?->schema()->fields() ?? [];
+        $main = $entry->mainTranslation();
+        $mainData = $main === null ? [] : (array) ($this->contentOf($main)['data'] ?? []);
+
         // The published text, or the draft for entries never published.
-        $sourceContent = $source->content_published_at === null && is_array($source->draft)
-            ? $source->draft + ['title' => $source->title, 'data' => [], 'seo' => []]
-            : ['title' => $source->title, 'data' => $source->data, 'seo' => $source->seo];
-        $sourceData = (array) ($sourceContent['data'] ?? []);
+        $sourceContent = $this->contentOf($source);
+        $sourceData = $entry->dataFor($source, (array) ($sourceContent['data'] ?? []), $mainData);
         $sourceSeo = (array) ($sourceContent['seo'] ?? []);
 
-        $strings = TranslatableStrings::collect($entry->activeBlueprint()?->schema()->fields() ?? [], $sourceData, 'data.');
+        $strings = TranslatableStrings::collect($fields, $sourceData, 'data.');
         if (is_string($sourceContent['title'] ?? null) && $sourceContent['title'] !== '') {
             $strings = ['title' => ['value' => $sourceContent['title'], 'rich' => false]] + $strings;
         }
@@ -98,14 +102,19 @@ class ContentTranslator
         $work = $target === null
             ? ['title' => '', 'slug' => '', 'data' => [], 'seo' => []]
             : (is_array($target->draft) ? $target->draft : ['title' => $target->title, 'slug' => $target->slug, 'data' => $target->data, 'seo' => $target->seo]);
-        // Copy fields the translation doesn't have yet (images, toggles, whole blocks...).
-        $work['data'] = (array) ($work['data'] ?? []) + $sourceData;
+        // Work on the target's text laid over the main layout, so every
+        // string has a slot at the same path as in the source.
+        $work['data'] = $entry->dataFor($target ?? new EntryTranslation(['locale' => $this->to]), (array) ($work['data'] ?? []), $mainData);
         $work['seo'] = (array) ($work['seo'] ?? []) + $sourceSeo;
 
         $label = ($entry->collection->title ?? 'Entry').' “'.$source->title.'”';
         $work = $this->translateInto($work, $strings, $label);
         if ($work === null) {
             return;
+        }
+
+        if (! Locales::isMain($this->to) && $fields !== []) {
+            $work['data'] = TranslationOverlay::extract($fields, (array) $work['data'], $mainData);
         }
 
         $slug = (string) ($work['slug'] ?? '');
@@ -120,7 +129,7 @@ class ContentTranslator
                 'locale' => $this->to,
                 'title' => $work['title'],
                 'slug' => $work['slug'],
-                'data' => $source->data,
+                'data' => [],
                 'seo' => $source->seo,
                 'draft' => $work,
                 'is_ready' => false,
@@ -128,6 +137,18 @@ class ContentTranslator
         } else {
             $target->forceFill(['draft' => $work])->save();
         }
+    }
+
+    /**
+     * The published content, or the draft for translations never published.
+     *
+     * @return array<string, mixed>
+     */
+    protected function contentOf(EntryTranslation $translation): array
+    {
+        return $translation->content_published_at === null && is_array($translation->draft)
+            ? $translation->draft + ['title' => $translation->title, 'data' => [], 'seo' => []]
+            : ['title' => $translation->title, 'data' => $translation->data, 'seo' => $translation->seo];
     }
 
     public function terms(): void

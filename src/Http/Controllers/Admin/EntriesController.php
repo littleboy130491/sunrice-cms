@@ -326,7 +326,9 @@ class EntriesController extends Controller
                 'collection_id' => $entry->collection_id,
                 'title' => $main === null ? '' : $main->title,
                 'slug' => SlugValidator::unique($main === null ? 'entry' : $main->slug, $entry->collection_id, $locale),
-                'data' => $main === null ? [] : $main->data,
+                // Secondary languages store only translated values; until
+                // the editor translates something, the main text shows.
+                'data' => [],
                 'seo' => $main === null ? [] : $main->seo,
             ],
         );
@@ -343,12 +345,16 @@ class EntriesController extends Controller
         $translations = [];
 
         if ($entry !== null) {
+            $main = $entry->mainTranslation();
+            $mainData = (array) ($main->draft['data'] ?? $main->data ?? []);
+
             foreach ($entry->translations as $t) {
                 $translations[$t->locale] = [
                     'id' => $t->id,
                     'title' => $t->title,
                     'slug' => $t->slug,
-                    'data' => $t->draft['data'] ?? $t->data ?? [],
+                    // Secondary languages edit their text in the main layout.
+                    'data' => $entry->dataFor($t, (array) ($t->draft['data'] ?? $t->data ?? []), $mainData),
                     'seo' => $t->draft['seo'] ?? $t->seo ?? [],
                     'is_ready' => (bool) $t->is_ready,
                     'is_outdated' => $t->isOutdated(),
@@ -382,6 +388,7 @@ class EntriesController extends Controller
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
             'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title')),
             'locales' => Locales::available(),
+            'mainLocale' => Locales::main(),
         ];
     }
 }

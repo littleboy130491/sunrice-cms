@@ -10,6 +10,7 @@ use ArrayAccess;
  * One flexible-content block: a fieldset type + hydrated values.
  * Values are reachable as properties and via array access, so Blade
  * can do `$block->type`, `$block->heading`, `$block['image']`.
+ * `$block->key` is the optional key set in the admin (see Items::byKey()).
  *
  * @implements ArrayAccess<string, mixed>
  */
@@ -22,6 +23,8 @@ class Block implements ArrayAccess
         public readonly string $type,
         public readonly string $id,
         public readonly array $values = [],
+        public readonly ?string $key = null,
+        public readonly bool $hidden = false,
     ) {}
 
     public function get(string $handle, mixed $default = null): mixed
@@ -64,6 +67,6 @@ class Block implements ArrayAccess
      */
     public function toArray(): array
     {
-        return ['id' => $this->id, 'type' => $this->type, 'values' => $this->values];
+        return ['id' => $this->id, 'type' => $this->type, 'key' => $this->key, 'values' => $this->values];
     }
 }

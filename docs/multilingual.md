@@ -9,7 +9,7 @@ Configure locales in `sunrice.locales`: `main`, `available`, `names`.
 - `<x-sunrice::seo>` emits `hreflang` alternates for main + every `Ready`
   translation, plus `x-default` pointing at main.
 
-## Whole-entity fallback (never field mixing)
+## Whole-entity fallback
 
 When the requested locale has no Ready translation, the whole main-locale
 translation is served at the locale-prefixed URL, with `isFallback = true`
@@ -19,6 +19,65 @@ publication status. This is not configurable.
 
 A translation that exists but is not `Ready` is **not** served publicly,
 and its slug is not routable: fallback pages use the main-language slug.
+
+## Shared layout, translated text
+
+The main language owns an entry's **layout**: which repeater rows and
+flexible blocks exist, their order, their keys and Show/Hide state, and
+every field that isn't translatable (images, toggles, numbers, dates…).
+A translation stores **only its translated text**, keyed by row/block id,
+and is always rendered inside the current main-language layout. So:
+
+- Adding, removing, reordering or hiding a block in the main language
+  changes every language at once — nobody re-copies keys or rows.
+- Swapping an image in the main language updates every language.
+- Text a translator hasn't changed keeps following the main language.
+
+### Which fields are translatable
+
+Each field has a **Translatable** switch in the blueprint/fieldset builder
+(`translatable: true|false` in the definition). Unset, it follows the field
+type: `text`, `textarea`, `rich_text` and `link` are translatable;
+everything else is shared. `group`, `repeater` and `flexible` are
+containers: their children decide, and switching a container off shares
+the whole thing.
+
+When editing a secondary language the admin shows shared fields read-only
+("Shared with ID"), and rows/blocks can't be added, removed, reordered or
+hidden — only their text is editable.
+
+### Keys and Show/Hide on rows and blocks
+
+Every repeater row and flexible block has an optional **key** and a
+**Show** switch. Hidden items are left out on the site (the editor still
+shows them). Keys let templates fetch an item directly instead of looping:
+
+```blade
+@php($hero = $entry->get('sections')->byKey('hero'))
+@if ($hero)
+    <h1>{{ $hero->heading }}</h1>
+@endif
+
+{{ $entry->get('features')->byKey('pricing')['title'] ?? '' }}
+```
+
+### Storage format
+
+Rows are stored with `_id`, `_key` and `_hidden`; blocks with `id`, `key`
+and `hidden`. A secondary translation's `data` looks like:
+
+```json
+{
+  "headline": "Hello",
+  "features": {"01J9…": {"title": "Fast"}},
+  "sections": {"01J9…": {"values": {"heading": "Welcome"}}}
+}
+```
+
+Translations saved by earlier versions (a full copy of the data) are still
+read correctly, matched by position. Run `php artisan
+sunrice:upgrade-translations` once to give existing rows ids and convert
+them; it is safe to run again.
 
 ## Draft / Ready per translation
 

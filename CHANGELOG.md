@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- **Shared layout, translated text** — secondary languages now store only
+  their translated text and render inside the main language's layout, so
+  adding, reordering or hiding blocks and swapping images happens once for
+  every language. Fields have a **Translatable** switch in the blueprint
+  builder (text types on by default); shared fields are read-only when
+  editing a translation. Run `php artisan sunrice:upgrade-translations` once
+  to convert existing translations (old ones still render meanwhile).
+- Repeater rows and flexible blocks get an optional **key** and a **Show**
+  switch: hidden items are skipped on the site, and templates can fetch an
+  item with `$entry->get('sections')->byKey('hero')`. Rows now carry a
+  stable `_id`.
+- Fixed: the blueprint builder stored group/repeater children and flexible
+  block types where the server didn't read them, type settings (max, min,
+  multiple…) didn't save, select fields had no options setting, and the
+  entry editor never received the fieldsets of flexible fields.
+- Fixed: preview rendered the draft's top-level keys as field data and
+  showed the main language for translations that weren't Ready yet.
+
 - **Starter templates** — `php artisan vendor:publish --tag=sunrice-templates`
   publishes a layout, header/footer, single, archive, term archive, an
   articles override and flexible-content block templates that show how to

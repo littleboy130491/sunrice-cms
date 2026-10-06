@@ -19,6 +19,11 @@ class Group extends FieldType
         return 'group';
     }
 
+    public function translatableByDefault(): bool
+    {
+        return true;
+    }
+
     public function rules(array $field): array
     {
         return ['array'];
@@ -54,6 +59,7 @@ class Group extends FieldType
     public function toAdminSchema(array $field): array
     {
         $field['config']['fields'] = BlueprintSchema::make($this->children($field))->toAdminSchema();
+        $field['fields'] = $field['config']['fields'];
 
         return $field;
     }

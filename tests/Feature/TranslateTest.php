@@ -77,7 +77,7 @@ it('translates through the OpenRouter API, including fenced JSON answers', funct
         && $request['model'] === 'google/gemini-3.5-flash-lite');
 });
 
-it('saves entry translations as unready drafts, copying non-text fields', function () {
+it('saves entry translations as unready drafts holding only the translated text', function () {
     fakeTranslations();
     $blueprint = Blueprint::create(['handle' => 'tr-page', 'title' => 'Page', 'fields' => [
         ['handle' => 'intro', 'type' => 'text', 'label' => 'Intro'],
@@ -108,10 +108,16 @@ it('saves entry translations as unready drafts, copying non-text fields', functi
         ->and($en->draft['slug'])->toBe('en-tentang-kami')
         ->and($en->draft['data']['intro'])->toBe('[en] Selamat datang')
         ->and($en->draft['data']['body'])->toStartWith('[en]')->toContain('<strong>tebal</strong>')
-        ->and($en->draft['data']['code'])->toBe('SKU-1')
-        ->and($en->draft['data']['featured'])->toBeTrue()
-        ->and($en->draft['data']['faq'][0]['question'])->toBe('[en] Apa itu?')
+        // Shared fields stay with the main language; rows are matched by id
+        // (or by position for rows saved before they had one).
+        ->and($en->draft['data'])->not->toHaveKey('code')->not->toHaveKey('featured')
+        ->and($en->draft['data']['faq']['#0']['question'])->toBe('[en] Apa itu?')
         ->and($en->draft['seo']['title'])->toBe('[en] Judul SEO');
+
+    $merged = Entry::query()->find($entry->id)->dataFor($en, $en->draft['data']);
+    expect($merged['code'])->toBe('SKU-1')
+        ->and($merged['featured'])->toBeTrue()
+        ->and($merged['faq'][0]['question'])->toBe('[en] Apa itu?');
 });
 
 it('skips fields that are already translated unless --force is used', function () {

@@ -109,8 +109,12 @@ class PublishTranslation
     {
         $schema = $entry->activeBlueprint()?->schema();
 
-        foreach ($entry->translations()->get() as $translation) {
-            $refs = $schema ? $schema->references($translation->data ?? []) : [];
+        $entry->setRelation('translations', $entry->translations()->get());
+
+        foreach ($entry->translations as $translation) {
+            // Secondary languages reference what they render: their text
+            // laid over the main language's layout.
+            $refs = $schema ? $schema->references($entry->dataFor($translation)) : [];
             app(ReferenceSync::class)->sync($translation, $refs);
         }
     }

@@ -13,6 +13,11 @@ class Text extends FieldType
         return 'text';
     }
 
+    public function translatableByDefault(): bool
+    {
+        return true;
+    }
+
     public function rules(array $field): array
     {
         $rules = ['string'];

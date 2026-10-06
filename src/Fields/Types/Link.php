@@ -20,6 +20,11 @@ class Link extends FieldType
         return 'link';
     }
 
+    public function translatableByDefault(): bool
+    {
+        return true;
+    }
+
     public function rules(array $field): array
     {
         return ['array'];

@@ -52,10 +52,12 @@ be translated, so it is safe to use in scripts.
 
 - **Fields:** text, textarea and rich text fields, including those inside
   groups, repeaters and flexible content blocks, plus the entry title and
-  the SEO title and description. Mark a field `translatable: false` in its
-  blueprint to leave it alone (e.g. product codes).
-- **Everything else is copied** from the source language (images, links,
-  toggles, dates…) so a new translation is complete.
+  the SEO title and description. Fields switched off as **Translatable**
+  in the blueprint (e.g. product codes) are left alone.
+- **Everything else stays shared** with the main language (images,
+  toggles, dates, the rows and blocks themselves): only the translated text
+  is saved, laid over the main layout. See
+  [Shared layout, translated text](multilingual.md#shared-layout-translated-text).
 - **Rich text** returned by the model is sanitized like editor input.
 - **Placeholders** such as `:name`, `{count}` and Laravel pluralisation are
   kept as they are.
@@ -64,8 +66,7 @@ be translated, so it is safe to use in scripts.
 
 By default only missing translations are filled in, per field: a field that
 already has its own translation is skipped. A value identical to the source
-text counts as untranslated, because the admin pre-fills a new translation
-with the source text. Use `--force` to translate every field again.
+text counts as untranslated (untranslated text shows the main language's). Use `--force` to translate every field again.
 
 ## Review before publishing
 

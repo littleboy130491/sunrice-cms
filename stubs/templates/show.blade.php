@@ -17,6 +17,11 @@
           link → ['url', 'label', 'new_tab'], group → array,
           repeater → collection of arrays, flexible → collection of Block
 
+    Repeater rows and flexible blocks switched off ("Show") in the admin are
+    already left out. Give one a key in the admin to fetch it directly:
+      $entry->get('sections')->byKey('hero')        a Block, or null
+      $entry->get('features')->byKey('pricing')     a row array, or null
+
     This template assumes these optional fields: `image` (asset),
     `body` (rich text) and `sections` (flexible content).
 --}}
@@ -38,8 +43,8 @@
             <div class="prose">{!! $body !!}</div>
         @endif
 
-        {{-- Flexible content: each block is a Sunrice\Fields\Block with ->type, ->id
-             and field values as properties ($block->heading) or ->get('heading').
+        {{-- Flexible content: each block is a Sunrice\Fields\Block with ->type, ->id,
+             ->key and field values as properties ($block->heading) or ->get('heading').
              A block of type "hero" renders sunrice/blocks/hero.blade.php. --}}
         @foreach ($entry->get('sections') ?? [] as $block)
             @includeFirst(['sunrice.blocks.'.$block->type, 'sunrice.blocks.default'], ['block' => $block])

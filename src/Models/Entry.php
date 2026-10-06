@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Sunrice\Database\Factories\EntryFactory;
 use Sunrice\Fields\HydrationContext;
+use Sunrice\Fields\TranslationOverlay;
 use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Support\Locales;
 
@@ -53,6 +54,20 @@ class Entry extends Model
     public ?string $resolvedLocale = null;
 
     public bool $isFallback = false;
+
+    /**
+     * Memo of merged translation data, keyed by translation object id.
+     *
+     * @var array<int, array<string, mixed>>
+     */
+    protected array $mergedData = [];
+
+    /**
+     * Data to render instead of the stored data (used by preview).
+     *
+     * @var array<string, mixed>|null
+     */
+    public ?array $dataOverride = null;
 
     /**
      * Shared hydration context (preload caches) — set by EntryQuery
@@ -145,6 +160,7 @@ class Entry extends Model
         ]);
         $this->resolvedLocale = $locale;
         $this->isFallback = $resolved !== null && $resolved->locale !== $locale;
+        $this->mergedData = [];
 
         return $this->resolved;
     }
@@ -169,12 +185,46 @@ class Entry extends Model
         return $this->renderedTranslation()?->slug;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Field data for the rendered translation. A secondary language only
+     * stores its translated text; the layout and every non-translatable
+     * value come from the main language (see TranslationOverlay).
+     *
+     * @return array<string, mixed>
+     */
     public function getDataAttribute(): array
     {
-        return $this->renderedTranslation() instanceof EntryTranslation
-            ? $this->renderedTranslation()->data
-            : [];
+        if ($this->dataOverride !== null) {
+            return $this->dataOverride;
+        }
+
+        $translation = $this->renderedTranslation();
+        if (! $translation instanceof EntryTranslation) {
+            return [];
+        }
+
+        return $this->mergedData[spl_object_id($translation)] ??= $this->dataFor($translation);
+    }
+
+    /**
+     * Merged data for a translation, optionally overriding the stored
+     * main/translation data (preview passes their drafts).
+     *
+     * @param  array<string, mixed>|null  $overlay
+     * @param  array<string, mixed>|null  $main
+     * @return array<string, mixed>
+     */
+    public function dataFor(EntryTranslation $translation, ?array $overlay = null, ?array $main = null): array
+    {
+        $overlay ??= (array) ($translation->data ?? []);
+        if (Locales::isMain($translation->locale)) {
+            return $overlay;
+        }
+
+        $schema = $this->activeBlueprint()?->schema();
+        $main ??= (array) ($this->mainTranslation()->data ?? []);
+
+        return $schema === null ? $overlay : TranslationOverlay::merge($schema->fields(), $main, $overlay);
     }
 
     /** @return array<string, mixed> */

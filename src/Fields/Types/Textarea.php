@@ -13,6 +13,11 @@ class Textarea extends FieldType
         return 'textarea';
     }
 
+    public function translatableByDefault(): bool
+    {
+        return true;
+    }
+
     public function rules(array $field): array
     {
         return ['string'];

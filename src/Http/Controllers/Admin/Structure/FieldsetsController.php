@@ -79,6 +79,7 @@ class FieldsetsController extends Controller
             'fieldsets' => Fieldset::query()->orderBy('title')->get(['id', 'title', 'handle']),
             'fieldTypes' => collect($registry->all())->map(fn ($t) => [
                 'type' => $t->type(),
+                'translatable' => $t->translatableByDefault(),
                 'settings' => $t->settingsSchema(),
             ])->values(),
         ]);

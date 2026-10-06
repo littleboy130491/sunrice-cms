@@ -79,6 +79,16 @@ abstract class FieldType
     }
 
     /**
+     * Whether values of this type differ per language when the field
+     * definition doesn't set `translatable` itself. Text types default to
+     * true; containers default to true so their children decide.
+     */
+    public function translatableByDefault(): bool
+    {
+        return false;
+    }
+
+    /**
      * Whether admin tables can filter on this field.
      */
     public function filterable(): bool

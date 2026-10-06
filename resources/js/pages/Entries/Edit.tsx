@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useForm, usePage, router, Link } from '@inertiajs/react';
-import { ArrowLeft, CheckCircle2, Copy, EyeOff, History, LoaderCircle, MoreHorizontal, Send, Trash2, Undo2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Copy, EyeOff, History, Languages, LoaderCircle, MoreHorizontal, Send, Trash2, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputError } from '@/components/app/input-error';
 import { useBreadcrumbs } from '@/components/app/breadcrumbs';
 import FieldRenderer from '@/fields/FieldRenderer';
+import { TranslationModeProvider } from '@/fields/translation-mode';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
 import type { AdminField, AdminTab, SharedProps } from '@/types'; import type { Json } from '@/types';
@@ -44,25 +45,30 @@ interface Props {
     blueprints: { id: number; title: string }[];
     taxonomies: { id: number; handle: string; title: string }[];
     locales: string[];
+    mainLocale?: string;
 }
 
 function flatFields(tabs: AdminTab[] | null): AdminField[] {
     return (tabs ?? []).flatMap((t) => t.fields ?? []);
 }
 
-export default function EntryEdit({ collection, entry, blueprint, blueprints, taxonomies, locales }: Props) {
+export default function EntryEdit({ collection, entry, blueprint, blueprints, taxonomies, locales, mainLocale = locales[0] }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
-    const mainLocale = locales[0];
     const isNew = entry === null;
 
     const [locale, setLocale] = React.useState(mainLocale);
     const existing = entry?.translations ?? {};
 
     // Working data for each locale is the draft (data.draft) if present
-    // else the live columns.
+    // else the live columns. A language without a translation yet starts
+    // from the main language's text, laid out exactly like it.
     const initial = (lc: string): TranslationState => existing[lc] ?? {
-        title: '', slug: '', data: {}, seo: {}, is_ready: false, is_outdated: false,
+        title: lc === mainLocale ? '' : existing[mainLocale]?.title ?? '',
+        slug: '',
+        data: lc === mainLocale ? {} : existing[mainLocale]?.data ?? {},
+        seo: lc === mainLocale ? {} : existing[mainLocale]?.seo ?? {},
+        is_ready: false, is_outdated: false,
         has_draft: false, draft_title: '', draft_slug: '', revisions: [],
     };
 
@@ -245,12 +251,23 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                         </div>
                                     </div>
                                 )}
-                                <FieldRenderer
-                                    fields={tab.fields}
-                                    values={form.data.data}
-                                    errors={form.errors}
-                                    onChange={(values) => form.setData('data', values)}
-                                />
+                                {index === 0 && locale !== mainLocale && (
+                                    <p className="flex items-start gap-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                                        <Languages className="mt-0.5 size-4 shrink-0" />
+                                        <span>
+                                            Translate the text here. Rows, blocks, their order and visibility, images and other shared
+                                            fields come from the {mainLocale.toUpperCase()} version. Text left unchanged keeps following it.
+                                        </span>
+                                    </p>
+                                )}
+                                <TranslationModeProvider secondary={locale !== mainLocale} mainLocale={mainLocale}>
+                                    <FieldRenderer
+                                        fields={tab.fields}
+                                        values={form.data.data}
+                                        errors={form.errors}
+                                        onChange={(values) => form.setData('data', values)}
+                                    />
+                                </TranslationModeProvider>
                             </CardContent>
                         </Card>
                     ))}

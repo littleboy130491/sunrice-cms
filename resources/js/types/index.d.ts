@@ -63,6 +63,8 @@ export interface AdminField {
     label: string;
     required?: boolean;
     display_type?: string;
+    /** Resolved: whether the value differs per language. */
+    translatable?: boolean;
     config?: Record<string, unknown>;
     fields?: AdminField[];
     fieldsets?: { handle: string; title: string; fields: AdminField[] }[];

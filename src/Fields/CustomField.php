@@ -88,6 +88,11 @@ abstract class CustomField extends FieldType
         return $schema;
     }
 
+    public function translatableByDefault(): bool
+    {
+        return $this->base()->translatableByDefault();
+    }
+
     public function filterable(): bool
     {
         return $this->base()->filterable();

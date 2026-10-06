@@ -58,6 +58,7 @@ export default function BlueprintForm({ blueprint, fieldTypes, fieldsets }: Prop
                     onChange={setFields}
                     fieldTypes={fieldTypes}
                     fieldsets={fieldsets}
+                    translatable
                 />
             </div>
 

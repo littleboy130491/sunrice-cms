@@ -42,8 +42,8 @@ field handles it expects.
 | terms | collection of `Term` (`->name`, `->url`) |
 | link | `['url' => ..., 'label' => ..., 'new_tab' => bool]` |
 | group | array of child values |
-| repeater | collection of row arrays |
-| flexible | collection of `Block` (`->type`, `->id`, values as properties) |
+| repeater | collection of row arrays (hidden rows removed; `->byKey('key')`) |
+| flexible | collection of `Block` (`->type`, `->id`, `->key`, values as properties; hidden blocks removed; `->byKey('key')`) |
 
 Entries also expose `$entry->title`, `->slug`, `->url`, `->published_at`,
 `->author`, `->terms` and `->isFallback` (true when a language shows the
@@ -58,6 +58,15 @@ Render flexible content with one partial per block type:
 @foreach ($entry->get('sections') ?? [] as $block)
     @includeFirst(['sunrice.blocks.'.$block->type, 'sunrice.blocks.default'], ['block' => $block])
 @endforeach
+```
+
+Or, for a hand-built landing page, give blocks/rows a key in the admin and
+fetch them directly:
+
+```blade
+@if ($hero = $entry->get('sections')->byKey('hero'))
+    <h1>{{ $hero->heading }}</h1>
+@endif
 ```
 
 ## Resolution order

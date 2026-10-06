@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Sunrice\Translation;
 
+use Sunrice\Fields\TranslationOverlay;
 use Sunrice\Models\Fieldset;
 
 /**
  * Finds the translatable text inside field data: text, textarea and rich
  * text fields, including those nested in groups, repeaters and flexible
- * content blocks. Fields marked `translatable: false` are skipped.
+ * content blocks. Fields that aren't translatable (`translatable: false`,
+ * or a type that isn't translatable by default) are skipped.
  */
 class TranslatableStrings
 {
@@ -24,7 +26,7 @@ class TranslatableStrings
 
         foreach ($fields as $field) {
             $handle = $field['handle'] ?? null;
-            if (! is_string($handle) || ($field['translatable'] ?? true) === false) {
+            if (! is_string($handle) || ! TranslationOverlay::isTranslatable($field)) {
                 continue;
             }
 

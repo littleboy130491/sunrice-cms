@@ -62,6 +62,7 @@ class Select extends FieldType
     public function settingsSchema(): array
     {
         return [
+            ['handle' => 'options', 'type' => 'key_value', 'label' => 'Options'],
             ['handle' => 'multiple', 'type' => 'toggle', 'label' => 'Allow multiple'],
         ];
     }

@@ -30,7 +30,11 @@ from the active blueprint are hidden, not erased.
 
 Each field: `handle`, `type`, `label`, `required`, `instructions`,
 `conditions` (`{field, operator, value}`), `validation` (extra Laravel
-rules), `config` (per-type options).
+rules), `translatable` (see [multilingual](multilingual.md#which-fields-are-translatable)),
+`config` (per-type options).
+
+Repeater rows and flexible blocks each get an optional key and a Show
+switch in the editor; templates read keyed items with `->byKey('key')`.
 
 ## Entries
 

@@ -14,6 +14,11 @@ class RichText extends FieldType
         return 'rich_text';
     }
 
+    public function translatableByDefault(): bool
+    {
+        return true;
+    }
+
     public function rules(array $field): array
     {
         return ['string'];

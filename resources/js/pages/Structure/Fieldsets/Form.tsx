@@ -57,6 +57,7 @@ export default function FieldsetForm({ fieldset, fieldTypes, fieldsets }: Props)
                     onChange={setFields}
                     fieldTypes={fieldTypes}
                     fieldsets={fieldsets}
+                    translatable
                 />
             </div>
             <div><Button type="submit" disabled={processing}>Save fieldset</Button></div>

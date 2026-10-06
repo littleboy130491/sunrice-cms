@@ -23,13 +23,29 @@ class PreviewController extends Controller
     {
         abort_unless(Locales::isAvailable($locale), 404);
 
+        $entry->load('translations');
         $entry->resolveFor($locale);
         $entry->hydrationContext = new HydrationContext($locale, preview: true);
 
-        // Preview reads draft data rather than live data.
+        // Preview shows this locale's translation even before it is Ready,
+        // read from the drafts (live data as fallback). A secondary locale
+        // is laid over the main language's draft layout.
+        $translation = $entry->translation($locale);
+        if ($translation !== null) {
+            $entry->resolved = $translation;
+            $entry->isFallback = false;
+        }
+
         $resolved = $entry->resolved;
-        if ($resolved !== null) {
-            $resolved->data = array_merge($resolved->data ?? [], $resolved->draft ?? []);
+        if ($resolved !== null && $resolved->exists) {
+            $main = $entry->mainTranslation();
+            $entry->dataOverride = $entry->dataFor(
+                $resolved,
+                (array) ($resolved->draft['data'] ?? $resolved->data ?? []),
+                (array) ($main->draft['data'] ?? $main->data ?? []),
+            );
+            $resolved->title = (string) ($resolved->draft['title'] ?? $resolved->title);
+            $resolved->seo = (array) ($resolved->draft['seo'] ?? $resolved->seo ?? []);
         }
 
         $ctx = new TemplateContext(
