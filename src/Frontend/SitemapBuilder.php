@@ -62,16 +62,19 @@ class SitemapBuilder
             if (! $taxonomy->setting('has_archive')) {
                 return;
             }
-            $taxonomy->terms()->with('translations')->get()->each(function ($term) use ($sitemap, $urls): void {
+            $routes = $taxonomy->termRoutes();
+            $taxonomy->terms()->with('translations')->get()->each(function ($term) use ($sitemap, $urls, $routes): void {
                 foreach (Locales::available() as $locale) {
                     $resolved = $term->translation($locale);
                     if (! Locales::isMain($locale) && $resolved === null) {
                         continue;
                     }
-                    $sitemap->add(
-                        Url::create(url($urls->term($term, $locale)))
-                            ->setLastModificationDate($term->updated_at ?? now())
-                    );
+                    foreach ($routes as $route) {
+                        $sitemap->add(
+                            Url::create(url($urls->term($term, $locale, $route['collection'])))
+                                ->setLastModificationDate($term->updated_at ?? now())
+                        );
+                    }
                 }
             });
         });

@@ -48,8 +48,8 @@ field handles it expects.
 Entries also expose `$entry->title`, `->slug`, `->url`, `->published_at`,
 `->author`, `->terms` and `->isFallback` (true when a language shows the
 main-language content because its translation isn't Ready). Terms expose
-`->name`, `->slug`, `->url` and `->get('handle')` for taxonomy-blueprint
-fields. Globals: `sunrice_global('handle')->field` or
+`->name`, `->slug`, `->url`, `->urlIn($collection)` (the term's page for
+one collection) and `->get('handle')` for taxonomy-blueprint fields. Globals: `sunrice_global('handle')->field` or
 `->get('field', 'default')`.
 
 Render flexible content with one partial per block type:
@@ -87,8 +87,9 @@ Archives use `index` instead of `show` (`sunrice.{collection}.index` →
 
 Every view receives `locale` and `pageType` (`entry`, `archive` or
 `term`) plus: `entry` and `collection` on entry pages; `entries` (a
-paginator) and `collection` on archives; `term`, `taxonomy` and `entries`
-on term archives. Entries are already resolved for the active language.
+paginator) and `collection` on archives; `term`, `taxonomy`, `entries`
+and `collection` (null when the page spans all collections) on term
+archives. Entries are already resolved for the active language.
 
 ## Template hooks
 

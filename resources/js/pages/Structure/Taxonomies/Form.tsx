@@ -10,15 +10,17 @@ import type { SharedProps } from '@/types';
 
 interface TaxonomyShape {
     id: number; handle: string; title: string; blueprint_id: number | null; hierarchical: boolean;
-    settings: { sluggable?: boolean; route?: string };
+    settings: { sluggable?: boolean; route?: string; has_archive?: boolean };
+    collection_ids: number[];
 }
 
 interface Props {
     taxonomy: TaxonomyShape | null;
     blueprints: { id: number; title: string }[];
+    collections: { id: number; title: string; handle: string }[];
 }
 
-export default function TaxonomyForm({ taxonomy, blueprints }: Props) {
+export default function TaxonomyForm({ taxonomy, blueprints, collections }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const form = useForm({
         title: taxonomy?.title ?? '',
@@ -28,8 +30,12 @@ export default function TaxonomyForm({ taxonomy, blueprints }: Props) {
         settings: {
             sluggable: taxonomy?.settings?.sluggable !== false,
             route: taxonomy?.settings?.route ?? '',
+            has_archive: !!taxonomy?.settings?.has_archive,
         },
+        collection_ids: taxonomy?.collection_ids ?? [],
     });
+    const handle = form.data.handle || 'taxonomy';
+    const attached = collections.filter((c) => form.data.collection_ids.includes(c.id));
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,9 +80,53 @@ export default function TaxonomyForm({ taxonomy, blueprints }: Props) {
                         Hierarchical (terms have parents)
                     </label>
                     <div className="grid gap-2">
-                        <Label htmlFor="route">Term route prefix (optional)</Label>
-                        <Input id="route" value={form.data.settings.route} onChange={(e) => form.setData('settings', { ...form.data.settings, route: e.target.value })} />
+                        <Label>Collections</Label>
+                        <p className="text-xs text-muted-foreground">Entries of these collections can be tagged with this taxonomy's terms.</p>
+                        {collections.map((c) => (
+                            <label key={c.id} className="flex items-center gap-2 text-sm">
+                                <Checkbox
+                                    checked={form.data.collection_ids.includes(c.id)}
+                                    onCheckedChange={(checked) =>
+                                        form.setData('collection_ids', checked
+                                            ? [...form.data.collection_ids, c.id]
+                                            : form.data.collection_ids.filter((id) => id !== c.id))
+                                    }
+                                />
+                                {c.title}
+                            </label>
+                        ))}
+                        {collections.length === 0 && <p className="text-sm text-muted-foreground">No collections yet.</p>}
                     </div>
+                    <label className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                            checked={!!form.data.settings.has_archive}
+                            onCheckedChange={(c) => form.setData('settings', { ...form.data.settings, has_archive: !!c })}
+                        />
+                        Term archive pages (a page per term listing its entries)
+                    </label>
+                    {form.data.settings.has_archive && (
+                        <div className="grid gap-2">
+                            <Label htmlFor="route">Term route prefix (optional)</Label>
+                            <Input
+                                id="route"
+                                className="font-mono text-sm"
+                                value={form.data.settings.route}
+                                placeholder={attached.length > 0 ? `/${attached[0].handle}/${handle}/{slug}` : `/${handle}/{slug}`}
+                                onChange={(e) => form.setData('settings', { ...form.data.settings, route: e.target.value })}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                {attached.length > 0 ? (
+                                    <>Leave empty for one page per collection: {attached.map((c) => <code key={c.id} className="mr-1">/{c.handle}/{handle}/&#123;slug&#125;</code>)} each listing that collection's entries. </>
+                                ) : (
+                                    <>Leave empty for <code>/{handle}/&#123;slug&#125;</code>. </>
+                                )}
+                                A prefix such as <code>topics</code> gives a single page per term across all collections.
+                            </p>
+                            {form.errors['settings.route' as keyof typeof form.errors] && (
+                                <p className="text-sm text-destructive">{form.errors['settings.route' as keyof typeof form.errors]}</p>
+                            )}
+                        </div>
+                    )}
                     <div className="flex gap-2">
                         <Button type="submit" disabled={form.processing}>Save</Button>
                         <Button type="button" variant="outline" onClick={() => router.get(adminUrl('structure/taxonomies', adminPath))}>Cancel</Button>

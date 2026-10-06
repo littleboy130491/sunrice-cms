@@ -7,6 +7,7 @@ namespace Sunrice\Actions\Taxonomies;
 use Illuminate\Support\Arr;
 use Illuminate\Validation\Rule;
 use Sunrice\Events\ContentChanged;
+use Sunrice\Models\Collection;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Permissions\SyncPermissions;
 
@@ -29,8 +30,20 @@ class SaveTaxonomy
             'hierarchical' => ['boolean'],
             'settings' => ['array'],
             'settings.sluggable' => ['boolean'],
-            'settings.route' => ['nullable', 'string', 'max:255'],
+            'settings.has_archive' => ['boolean'],
+            'settings.route' => ['nullable', 'string', 'max:255', 'regex:#^[A-Za-z0-9/_{}.-]*$#'],
+            'collection_ids' => ['array'],
+            'collection_ids.*' => ['integer', Rule::exists('sunrice_collections', 'id')],
         ])->validate();
+
+        $settings = Arr::get($validated, 'settings', $taxonomy->settings ?? []);
+        // Empty: per-collection pages at /{collection}/{taxonomy}/{slug}.
+        $route = Collection::normalizeRoute($settings['route'] ?? null);
+        if ($route === null) {
+            unset($settings['route']);
+        } else {
+            $settings['route'] = $route;
+        }
 
         $taxonomy ??= new Taxonomy;
         $taxonomy->fill([
@@ -38,9 +51,13 @@ class SaveTaxonomy
             'title' => $validated['title'],
             'blueprint_id' => Arr::get($validated, 'blueprint_id', $taxonomy->blueprint_id),
             'hierarchical' => (bool) ($validated['hierarchical'] ?? $taxonomy->hierarchical ?? false),
-            'settings' => Arr::get($validated, 'settings', $taxonomy->settings ?? []),
+            'settings' => $settings,
         ]);
         $taxonomy->save();
+
+        if (array_key_exists('collection_ids', $validated)) {
+            $taxonomy->collections()->sync($validated['collection_ids']);
+        }
 
         app(SyncPermissions::class)->handle();
         ContentChanged::dispatch('taxonomy_saved');

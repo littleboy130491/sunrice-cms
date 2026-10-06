@@ -40,7 +40,7 @@
             <ul class="tags">
                 @foreach ($entry->terms as $term)
                     @php($term->resolveFor($locale))
-                    <li><a href="{{ $term->url }}">{{ $term->name }}</a></li>
+                    <li><a href="{{ $term->urlIn($entry->collection) }}">{{ $term->name }}</a></li>
                 @endforeach
             </ul>
         @endif

@@ -67,4 +67,51 @@ class Taxonomy extends Model
     {
         return data_get($this->settings, $key, $default);
     }
+
+    /**
+     * URL patterns of the term archive pages, each with the collection
+     * whose entries it lists (null = entries of every collection):
+     *
+     * - a custom route: one archive across all collections;
+     * - otherwise one archive per attached collection, at
+     *   /{collection}/{taxonomy}/{slug};
+     * - attached to none: /{taxonomy}/{slug}.
+     *
+     * @return array<int, array{route: string, collection: Collection|null}>
+     */
+    public function termRoutes(): array
+    {
+        $custom = Collection::normalizeRoute($this->setting('route'));
+        if ($custom !== null) {
+            return [['route' => $custom, 'collection' => null]];
+        }
+
+        $collections = $this->relationLoaded('collections')
+            ? $this->collections->sortBy('sort_order')->values()
+            : $this->collections()->orderBy('sort_order')->orderBy('title')->get();
+
+        if ($collections->isEmpty()) {
+            return [['route' => '/'.$this->handle.'/{slug}', 'collection' => null]];
+        }
+
+        return $collections
+            ->map(fn (Collection $c) => ['route' => '/'.$c->handle.'/'.$this->handle.'/{slug}', 'collection' => $c])
+            ->all();
+    }
+
+    /**
+     * The term archive pattern to link to: the given collection's when it
+     * has one, else the first.
+     */
+    public function termRoute(?Collection $collection = null): string
+    {
+        $routes = $this->termRoutes();
+        foreach ($routes as $route) {
+            if ($collection !== null && $route['collection']?->is($collection)) {
+                return $route['route'];
+            }
+        }
+
+        return $routes[0]['route'];
+    }
 }

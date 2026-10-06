@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Sunrice\Database\Factories\TermFactory;
 use Sunrice\Fields\HydrationContext;
+use Sunrice\Models\Collection as ContentCollection;
 use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Support\Locales;
 
@@ -136,6 +137,15 @@ class Term extends Model
     public function getUrlAttribute(): ?string
     {
         return app(UrlGenerator::class)->term($this, $this->resolvedLocale);
+    }
+
+    /**
+     * This term's archive page for one collection's entries, e.g. on a
+     * blog post: $term->urlIn($entry->collection) → /blog/category/news.
+     */
+    public function urlIn(ContentCollection $collection): string
+    {
+        return app(UrlGenerator::class)->term($this, $this->resolvedLocale, $collection);
     }
 
     /**

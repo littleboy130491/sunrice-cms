@@ -13,6 +13,7 @@ use Inertia\Response;
 use Sunrice\Actions\Taxonomies\SaveTaxonomy;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Blueprint;
+use Sunrice\Models\Collection;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Permissions\SyncPermissions;
 
@@ -81,8 +82,12 @@ class TaxonomiesController extends Controller
     protected function form(?Taxonomy $taxonomy): Response
     {
         return Inertia::render('Structure/Taxonomies/Form', [
-            'taxonomy' => $taxonomy?->only('id', 'handle', 'title', 'blueprint_id', 'hierarchical', 'settings'),
+            'taxonomy' => $taxonomy === null ? null : [
+                ...$taxonomy->only('id', 'handle', 'title', 'blueprint_id', 'hierarchical', 'settings'),
+                'collection_ids' => $taxonomy->collections()->pluck('sunrice_collections.id'),
+            ],
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
+            'collections' => Collection::query()->orderBy('sort_order')->orderBy('title')->get(['id', 'title', 'handle']),
         ]);
     }
 }

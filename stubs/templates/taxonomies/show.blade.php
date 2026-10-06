@@ -3,16 +3,19 @@
     `sunrice/taxonomies/{taxonomy}/show.blade.php` for one taxonomy),
     shown at the taxonomy's route when its archive is enabled.
 
-    Available: $term, $taxonomy, $entries (paginator), $locale, $pageType.
+    Available: $term, $taxonomy, $entries (paginator), $locale, $pageType,
+    and $collection: the collection this page lists (per-collection term
+    pages such as /blog/category/news), or null for one page across all.
 
     $term->name, $term->slug, $term->url    in the active language
+    $term->urlIn($collection)               the term's page for one collection
     $term->parent / $term->children         for hierarchical taxonomies
     $term->get('handle')                    a field from the taxonomy blueprint (hydrated like entry fields)
 --}}
 @extends('sunrice.layouts.app', ['seoTitle' => $term->name.' — '.$taxonomy->title])
 
 @section('content')
-    <p class="meta">{{ $taxonomy->title }}</p>
+    <p class="meta">{{ $collection ? $collection->title.' · ' : '' }}{{ $taxonomy->title }}</p>
     <h1>{{ $term->name }}</h1>
 
     @if ($description = $term->get('description'))
@@ -22,7 +25,8 @@
     @if ($term->children->isNotEmpty())
         <ul class="tags">
             @foreach ($term->children as $child)
-                <li><a href="{{ $child->url }}">{{ $child->name }}</a></li>
+                @php($child->resolveFor($locale))
+                <li><a href="{{ $collection ? $child->urlIn($collection) : $child->url }}">{{ $child->name }}</a></li>
             @endforeach
         </ul>
     @endif

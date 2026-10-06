@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Taxonomies: attach collections from the taxonomy form, and switch term
+  archive pages on there (there was no way to before). Term pages default
+  to one per attached collection at `/{collection}/{taxonomy}/{slug}`,
+  listing that collection's entries; a custom route gives one page across
+  collections. `$term->urlIn($collection)` links to a collection's page.
 - Collections: the route prefix field now takes a prefix (`blog` →
   `/blog/{slug}`), a full pattern, or `/` for the site root; left empty it
   follows the handle. Two collections can no longer share a URL pattern.

@@ -78,10 +78,11 @@ class RouteMatcher
             }
         });
 
-        Taxonomy::query()->get()->each(function (Taxonomy $taxonomy) use (&$routes): void {
+        Taxonomy::query()->with('collections')->get()->each(function (Taxonomy $taxonomy) use (&$routes): void {
             if ($taxonomy->setting('has_archive')) {
-                $route = Collection::normalizeRoute($taxonomy->setting('route')) ?? '/'.$taxonomy->handle.'/{slug}';
-                $routes[] = $this->route($route, new RouteMatch('term', taxonomy: $taxonomy));
+                foreach ($taxonomy->termRoutes() as $termRoute) {
+                    $routes[] = $this->route($termRoute['route'], new RouteMatch('term', collection: $termRoute['collection'], taxonomy: $taxonomy));
+                }
             }
         });
 
