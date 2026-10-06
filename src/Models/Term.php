@@ -14,8 +14,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Sunrice\Database\Factories\TermFactory;
 use Sunrice\Fields\HydrationContext;
-use Sunrice\Models\Collection as ContentCollection;
 use Sunrice\Frontend\UrlGenerator;
+use Sunrice\Models\Collection as ContentCollection;
 use Sunrice\Support\Locales;
 
 /**
