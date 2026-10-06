@@ -8,8 +8,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <x-sunrice::seo :entry="$entry ?? null" />
+    <x-sunrice::code position="head" />
 </head>
 <body>
+    <x-sunrice::code position="body_start" />
     <article>
         <h1>{{ $entry->title ?? '' }}</h1>
         @foreach ($entry?->activeBlueprint()?->schema()->fields() ?? [] as $field)
@@ -21,5 +23,6 @@
             @endif
         @endforeach
     </article>
+    <x-sunrice::code position="body_end" />
 </body>
 </html>

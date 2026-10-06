@@ -6,7 +6,7 @@ import type { FieldProps } from './types';
 export default function AssetField({ field, value, onChange }: FieldProps) {
     const multiple = !!field.config?.multiple;
     const imageOnly = !!field.config?.image_only;
-    const ids = (value as number[]) ?? (value ? [value as number] : []);
+    const ids: number[] = Array.isArray(value) ? (value as number[]) : typeof value === 'number' ? [value] : [];
 
     // Assets render as ids; thumbnails require a lookup, so ids are
     // shown alongside picked previews kept in state by the picker.

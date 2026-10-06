@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Site settings** — Manage → Settings edits the site name, description,
+  timezone, homepage, languages (main, available, names), site-wide
+  noindex (also empties the sitemap), X/Twitter handle and default share
+  image. Values override the config at boot.
+- **Code snippets** — add tracking or other code to the head, body start
+  or body end from Settings; layouts print them with
+  `<x-sunrice::code position="head|body_start|body_end" />` (already in the
+  starter layout and fallback views).
+- Fixed: the asset field crashed once a single-asset field had a value.
 - Menus: the item editor can now link to a collection archive (it was
   saved without its target and never showed), pick a term from a taxonomy
   (instead of typing an id), set a label per language (empty uses the linked

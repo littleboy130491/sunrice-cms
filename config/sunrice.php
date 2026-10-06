@@ -127,11 +127,36 @@ return [
     |               page). Useful on staging. Single pages can be hidden from
     |               the entry's SEO tab instead.
     | twitter_site: The site's X/Twitter handle for `twitter:site`, e.g. "@acme".
+    | description:  Default meta description for pages without their own.
+    | image:        Default share image (asset id) for pages without their own.
+    |
+    | All of these (and the site name, timezone, languages and code snippets
+    | below) can be changed in the admin under Settings, which overrides
+    | the values here.
     |
     */
     'seo' => [
         'noindex' => (bool) env('SUNRICE_NOINDEX', false),
         'twitter_site' => env('SUNRICE_TWITTER_SITE'),
+        'description' => null,
+        'image' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Code snippets
+    |--------------------------------------------------------------------------
+    |
+    | HTML added to every public page by <x-sunrice::code position="…" />:
+    | head (end of <head>), body_start (after <body>), body_end (before
+    | </body>) — e.g. analytics or tag-manager snippets. Edited under
+    | Settings in the admin.
+    |
+    */
+    'code' => [
+        'head' => null,
+        'body_start' => null,
+        'body_end' => null,
     ],
 
     /*

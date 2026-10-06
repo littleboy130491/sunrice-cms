@@ -50,7 +50,8 @@ class Seo extends Component
         $this->isFallback = $entry !== null && (bool) $entry->isFallback;
 
         $this->title = $title ?? $seo['title'] ?? ($entry === null ? null : $entry->title) ?? (string) config('app.name');
-        $this->description = $description ?? $seo['description'] ?? null;
+        // The page's own description, else the site description from Settings.
+        $this->description = $description ?? (($seo['description'] ?? '') ?: (config('sunrice.seo.description') ?: null));
         $this->image = $this->image($seo);
         $this->canonical = $this->canonical($seo);
         $this->alternates = $this->alternates();
@@ -119,7 +120,11 @@ class Seo extends Component
     /** @param array<string, mixed> $seo */
     protected function image(array $seo): ?string
     {
+        // The page's own image, else the site's default share image.
         $id = $seo['image'] ?? null;
+        if (! is_numeric($id)) {
+            $id = config('sunrice.seo.image');
+        }
         if (! is_numeric($id)) {
             return null;
         }

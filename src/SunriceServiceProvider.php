@@ -44,9 +44,11 @@ use Sunrice\Policies\RolePolicy;
 use Sunrice\Policies\TaxonomyPolicy;
 use Sunrice\Policies\TermPolicy;
 use Sunrice\Policies\UserPolicy;
+use Sunrice\Support\SiteSettings;
 use Sunrice\View\Components\Entries;
 use Sunrice\View\Components\Form as FormComponent;
 use Sunrice\View\Components\Seo;
+use Sunrice\View\Components\SiteCode;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class SunriceServiceProvider extends PackageServiceProvider
@@ -112,6 +114,9 @@ class SunriceServiceProvider extends PackageServiceProvider
         $this->registerBladeComponents();
         $this->registerContentCache();
         $this->registerRateLimiters();
+
+        // Site settings saved in the admin override the config defaults.
+        $this->app->booted(fn () => SiteSettings::apply());
     }
 
     /**
@@ -149,6 +154,7 @@ class SunriceServiceProvider extends PackageServiceProvider
     {
         Blade::component(Entries::class, 'sunrice::entries');
         Blade::component(Seo::class, 'sunrice::seo');
+        Blade::component(SiteCode::class, 'sunrice::code');
         Blade::component(FormComponent::class, 'sunrice::form');
     }
 

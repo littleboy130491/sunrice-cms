@@ -107,6 +107,10 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::put('globals/{globalSet}', [Admin\GlobalsController::class, 'update'])->name('globals.update');
     Route::delete('globals/{globalSet}', [Admin\GlobalsController::class, 'destroy'])->name('globals.destroy');
 
+    // Site settings
+    Route::get('settings', [Admin\SettingsController::class, 'edit'])->name('settings.edit');
+    Route::put('settings', [Admin\SettingsController::class, 'update'])->name('settings.update');
+
     // Users & roles (T8.7)
     Route::get('users', [Admin\UsersController::class, 'index'])->name('users.index');
     Route::post('users', [Admin\UsersController::class, 'store'])->name('users.store');

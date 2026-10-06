@@ -29,6 +29,11 @@ class SitemapBuilder
         $sitemap = Sitemap::create();
         $urls = app(UrlGenerator::class);
 
+        // The whole site is hidden from search engines (Settings).
+        if ((bool) config('sunrice.seo.noindex', false)) {
+            return $sitemap->render();
+        }
+
         Collection::query()->with('entries.translations')->get()->each(function (Collection $collection) use ($sitemap, $urls): void {
             if ($collection->setting('has_archive')) {
                 foreach (Locales::available() as $locale) {

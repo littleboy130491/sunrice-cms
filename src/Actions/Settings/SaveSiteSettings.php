@@ -1,0 +1,87 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Sunrice\Actions\Settings;
+
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Sunrice\Models\EntryTranslation;
+use Sunrice\Models\Setting;
+use Sunrice\Support\Locales;
+use Sunrice\Support\SiteSettings;
+
+/**
+ * Validates and stores the site settings (see SiteSettings) and the
+ * homepage entry.
+ */
+class SaveSiteSettings
+{
+    public const LOCALE_PATTERN = '/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})?$/';
+
+    /**
+     * @param  array<string, mixed>  $input
+     *
+     * @throws ValidationException
+     */
+    public function handle(array $input): void
+    {
+        $validated = validator($input, [
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'timezone' => ['required', 'timezone:all'],
+            'homepage_entry_id' => ['nullable', 'integer', Rule::exists('sunrice_entries', 'id')],
+            'locales' => ['required', 'array'],
+            'locales.main' => ['required', 'string', 'regex:'.self::LOCALE_PATTERN],
+            'locales.available' => ['required', 'array', 'min:1'],
+            'locales.available.*' => ['required', 'string', 'distinct', 'regex:'.self::LOCALE_PATTERN],
+            'locales.names' => ['array'],
+            'locales.names.*' => ['nullable', 'string', 'max:100'],
+            'seo' => ['array'],
+            'seo.noindex' => ['boolean'],
+            'seo.twitter_site' => ['nullable', 'string', 'max:50', 'regex:/^@?\w+$/'],
+            'seo.image' => ['nullable', 'integer', Rule::exists('sunrice_assets', 'id')],
+            'code' => ['array'],
+            'code.head' => ['nullable', 'string', 'max:20000'],
+            'code.body_start' => ['nullable', 'string', 'max:20000'],
+            'code.body_end' => ['nullable', 'string', 'max:20000'],
+        ], [
+            'locales.*.regex' => 'Use a language code such as "en", "id" or "pt-BR".',
+            'locales.available.*.regex' => 'Use a language code such as "en", "id" or "pt-BR".',
+        ])->validate();
+
+        $locales = $validated['locales'];
+        $available = array_values(array_unique([$locales['main'], ...$locales['available']]));
+        $names = array_filter(
+            array_intersect_key((array) ($locales['names'] ?? []), array_flip($available)),
+            fn ($name) => is_string($name) && trim($name) !== '',
+        );
+
+        // Content is stored per language code: switching the main language
+        // after content exists would orphan it.
+        if ($locales['main'] !== Locales::main() && EntryTranslation::query()->exists()) {
+            throw ValidationException::withMessages([
+                'locales.main' => 'The main language can\'t be changed once content exists.',
+            ]);
+        }
+
+        SiteSettings::save([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+            'timezone' => $validated['timezone'],
+            'locales' => ['main' => $locales['main'], 'available' => $available, 'names' => $names],
+            'seo' => [
+                'noindex' => (bool) ($validated['seo']['noindex'] ?? false),
+                'twitter_site' => $validated['seo']['twitter_site'] ?? null,
+                'image' => $validated['seo']['image'] ?? null,
+            ],
+            'code' => [
+                'head' => $validated['code']['head'] ?? null,
+                'body_start' => $validated['code']['body_start'] ?? null,
+                'body_end' => $validated['code']['body_end'] ?? null,
+            ],
+        ]);
+
+        Setting::set('homepage_entry_id', $validated['homepage_entry_id'] ?? null);
+    }
+}

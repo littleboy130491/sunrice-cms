@@ -4,8 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <x-sunrice::seo />
+    <x-sunrice::code position="head" />
 </head>
 <body>
+    <x-sunrice::code position="body_start" />
     <h1>{{ $collection->title ?? 'Archive' }}</h1>
     <ul>
         @foreach($entries as $entry)
@@ -15,5 +17,6 @@
     @if($entries instanceof \Illuminate\Contracts\Pagination\Paginator)
         {{ $entries->links() }}
     @endif
+    <x-sunrice::code position="body_end" />
 </body>
 </html>
