@@ -86,16 +86,26 @@ class RouteMatcher
             }
         });
 
-        return $routes;
+        // Most specific first: fixed paths ('/blog') before patterns
+        // ('/{slug}'), then more literal characters before fewer, so a
+        // root-level collection doesn't swallow other archives and terms.
+        usort($routes, fn (array $a, array $b) => [$a['dynamic'], -$a['literal']] <=> [$b['dynamic'], -$b['literal']]);
+
+        return array_map(fn (array $r) => ['regex' => $r['regex'], 'match' => $r['match']], $routes);
     }
 
-    /** @return array{regex: string, match: RouteMatch} */
+    /** @return array{regex: string, match: RouteMatch, dynamic: bool, literal: int} */
     protected function route(string $pattern, RouteMatch $match): array
     {
         $pattern = '/'.trim($pattern, '/');
         $regex = '#^'.preg_quote($pattern, '#').'$#';
         $regex = str_replace(preg_quote('{slug}', '#'), '(?<slug>[^/]+)', $regex);
 
-        return ['regex' => $regex, 'match' => $match];
+        return [
+            'regex' => $regex,
+            'match' => $match,
+            'dynamic' => str_contains($pattern, '{slug}'),
+            'literal' => strlen(str_replace('{slug}', '', $pattern)),
+        ];
     }
 }

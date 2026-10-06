@@ -3,8 +3,9 @@
     Fields: `heading` (text), `subheading` (textarea), `image` (asset), `button` (link).
 --}}
 <section class="block hero" id="block-{{ $block->id }}">
-    @if ($block->image)
-        <img src="{{ $block->image->url('large') }}" alt="{{ $block->image->alt ?? '' }}">
+    @php($image = $block->image instanceof \Illuminate\Support\Collection ? $block->image->first() : $block->image)
+    @if ($image)
+        <img src="{{ $image->url('large') }}" alt="{{ $image->alt ?? '' }}">
     @endif
     <h1>{{ $block->heading }}</h1>
     @if ($block->subheading)
@@ -13,8 +14,8 @@
     {{-- Link fields hydrate to ['url' => ..., 'label' => ..., 'new_tab' => bool];
          links to entries already point at the entry's URL in the active language. --}}
     @if (! empty($block->button['url']))
-        <a class="button" href="{{ $block->button['url'] }}" @if ($block->button['new_tab']) target="_blank" rel="noopener" @endif>
-            {{ $block->button['label'] ?: 'Learn more' }}
+        <a class="button" href="{{ $block->button['url'] }}" @if (! empty($block->button['new_tab'])) target="_blank" rel="noopener" @endif>
+            {{ ($block->button['label'] ?? null) ?: 'Learn more' }}
         </a>
     @endif
 </section>

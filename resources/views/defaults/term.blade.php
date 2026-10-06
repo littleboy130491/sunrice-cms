@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <x-sunrice::seo />
+    <x-sunrice::seo :title="$term->name ?? null" />
     <x-sunrice::code position="head" />
 </head>
 <body>
@@ -14,6 +14,9 @@
             <li><a href="{{ $entry->url }}">{{ $entry->title }}</a></li>
         @endforeach
     </ul>
+    @if($entries instanceof \Illuminate\Contracts\Pagination\Paginator)
+        {{ $entries->links() }}
+    @endif
     <x-sunrice::code position="body_end" />
 </body>
 </html>

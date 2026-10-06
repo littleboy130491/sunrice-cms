@@ -12,6 +12,7 @@ use Sunrice\Models\Setting;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
+use Sunrice\View\Components\Entries;
 
 use function Pest\Laravel\get;
 
@@ -322,4 +323,18 @@ it('includes published entries per available locale and excludes fallbacks', fun
         ->toContain('/en/pages/about-en')
         ->toContain('/pages/other')
         ->not->toContain('/en/pages/other');
+});
+
+it('orders <x-sunrice::entries> by "-field", "field desc" or several fields', function () {
+    $news = createCollection('news');
+    $a = createEntry($news, 'Alpha');
+    $a->update(['published_at' => now()->subDays(2)]);
+    createEntry($news, 'Bravo');
+
+    $titles = fn (string $orderBy) => (new Entries('news', orderBy: $orderBy))->entries->pluck('title')->all();
+
+    expect($titles('published_at desc'))->toBe(['Bravo', 'Alpha'])
+        ->and($titles('-published_at'))->toBe(['Bravo', 'Alpha'])
+        ->and($titles('published_at'))->toBe(['Alpha', 'Bravo'])
+        ->and($titles('title desc, -published_at'))->toBe(['Bravo', 'Alpha']);
 });

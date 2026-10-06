@@ -1,6 +1,9 @@
 {{-- Entry teaser used by archives and listings. --}}
 <li class="card">
-    @if ($image = $entry->get('image'))
+    {{-- An asset field with "Allow multiple" returns a collection: use the first. --}}
+    @php($image = $entry->get('image'))
+    @php($image = $image instanceof \Illuminate\Support\Collection ? $image->first() : $image)
+    @if ($image)
         <a href="{{ $entry->url }}"><img src="{{ $image->url('medium') }}" alt="{{ $image->alt ?? $entry->title }}" loading="lazy"></a>
     @endif
     @if ($entry->published_at)

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <x-sunrice::seo />
+    <x-sunrice::seo :title="$collection->title ?? null" />
     <x-sunrice::code position="head" />
 </head>
 <body>

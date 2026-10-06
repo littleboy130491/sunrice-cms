@@ -150,8 +150,9 @@ class BlueprintSchema
             $key = $prefix.'.'.$field['handle'];
             $type = $this->fieldType($field);
 
-            $fieldRules = $type->rules($field);
-            $fieldRules[] = ($field['required'] ?? false) ? 'required' : 'nullable';
+            // Required/nullable first: an empty required field should say
+            // "is required", not fail the type rule ("must be a string").
+            $fieldRules = [($field['required'] ?? false) ? 'required' : 'nullable', ...$type->rules($field)];
             foreach ((array) ($field['validation'] ?? []) as $rule) {
                 $fieldRules[] = $rule;
             }

@@ -79,7 +79,10 @@ Public form renderer:
 ```
 
 The component outputs `<form>` + `@csrf` + honeypot fields; submissions
-post to `route('sunrice.frontend.forms.submit', $handle)`. The slot
-sees `$component->form` (fields/schema), the shared `$errors` bag, and
-`$component->success()` (true after a successful submission flash or the
-form's `success_message`).
+post to `route('sunrice.frontend.forms.submit', $handle)` with the
+page's language, so messages come back in it. The slot sees
+`$component->form` (fields/schema), `$component->error('email')` and
+`$component->old('email')` (this form's message and previous input; other
+forms on the same page keep theirs), and `$component->success()`. After a
+submission the visitor lands back on the form (`#sunrice-form-{handle}`),
+and messages name fields by their label.

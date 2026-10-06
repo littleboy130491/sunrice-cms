@@ -7,6 +7,7 @@ use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Fieldset;
 use Sunrice\Models\Form;
+use Sunrice\Models\FormSubmission;
 use Sunrice\Models\GlobalSet;
 use Sunrice\Models\Menu;
 use Sunrice\Models\MenuItem;
@@ -137,4 +138,99 @@ it('renders a form block with inputs generated from the form fields', function (
         ->assertSee('type="email"', false)
         ->assertSee('<option value="sales"', false)
         ->assertSee('name="data[message]"', false);
+});
+
+it('serves archives and term pages next to a collection at the site root', function () {
+    $pages = createCollection('pages', ['route' => '/']);
+    createEntry($pages, 'About');
+    $articles = createCollection('articles', ['has_archive' => true]);
+    $articles->update(['archive_data' => ['title' => 'All the news', 'intro' => 'Fresh every week']]);
+    $old = createEntry($articles, 'Older post');
+    $old->update(['published_at' => now()->subDays(3)]);
+    createEntry($articles, 'Newest post');
+    $taxonomy = Taxonomy::factory()->create(['handle' => 'topics', 'title' => 'Topics', 'settings' => ['has_archive' => true, 'route' => '/topics/{slug}']]);
+    $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
+    $term->translations()->first()->update(['name' => 'Laravel', 'slug' => 'laravel']);
+    $old->terms()->attach($term);
+    RouteMatcher::flush();
+
+    get('/about')->assertOk()->assertSee('About');
+    get('/articles')->assertOk()->assertSee('All the news')->assertSee('Fresh every week')->assertSee('Older post');
+    get('/topics/laravel')->assertOk()->assertSee('Older post');
+
+    // "Latest articles" lists the newest first, without the article itself.
+    get('/articles/older-post')->assertOk()->assertSeeInOrder(['Latest articles', 'Newest post']);
+});
+
+it('links tags only for taxonomies with term pages', function () {
+    $articles = createCollection('articles');
+    $post = createEntry($articles, 'Post');
+    $taxonomy = Taxonomy::factory()->create(['handle' => 'labels', 'title' => 'Labels', 'settings' => []]);
+    $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
+    $term->translations()->first()->update(['name' => 'Internal', 'slug' => 'internal']);
+    $post->terms()->attach($term);
+    RouteMatcher::flush();
+
+    get('/articles/post')->assertOk()->assertSee('<span>Internal</span>', false)->assertDontSee('/articles/labels/internal');
+});
+
+it('defaults entry link text to the entry title and shows a switcher on listings', function () {
+    Fieldset::create(['handle' => 'hero', 'title' => 'Hero', 'fields' => [
+        ['handle' => 'heading', 'type' => 'text', 'label' => 'Heading'],
+        ['handle' => 'button', 'type' => 'link', 'label' => 'Button'],
+    ]]);
+    $blueprint = Blueprint::create(['handle' => 'page', 'title' => 'Page', 'fields' => [
+        ['handle' => 'sections', 'type' => 'flexible', 'label' => 'Sections', 'config' => ['fieldsets' => ['hero']]],
+    ]]);
+    $pages = createCollection('pages', ['has_archive' => true], $blueprint);
+    $pricing = createEntry($pages, 'Pricing plans');
+    createEntry($pages, 'Home', ['sections' => [
+        ['id' => 'b1', 'type' => 'hero', 'values' => ['heading' => 'Hi', 'button' => ['type' => 'entry', 'entry_id' => $pricing->id]]],
+    ]]);
+    RouteMatcher::flush();
+
+    get('/pages/home')->assertOk()
+        ->assertSee('href="/pages/pricing-plans"', false)
+        ->assertSee('Pricing plans');
+
+    get('/pages?page=2')->assertOk()
+        ->assertSee('hreflang="en"', false)
+        ->assertSee('href="/en/pages"', false)
+        ->assertSee('<link rel="canonical" href="'.url('/pages').'?page=2">', false);
+});
+
+it('returns form errors to the right form, in the page language, with labels', function () {
+    Fieldset::create(['handle' => 'form', 'title' => 'Form', 'fields' => [
+        ['handle' => 'form', 'type' => 'text', 'label' => 'Form handle'],
+    ]]);
+    $blueprint = Blueprint::create(['handle' => 'landing', 'title' => 'Landing', 'fields' => [
+        ['handle' => 'sections', 'type' => 'flexible', 'label' => 'Sections', 'config' => ['fieldsets' => ['form']]],
+    ]]);
+    foreach (['contact', 'newsletter'] as $handle) {
+        Form::query()->create(['handle' => $handle, 'title' => ucfirst($handle), 'settings' => [], 'fields' => [
+            ['handle' => 'email', 'type' => 'text', 'label' => 'Your email', 'required' => true],
+        ]]);
+    }
+    $pages = createCollection('pages', ['route' => '/{slug}'], $blueprint);
+    $page = createEntry($pages, 'Contact', ['sections' => [
+        ['id' => 'f1', 'type' => 'form', 'values' => ['form' => 'contact']],
+        ['id' => 'f2', 'type' => 'form', 'values' => ['form' => 'newsletter']],
+    ]]);
+    RouteMatcher::flush();
+
+    $this->from('/contact')
+        ->post('/sunrice/forms/contact', ['_form' => 'contact', '_locale' => 'en', 'data' => ['email' => '']])
+        ->assertRedirect(url('/contact').'#sunrice-form-contact');
+
+    $html = $this->get('/contact')->assertOk()->getContent();
+    // One message, under the contact form only, naming the field by its label.
+    expect(substr_count($html, 'class="error"'))->toBe(1)
+        ->and($html)->toContain('The Your email field is required.')
+        ->and(strpos($html, 'class="error"'))->toBeLessThan(strpos($html, 'id="sunrice-form-newsletter"'));
+
+    $this->from('/contact')
+        ->post('/sunrice/forms/contact', ['_form' => 'contact', '_locale' => 'en', 'data' => ['email' => 'a@b.c']])
+        ->assertRedirect(url('/contact').'#sunrice-form-contact');
+    expect(FormSubmission::query()->first()->locale)->toBe('en');
+    $this->get('/contact')->assertSee('sunrice-form-success', false);
 });

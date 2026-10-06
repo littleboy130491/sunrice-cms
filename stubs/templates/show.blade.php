@@ -35,7 +35,9 @@
 
         <h1>{{ $entry->title }}</h1>
 
-        @if ($image = $entry->get('image'))
+        @php($image = $entry->get('image'))
+        @php($image = $image instanceof \Illuminate\Support\Collection ? $image->first() : $image)
+        @if ($image)
             <img src="{{ $image->url('large') }}" alt="{{ $image->alt ?? $entry->title }}">
         @endif
 

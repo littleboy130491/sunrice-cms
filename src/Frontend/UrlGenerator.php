@@ -77,19 +77,41 @@ class UrlGenerator
     }
 
     /**
-     * Locale => URL map for an entry (language switchers).
+     * Locale => URL map for the current page (language switchers): an
+     * entry, a term (with the collection of a per-collection term page),
+     * or, with neither, the current frontend path (archives) in each
+     * language.
      *
      * @return array<string, string>
      */
-    public function localeUrls(?Entry $entry): array
+    public function localeUrls(Entry|Term|null $page = null, ?Collection $collection = null): array
     {
-        if ($entry === null) {
-            return [];
+        $urls = [];
+
+        if ($page instanceof Entry) {
+            foreach (Locales::available() as $locale) {
+                $urls[$locale] = $this->entry($page, $locale);
+            }
+
+            return $urls;
         }
 
-        $urls = [];
+        if ($page instanceof Term) {
+            foreach (Locales::available() as $locale) {
+                $urls[$locale] = $this->term($page, $locale, $collection);
+            }
+
+            return $urls;
+        }
+
+        $request = request();
+        if (! $request->attributes->has('sunrice.path')) {
+            return [];
+        }
+        $path = trim((string) $request->attributes->get('sunrice.path'), '/');
         foreach (Locales::available() as $locale) {
-            $urls[$locale] = $this->entry($entry, $locale);
+            $url = Locales::prefix($locale).($path === '' ? '' : '/'.$path);
+            $urls[$locale] = $url === '' ? '/' : $url;
         }
 
         return $urls;

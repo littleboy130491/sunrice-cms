@@ -8,12 +8,13 @@
 @php
     $site = sunrice_global('site');           // GlobalData: read fields as properties or ->get('field', 'default')
     $mainMenu = sunrice_menu('main');          // Collection of MenuNode (label, url, newTab, children)
-    $languages = sunrice_locale_urls($entry ?? null); // ['id' => '/about', 'en' => '/en/about'] on entry pages
+    // ['id' => '/about', 'en' => '/en/about']: the entry, the term page or the current listing in each language
+    $languages = sunrice_locale_urls($entry ?? $term ?? null, isset($term) ? ($collection ?? null) : null);
 @endphp
 
 <header class="site-header">
     <div class="container">
-        <a class="brand" href="{{ url($locale === config('sunrice.locales.main') ? '/' : '/'.$locale) }}">
+        <a class="brand" href="{{ url(\Sunrice\Support\Locales::prefix($locale) ?: '/') }}">
             @if ($site->logo)
                 {{-- Asset fields hydrate to Sunrice\Models\Asset: url(), url('thumbnail'|'medium'|'large'), alt, title --}}
                 <img src="{{ $site->logo->url('medium') }}" alt="{{ $site->logo->alt ?? $site->get('name') }}">

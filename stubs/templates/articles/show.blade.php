@@ -29,18 +29,25 @@
             <p class="muted">{{ $excerpt }}</p>
         @endif
 
-        @if ($image = $entry->get('image'))
+        @php($image = $entry->get('image'))
+        @php($image = $image instanceof \Illuminate\Support\Collection ? $image->first() : $image)
+        @if ($image)
             <img src="{{ $image->url('large') }}" alt="{{ $image->alt ?? $entry->title }}">
         @endif
 
         {!! $entry->get('body') !!}
 
-        {{-- Terms attached to the entry (from any taxonomy the collection uses). --}}
+        {{-- Terms attached to the entry (from any taxonomy the collection uses).
+             Only taxonomies with term pages ("Term archive pages" on) get links. --}}
         @if ($entry->terms->isNotEmpty())
             <ul class="tags">
                 @foreach ($entry->terms as $term)
                     @php($term->resolveFor($locale))
-                    <li><a href="{{ $term->urlIn($entry->collection) }}">{{ $term->name }}</a></li>
+                    @if ($term->taxonomy?->setting('has_archive'))
+                        <li><a href="{{ $term->urlIn($entry->collection) }}">{{ $term->name }}</a></li>
+                    @else
+                        <li><span>{{ $term->name }}</span></li>
+                    @endif
                 @endforeach
             </ul>
         @endif
@@ -62,10 +69,10 @@
          in the active language with whole-entry fallback. --}}
     <section class="block">
         <h2>Latest articles</h2>
-        <x-sunrice::entries collection="articles" :limit="3" order-by="published_at desc">
+        <x-sunrice::entries collection="articles" :limit="4" order-by="-published_at">
             <ul class="cards">
-                @foreach ($component->entries as $item)
-                    @continue($item->id === $entry->id)
+                {{-- One extra is fetched so there are still three after leaving out this article. --}}
+                @foreach ($component->entries->reject(fn ($item) => $item->id === $entry->id)->take(3) as $item)
                     @include('sunrice.partials.card', ['entry' => $item])
                 @endforeach
             </ul>
