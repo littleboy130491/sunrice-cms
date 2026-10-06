@@ -167,7 +167,9 @@ it('translates terms, translatable globals and menu labels', function () {
     expect($term->fresh()->translation('en')->name)->toBe('[en] Berita')
         ->and($term->fresh()->translation('en')->slug)->toBe('en-berita')
         ->and($site->values()->where('locale', 'en')->first()->data['tagline'])->toBe('[en] Cepat dan ringan')
-        ->and($item->fresh()->labels)->toBe(['id' => 'Beranda', 'en' => '[en] Beranda']);
+        // Compare per key: MySQL's JSON type does not keep object key order.
+        ->and($item->fresh()->labels['id'])->toBe('Beranda')
+        ->and($item->fresh()->labels['en'])->toBe('[en] Beranda');
 });
 
 it('translates Laravel language files, keeping existing keys', function () {
