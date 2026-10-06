@@ -109,6 +109,41 @@ class Collection extends Model
         return $route;
     }
 
+    /** Sort choices for a collection's entries: setting value => column. */
+    public const SORTS = [
+        'manual' => 'sort_order',
+        'published_at' => 'published_at',
+        'created_at' => 'created_at',
+        'updated_at' => 'updated_at',
+        'title' => 'title',
+    ];
+
+    /**
+     * How entries are ordered when a query doesn't say: settings.sort
+     * (manual | published_at | created_at | updated_at | title) and
+     * settings.sort_direction. Manual means the drag-and-drop order.
+     *
+     * @return array{0: string, 1: 'asc'|'desc'}
+     */
+    public function defaultSort(): array
+    {
+        $sort = (string) $this->setting('sort', 'published_at');
+        $column = self::SORTS[$sort] ?? 'published_at';
+        $direction = $this->setting('sort_direction') ?? ($column === 'sort_order' || $column === 'title' ? 'asc' : 'desc');
+
+        return [$column, $direction === 'asc' ? 'asc' : 'desc'];
+    }
+
+    /**
+     * Whether entries get their own page (settings.has_single, on by
+     * default). Off: the collection is a list of information shown by
+     * templates; its entries have no URL.
+     */
+    public function hasSinglePages(): bool
+    {
+        return $this->setting('has_single', true) !== false;
+    }
+
     /**
      * The listing page's heading and intro in a language, falling back
      * to the main language: ['title' => ?string, 'intro' => ?string].

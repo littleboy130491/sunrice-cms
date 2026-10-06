@@ -22,6 +22,9 @@ class EntrySearchController extends Controller
 
         $collectionIds = Collection::query()
             ->when($collections->isNotEmpty() && $ids === [], fn ($query) => $query->whereIn('handle', $collections))
+            ->get()
+            // linkable=1 (menus, link fields): only entries that have a page.
+            ->filter(fn (Collection $c) => ! $request->boolean('linkable') || $c->hasSinglePages())
             ->pluck('id');
 
         $entries = Entry::query()

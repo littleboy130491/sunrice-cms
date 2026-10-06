@@ -30,6 +30,7 @@ use Sunrice\Actions\Support\Reorder;
 use Sunrice\Admin\Export\CsvExporter;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Admin\Table\TableQuery;
+use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
@@ -77,6 +78,25 @@ class EntriesController extends Controller
             ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at'])
             ->apply($request);
 
+        // No column clicked: the collection's own order (Structure →
+        // Collections → Order).
+        [$defaultColumn, $defaultDirection] = $collection->defaultSort();
+        $meta = $table->meta();
+        if ($meta['sort'] === null) {
+            $defaultColumn === 'title'
+                ? $query->orderBy($mainTitle, $defaultDirection)
+                : $query->orderBy($defaultColumn, $defaultDirection);
+            $query->orderBy('id', $defaultColumn === 'sort_order' ? 'asc' : 'desc');
+        }
+        // Drag-and-drop when the collection is ordered manually and the
+        // list shows that order unfiltered.
+        $manual = $defaultColumn === 'sort_order';
+        $mayReorder = $manual && $request->user()->can('reorder', [Entry::class, $collection->id]);
+        $canReorder = $mayReorder
+            && in_array($meta['sort'], [null, 'sort_order'], true)
+            && $meta['search'] === null
+            && $meta['filters'] === [];
+
         $userId = $request->user()->getAuthIdentifier();
         $columns = [
             new Column('id', 'ID', sortable: true, type: 'number'),
@@ -103,10 +123,13 @@ class EntriesController extends Controller
                     'updated_at' => $e->updated_at?->diffForHumans(),
                 ];
             }),
-            'meta' => $table->meta(),
+            'meta' => $meta,
+            // Ordered by hand, but a search, filter or column sort hides that order.
+            'reorderPaused' => $mayReorder && ! $canReorder,
             'visibleColumns' => TablePreferencesController::columnsFor($userId, 'entries', ['id', 'title', 'status', 'updated_at']),
             'can' => [
                 'create' => $request->user()->can('create', [Entry::class, $collection->id]),
+                'reorder' => $canReorder,
                 // The listing page editor (heading, intro, listing blueprint fields).
                 'listing' => $collection->setting('has_archive', false)
                     && ($request->user()->can("sunrice.entries.{$collection->id}.edit") || $request->user()->can("sunrice.entries.{$collection->id}.translate")),
@@ -292,12 +315,24 @@ class EntriesController extends Controller
         $this->authorize('reorder', [Entry::class, $collection->id]);
 
         $validated = $request->validate(['items' => ['required', 'array'], 'items.*' => ['integer']]);
-        // Only this collection's entries, in the posted order.
-        $ids = array_map('intval', $validated['items']);
-        $own = Entry::query()->where('collection_id', $collection->id)->whereIn('id', $ids)->pluck('id')->all();
-        $reorder->handle(Entry::class, array_values(array_intersect($ids, $own)));
 
-        return back();
+        // The list is paginated: `items` is one page in its new order. Keep
+        // every other entry where it is and put these in the slots they
+        // occupied, then number the whole collection 1..n.
+        $moved = array_map('intval', $validated['items']);
+        $all = Entry::withTrashed()->where('collection_id', $collection->id)
+            ->orderBy('sort_order')->orderBy('id')->pluck('id')->all();
+        $moved = array_values(array_intersect($moved, $all));
+        $slots = array_keys(array_intersect($all, $moved));
+        foreach ($slots as $i => $slot) {
+            $all[$slot] = $moved[$i];
+        }
+        if ($all !== []) {
+            $reorder->handle(Entry::class, array_combine(range(1, count($all)), $all));
+        }
+        ContentChanged::dispatch('entry_saved');
+
+        return back()->with('success', 'Order saved.');
     }
 
     public function bulk(Request $request, Collection $collection): RedirectResponse

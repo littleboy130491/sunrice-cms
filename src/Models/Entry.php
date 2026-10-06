@@ -81,6 +81,16 @@ class Entry extends Model
     }
 
     /** @return BelongsTo<Collection, $this> */
+    protected static function booted(): void
+    {
+        // New entries go to the end of their collection's manual order.
+        static::creating(function (Entry $entry): void {
+            if (! $entry->sort_order) {
+                $entry->sort_order = (int) static::withTrashed()->where('collection_id', $entry->collection_id)->max('sort_order') + 1;
+            }
+        });
+    }
+
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);
@@ -235,9 +245,10 @@ class Entry extends Model
             : [];
     }
 
+    /** Null when the collection's entries have no page of their own. */
     public function getUrlAttribute(): ?string
     {
-        return app(UrlGenerator::class)->entry($this, $this->resolvedLocale);
+        return app(UrlGenerator::class)->entryUrl($this, $this->resolvedLocale);
     }
 
     public function getLocaleAttribute(): ?string

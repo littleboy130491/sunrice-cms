@@ -174,8 +174,9 @@ it('resolves templates by priority with hooks', function () {
 // ---------------- entries component (T11.4) ----------------
 
 it('renders two independently paginated entries components on one page', function () {
-    $a = createCollection('news', ['route' => '/news/{slug}']);
-    $b = createCollection('events', ['route' => '/events/{slug}']);
+    // Manual order: entries in the order they were created.
+    $a = createCollection('news', ['route' => '/news/{slug}', 'sort' => 'manual']);
+    $b = createCollection('events', ['route' => '/events/{slug}', 'sort' => 'manual']);
     for ($i = 1; $i <= 3; $i++) {
         createEntry($a, title: "News {$i}");
         createEntry($b, title: "Event {$i}");

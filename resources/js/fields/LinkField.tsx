@@ -38,6 +38,7 @@ export default function LinkField({ field, value, onChange }: FieldProps) {
                         <Input placeholder="https://…" value={v.url ?? ''} onChange={(e) => set({ url: e.target.value })} />
                     ) : (
                         <EntryPicker
+                            linkable
                             collections={collections}
                             value={v.entry_id ? [{ id: v.entry_id, title: titles[v.entry_id] ?? `Entry #${v.entry_id}`, collection: '' }] : []}
                             onChange={(entries) => set({ entry_id: entries[0]?.id ?? null })}

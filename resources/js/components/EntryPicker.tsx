@@ -21,6 +21,8 @@ interface Props {
     value: PickedEntry[];
     onChange: (entries: PickedEntry[]) => void;
     placeholder?: string;
+    /** Only entries that have a page of their own (for links and menus). */
+    linkable?: boolean;
 }
 
 /**
@@ -47,7 +49,7 @@ export function useEntryTitles(ids: number[]): Record<number, string> {
     return titles;
 }
 
-export default function EntryPicker({ collections = [], multiple = false, value, onChange, placeholder = 'Pick entry…' }: Props) {
+export default function EntryPicker({ collections = [], multiple = false, value, onChange, placeholder = 'Pick entry…', linkable = false }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState('');
@@ -58,6 +60,7 @@ export default function EntryPicker({ collections = [], multiple = false, value,
         const t = setTimeout(async () => {
             const params = new URLSearchParams();
             collections.forEach((c) => params.append('collections[]', c));
+            if (linkable) params.set('linkable', '1');
             if (query) params.set('q', query);
             try {
                 const json = await fetchJson<{ data?: PickedEntry[] }>(`${adminUrl('api/entries', adminPath)}?${params}`);
@@ -68,7 +71,7 @@ export default function EntryPicker({ collections = [], multiple = false, value,
         }, 200);
         return () => clearTimeout(t);
         // Compare collections by value: callers often pass a new array each render.
-    }, [open, query, collections.join(','), adminPath]);
+    }, [open, query, collections.join(','), adminPath, linkable]);
 
     const toggle = (entry: PickedEntry) => {
         if (multiple) {

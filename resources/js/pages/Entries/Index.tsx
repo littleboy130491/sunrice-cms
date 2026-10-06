@@ -13,11 +13,13 @@ interface Props {
     columns: ColumnDef[];
     rows: Paginated<Row>;
     meta: { search: string | null; filters: Record<string, string>; sort: string | null };
-    can: { create: boolean; listing?: boolean };
+    can: { create: boolean; listing?: boolean; reorder?: boolean };
+    /** Ordered by hand, but a search, filter or column sort is hiding that order. */
+    reorderPaused?: boolean;
     visibleColumns?: string[];
 }
 
-export default function EntriesIndex({ collection, columns, rows, meta, can, visibleColumns }: Props) {
+export default function EntriesIndex({ collection, columns, rows, meta, can, visibleColumns, reorderPaused }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
 
     const filters: FilterDef[] = [
@@ -54,11 +56,19 @@ export default function EntriesIndex({ collection, columns, rows, meta, can, vis
                     )}
                 </div>
             </div>
+            {reorderPaused && (
+                <p className="text-sm text-muted-foreground">
+                    This collection is ordered by hand. Clear the search, filters and column sorting to drag entries into order.
+                </p>
+            )}
+            {can.reorder && <p className="text-sm text-muted-foreground">Drag entries to set the order they appear in on the site.</p>}
             <DataTable<Row>
                 columns={columns}
                 rows={rows}
                 meta={meta}
                 tableKey="entries"
+                reorderable={!!can.reorder}
+                reorderUrl={adminUrl(`collections/${collection.handle}/entries/reorder`, adminPath)}
                 visibleColumns={visibleColumns}
                 filters={filters}
                 exportUrl={adminUrl(`collections/${collection.handle}/entries/export`, adminPath)}
