@@ -1,8 +1,9 @@
-import { Link, usePage } from '@inertiajs/react';
+import * as React from 'react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { LayoutGrid } from 'lucide-react';
 import {
     Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarHeader, SidebarMenu,
-    SidebarMenuButton, SidebarMenuItem, SidebarRail,
+    SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar,
 } from '@/components/ui/sidebar';
 import AppLogo from '@/components/app/app-logo';
 import { NavUser } from '@/components/app/nav-user';
@@ -16,6 +17,14 @@ export function AppSidebar() {
     const match = useNavMatch();
     const dashboardUrl = adminUrl('', adminPath);
     const onDashboard = usePage().url.split('?')[0] === dashboardUrl;
+    const { isMobile, setOpenMobile } = useSidebar();
+
+    // On phones the sidebar is a flyout: close it as soon as a link in it
+    // (or anywhere) starts a visit, instead of leaving it over the new page.
+    React.useEffect(() => {
+        if (!isMobile) return;
+        return router.on('start', () => setOpenMobile(false));
+    }, [isMobile, setOpenMobile]);
 
     return (
         <Sidebar collapsible="icon" variant="inset">
