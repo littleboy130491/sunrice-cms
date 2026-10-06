@@ -80,7 +80,6 @@ class Entry extends Model
         return EntryFactory::new();
     }
 
-    /** @return BelongsTo<Collection, $this> */
     protected static function booted(): void
     {
         // New entries go to the end of their collection's manual order.
@@ -91,6 +90,7 @@ class Entry extends Model
         });
     }
 
+    /** @return BelongsTo<Collection, $this> */
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);
