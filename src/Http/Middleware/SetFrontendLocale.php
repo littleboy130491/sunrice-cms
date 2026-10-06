@@ -13,7 +13,9 @@ use Symfony\Component\HttpFoundation\Response;
  * Detects the frontend locale from the first path segment. A non-main
  * available locale prefix selects that locale and is stripped for
  * route matching (exposed as the `sunrice.path` request attribute);
- * anything else selects the main locale.
+ * anything else selects the main locale. A main-locale prefix (e.g. a
+ * link from before the main language changed) redirects to the
+ * unprefixed URL.
  */
 class SetFrontendLocale
 {
@@ -24,6 +26,13 @@ class SetFrontendLocale
 
         $locale = Locales::main();
         $stripped = $path;
+
+        if ($segment !== '' && Locales::isMain($segment) && $request->isMethod('GET')) {
+            $rest = trim(substr($path, strlen($segment)), '/');
+            $query = $request->getQueryString();
+
+            return redirect('/'.$rest.($query ? '?'.$query : ''), 301);
+        }
 
         if ($segment !== '' && ! Locales::isMain($segment) && Locales::isAvailable($segment)) {
             $locale = $segment;

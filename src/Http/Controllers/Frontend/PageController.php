@@ -81,7 +81,7 @@ class PageController extends Controller
             ->first();
 
         if ($translation === null) {
-            return $this->redirectOr404($path, $locale);
+            return $this->otherLanguageEntry($match, $locale) ?? $this->redirectOr404($path, $locale);
         }
 
         $entry = $translation->entry;
@@ -127,7 +127,7 @@ class PageController extends Controller
             ->first();
 
         if ($translation === null) {
-            return $this->redirectOr404($path, $locale);
+            return $this->otherLanguageTerm($match, $locale) ?? $this->redirectOr404($path, $locale);
         }
 
         $term = $translation->term;
@@ -158,10 +158,54 @@ class PageController extends Controller
         ]);
     }
 
+    /**
+     * An unprefixed URL carrying another language's slug, e.g. a link
+     * from before the main language changed: redirect to that page.
+     */
+    protected function otherLanguageEntry(RouteMatch $match, string $locale): ?RedirectResponse
+    {
+        if (! Locales::isMain($locale)) {
+            return null;
+        }
+
+        $translation = EntryTranslation::query()
+            ->where('collection_id', $match->collection->id)
+            ->where('slug', $match->slug)
+            ->where('locale', '!=', $locale)
+            ->where('is_ready', true)
+            ->whereIn('locale', Locales::available())
+            ->whereHas('entry', fn ($q) => $q->published())
+            ->first();
+
+        return $translation === null
+            ? null
+            : redirect(app(UrlGenerator::class)->entry($translation->entry, $translation->locale), 301);
+    }
+
+    protected function otherLanguageTerm(RouteMatch $match, string $locale): ?RedirectResponse
+    {
+        if (! Locales::isMain($locale)) {
+            return null;
+        }
+
+        $translation = TermTranslation::query()
+            ->where('taxonomy_id', $match->taxonomy->id)
+            ->where('slug', $match->slug)
+            ->where('locale', '!=', $locale)
+            ->whereIn('locale', Locales::available())
+            ->whereHas('term', fn ($q) => $q->whereNull('deleted_at'))
+            ->first();
+
+        return $translation === null
+            ? null
+            : redirect(app(UrlGenerator::class)->term($translation->term, $translation->locale, $match->collection), 301);
+    }
+
     protected function redirectOr404(string $path, string $locale): Response|RedirectResponse
     {
+        // Recorded paths are full URLs, language prefix included.
         $redirect = Redirect::query()
-            ->where('old_path', '/'.$path)
+            ->where('old_path', Locales::prefix($locale).'/'.$path)
             ->where('locale', $locale)
             ->first();
 

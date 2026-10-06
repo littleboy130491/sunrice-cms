@@ -173,7 +173,7 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                     />
                     <Button type="button" variant="outline" size="sm" onClick={addLocale}><Plus /> Add language</Button>
                 </div>
-                {mainLocked && <p className="text-xs text-muted-foreground">The main language is fixed once content exists.</p>}
+                {mainLocked && <MainLanguageHelp example={locales.available.find((code) => code !== locales.main) ?? 'en'} />}
                 <InputError message={errors['locales.main'] ?? errors['locales.available'] ?? Object.entries(errors).find(([k]) => k.startsWith('locales.'))?.[1]} />
             </CollapsibleCard>
 
@@ -252,5 +252,44 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                 </Button>
             </div>
         </form>
+    );
+}
+
+/** Why the main language is locked, and how to change it from the command line. */
+function MainLanguageHelp({ example }: { example: string }) {
+    const command = `php artisan sunrice:switch-main-language ${example}`;
+
+    return (
+        <details className="group rounded-lg border border-border/80 bg-muted/30 text-[13px]">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-muted-foreground hover:text-foreground">
+                <span>The main language is locked because content exists. How do I change it?</span>
+                <span aria-hidden className="text-xs transition-transform group-open:rotate-90">›</span>
+            </summary>
+            <div className="grid gap-2 border-t border-border/70 px-3 py-3 leading-relaxed text-muted-foreground">
+                <p>
+                    Every entry keeps its full content in the main language, and only the main language has unprefixed URLs. Switching
+                    converts that content, so it is done on the server with an Artisan command instead of here:
+                </p>
+                <ol className="ml-4 grid list-decimal gap-1.5">
+                    <li>Back up your database.</li>
+                    <li>
+                        See what would change and what is missing:
+                        <code className="mt-1 block rounded-md bg-card px-2 py-1 font-mono text-xs text-foreground">{command} --dry-run</code>
+                    </li>
+                    <li>
+                        Translate the entries and terms it lists, or add <code className="font-mono text-xs text-foreground">--copy-missing</code> to give them a
+                        copy of the current text.
+                    </li>
+                    <li>
+                        Run the switch:
+                        <code className="mt-1 block rounded-md bg-card px-2 py-1 font-mono text-xs text-foreground">{command}</code>
+                    </li>
+                    <li>
+                        If you cache routes or config, refresh them: <code className="font-mono text-xs text-foreground">php artisan optimize</code>.
+                    </li>
+                </ol>
+                <p>Old addresses keep working: they redirect (301) to each page's new URL.</p>
+            </div>
+        </details>
     );
 }

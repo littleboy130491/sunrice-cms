@@ -85,3 +85,40 @@ Each translation has `is_ready` (Draft/Ready). Ready translations are
 publishable; publish copies the `draft` payload to the live columns and
 records a `Revision`. `sunrice.revisions.keep` caps revisions per
 translation.
+
+## Changing the main language
+
+The Settings page locks the main language once content exists: the main
+language holds each entry's full field data and the unprefixed URLs, so
+switching needs a conversion. Run it on the server:
+
+```bash
+# 1. Back up the database, then see what would change and what's missing
+php artisan sunrice:switch-main-language en --dry-run
+
+# 2. Translate what it lists, or copy the current text into those items
+php artisan sunrice:switch-main-language en --copy-missing
+
+# 3. Or, with everything translated
+php artisan sunrice:switch-main-language en
+```
+
+What it does (in one transaction):
+
+- **Entries:** the new main language gets the full data (its translation
+  laid over the old main data); the old main keeps only its translated
+  text. Drafts and revisions are converted the same way, and both
+  languages stay published. Entries of non-translatable collections are
+  relabeled to the new language.
+- **Terms, globals:** stored whole per language; missing new-main copies
+  are filled from the old main language (terms need `--copy-missing`).
+- **Listing pages, collection/taxonomy titles, menu labels:** swapped so
+  every language shows what it showed before.
+- **URLs:** new-main pages become unprefixed and `/{new}/…` redirects to
+  them (301); old-main pages move to `/{old}/…`, and their old
+  unprefixed URLs redirect there. Recorded slug-change redirects move
+  with them.
+
+Options: `--dry-run` (report only), `--copy-missing`, `--force` (no
+confirmation). If routes or config are cached, run `php artisan optimize`
+afterwards.
