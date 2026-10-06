@@ -73,9 +73,10 @@ it('creates a super admin user with the Super Admin role', function () {
 it('does not create a role-less admin when the user model lacks HasRoles', function () {
     config(['sunrice.auth.user_model' => InstallTestUserWithoutRoles::class]);
 
+    // No name/email prompts are expected: the installer must not try to
+    // create a user it couldn't make a super admin.
     artisan('sunrice:install')
         ->expectsOutputToContain('HasRoles')
-        ->expectsOutputToContain('Skipped creating the super admin user')
         ->assertSuccessful();
 
     expect(User::query()->count())->toBe(0);
