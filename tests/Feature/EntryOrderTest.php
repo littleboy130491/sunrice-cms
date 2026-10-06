@@ -7,6 +7,7 @@ use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Menu;
 use Sunrice\Models\MenuItem;
+use Sunrice\Models\Revision;
 use Sunrice\Query\EntryQuery;
 use Sunrice\View\Components\Entries;
 
@@ -88,4 +89,40 @@ it('gives entries no page when the collection has no single pages', function () 
 
     $this->getJson('/cms/api/entries?linkable=1')->assertJsonCount(0, 'data');
     $this->getJson('/cms/api/entries')->assertJsonCount(3, 'data');
+});
+
+it('restores a revision into the draft and can undo it', function () {
+    $entry = $this->a;
+    $t = $entry->mainTranslation();
+    $this->post("/cms/entries/{$entry->id}/publish", ['locale' => 'id'])->assertSessionHasNoErrors();
+    $revision = Revision::query()->where('entry_translation_id', $t->id)->latest('id')->firstOrFail();
+
+    $this->put("/cms/entries/{$entry->id}", ['locale' => 'id', 'title' => 'Ana (draft)', 'slug' => 'ana', 'data' => []])->assertSessionHasNoErrors();
+    expect($t->fresh()->draft['title'])->toBe('Ana (draft)');
+
+    post("/cms/revisions/{$revision->id}/restore")->assertSessionHas('success');
+    expect($t->fresh()->draft['title'])->toBe('Ana');
+    get("/cms/entries/{$entry->id}")->assertInertia(fn (AssertableInertia $page) => $page
+        ->where('entry.translations.id.can_undo_restore', true)
+        ->where('entry.translations.id.revisions.0.created_at_iso', $revision->created_at->toIso8601String()));
+
+    post("/cms/entry-translations/{$t->id}/undo-restore")->assertSessionHas('success');
+    expect($t->fresh()->draft['title'])->toBe('Ana (draft)');
+    post("/cms/entry-translations/{$t->id}/undo-restore")->assertSessionHas('error');
+});
+
+it('changes the publish date of a published entry without publishing the draft', function () {
+    $entry = $this->a;
+    $this->put("/cms/entries/{$entry->id}", ['locale' => 'id', 'title' => 'Unpublished edit', 'slug' => 'ana', 'data' => []]);
+
+    $this->put("/cms/entries/{$entry->id}/publish-date", ['published_at' => now()->addDays(2)->toIso8601String()])
+        ->assertSessionHas('success', 'Entry scheduled.');
+    $fresh = $entry->fresh();
+    expect($fresh->published_at->isFuture())->toBeTrue()
+        ->and($fresh->mainTranslation()->title)->toBe('Ana')
+        ->and(Entry::query()->scheduled()->whereKey($entry->id)->exists())->toBeTrue();
+
+    $this->post("/cms/entries/{$entry->id}/unpublish");
+    $this->put("/cms/entries/{$entry->id}/publish-date", ['published_at' => now()->toIso8601String()])
+        ->assertSessionHas('error');
 });

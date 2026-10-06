@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -262,6 +263,26 @@ class EntriesController extends Controller
         return back()->with('success', 'Published.');
     }
 
+    /**
+     * Change only the publish date of a published entry (reschedule or
+     * backdate) without publishing the current draft.
+     */
+    public function publishDate(Request $request, Entry $entry): RedirectResponse
+    {
+        $this->authorize('publish', $entry);
+        $validated = $request->validate(['published_at' => ['required', 'date']]);
+
+        if ($entry->status !== 'published') {
+            return back()->with('error', 'Publish the entry first, then change its date.');
+        }
+
+        $entry->published_at = Carbon::parse($validated['published_at']);
+        $entry->save();
+        ContentChanged::dispatch('entry_saved');
+
+        return back()->with('success', $entry->published_at->isFuture() ? 'Entry scheduled.' : 'Publish date changed.');
+    }
+
     public function unpublish(Entry $entry, UnpublishEntry $unpublish): RedirectResponse
     {
         $this->authorize('publish', $entry);
@@ -305,9 +326,35 @@ class EntriesController extends Controller
     {
         $translation = $revision->translation;
         $this->authorize(Locales::isMain($translation->locale) ? 'update' : 'translate', $translation->entry);
+
+        // Keep the draft being replaced so the restore can be undone.
+        session()->put(static::undoKey($translation), ['draft' => $translation->draft]);
         $action->handle($revision);
 
         return back()->with('success', 'Revision restored to draft.');
+    }
+
+    /**
+     * Put back the draft a revision restore replaced (this session only).
+     */
+    public function undoRestore(EntryTranslation $translation): RedirectResponse
+    {
+        $this->authorize(Locales::isMain($translation->locale) ? 'update' : 'translate', $translation->entry);
+
+        $key = static::undoKey($translation);
+        if (! session()->has($key)) {
+            return back()->with('error', 'There is no restore to undo.');
+        }
+
+        $translation->draft = session()->pull($key)['draft'] ?? null;
+        $translation->save();
+
+        return back()->with('success', 'Restore undone: your previous draft is back.');
+    }
+
+    protected static function undoKey(EntryTranslation $translation): string
+    {
+        return "sunrice.undo_restore.{$translation->id}";
     }
 
     public function reorder(Request $request, Collection $collection, Reorder $reorder): RedirectResponse
@@ -471,9 +518,11 @@ class EntriesController extends Controller
                     'has_draft' => $t->draft !== null,
                     'draft_title' => $t->draft['title'] ?? $t->title,
                     'draft_slug' => $t->draft['slug'] ?? $t->slug,
+                    'can_undo_restore' => session()->has(static::undoKey($t)),
                     'revisions' => $t->revisions->map(fn (Revision $r) => [
                         'id' => $r->id,
                         'created_at' => $r->created_at?->diffForHumans(),
+                        'created_at_iso' => $r->created_at?->toIso8601String(),
                         'user_id' => $r->user_id,
                     ])->values(),
                 ];
