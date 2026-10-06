@@ -9,7 +9,7 @@ receives the component (`$component->entries`).
 <x-sunrice::entries collection="articles" :paginate="true" :per-page="10">
     @foreach ($component->entries as $entry)
         <article>
-            <h2><a href="{{ $entry->url() }}">{{ $entry->title }}</a></h2>
+            <h2><a href="{{ $entry->url }}">{{ $entry->title }}</a></h2>
         </article>
     @endforeach
     {{ $component->entries->links() }}

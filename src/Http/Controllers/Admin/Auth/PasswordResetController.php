@@ -14,6 +14,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Sunrice\Notifications\ResetAdminPassword;
 
 /**
  * Forgot/reset password via Laravel's Password broker for the
@@ -30,7 +31,10 @@ class PasswordResetController extends Controller
     {
         $request->validate(['email' => ['required', 'email']]);
 
-        $status = Password::broker()->sendResetLink($request->only('email'));
+        $status = Password::broker()->sendResetLink(
+            $request->only('email'),
+            fn ($user, string $token) => $user->notify(new ResetAdminPassword($token)),
+        );
 
         if ($status !== Password::RESET_LINK_SENT) {
             throw ValidationException::withMessages(['email' => [__($status)]]);

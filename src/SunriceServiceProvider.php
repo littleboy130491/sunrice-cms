@@ -166,6 +166,10 @@ class SunriceServiceProvider extends PackageServiceProvider
         if (is_dir(__DIR__.'/../dist')) {
             $this->publishes([__DIR__.'/../dist' => public_path('vendor/sunrice')], 'sunrice-assets');
         }
+
+        // Starter front-end templates: `php artisan vendor:publish --tag=sunrice-templates`
+        // copies them to resources/views/sunrice, where the template resolver finds them.
+        $this->publishes([__DIR__.'/../stubs/templates' => resource_path('views/sunrice')], 'sunrice-templates');
     }
 
     /**

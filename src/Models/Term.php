@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Sunrice\Database\Factories\TermFactory;
+use Sunrice\Fields\HydrationContext;
 use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Support\Locales;
 
@@ -135,6 +136,26 @@ class Term extends Model
     public function getUrlAttribute(): ?string
     {
         return app(UrlGenerator::class)->term($this, $this->resolvedLocale);
+    }
+
+    /**
+     * Hydrated value of a field from the taxonomy's blueprint, in the
+     * resolved language (e.g. a category description or image).
+     */
+    public function get(string $handle): mixed
+    {
+        $data = ($this->resolved ?? $this->mainTranslation())?->data ?? [];
+        $blueprint = $this->taxonomy?->blueprint;
+
+        if ($blueprint === null) {
+            return $data[$handle] ?? null;
+        }
+
+        return $blueprint->schema()->hydrateField(
+            $handle,
+            $data[$handle] ?? null,
+            new HydrationContext($this->resolvedLocale ?? Locales::main()),
+        );
     }
 
     /**

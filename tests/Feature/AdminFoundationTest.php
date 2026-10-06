@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Role;
@@ -12,6 +13,7 @@ use Sunrice\Admin\Table\Column;
 use Sunrice\Admin\Table\TableQuery;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Setting;
+use Sunrice\Notifications\ResetAdminPassword;
 use Sunrice\Permissions\SyncPermissions;
 use Workbench\App\Models\User;
 
@@ -79,6 +81,20 @@ it('rate limits repeated failed logins', function () {
 
     $this->post('/cms/login', ['email' => 'a@x.com', 'password' => 'right'])
         ->assertSessionHasErrors('email');
+});
+
+it('emails a password reset link that points at the CMS reset page', function () {
+    Notification::fake();
+    $user = User::query()->create(['name' => 'Ed', 'email' => 'ed@example.com', 'password' => Hash::make('secret-pw-123')]);
+
+    $this->post('/cms/forgot-password', ['email' => 'ed@example.com'])->assertSessionHasNoErrors();
+
+    Notification::assertSentTo($user, ResetAdminPassword::class, function (ResetAdminPassword $notification) use ($user) {
+        $url = $notification->toMail($user)->actionUrl;
+
+        return str_contains($url, '/cms/reset-password/'.$notification->token)
+            && str_contains($url, 'email=ed%40example.com');
+    });
 });
 
 it('does not affect host app routes outside the admin path', function () {

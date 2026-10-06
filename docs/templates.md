@@ -1,7 +1,69 @@
 # Templates
 
+## Starter templates
+
+Publish a working set of templates into your app and edit them freely:
+
+```bash
+php artisan vendor:publish --tag=sunrice-templates
+```
+
+This copies them to `resources/views/sunrice/`, where the resolver below
+picks them up:
+
+| File | Used for | Shows how to |
+| --- | --- | --- |
+| `layouts/app.blade.php` | every page | `<x-sunrice::seo>`, shared layout |
+| `partials/header.blade.php` | header | globals (`sunrice_global('site')`), menus (`sunrice_menu('main')`), language switcher (`sunrice_locale_urls()`) |
+| `partials/footer.blade.php` | footer | template-part globals, rich text, repeaters |
+| `partials/menu.blade.php` | menus | nested menu items |
+| `partials/card.blade.php` | listings | entry teaser (image, date, excerpt) |
+| `show.blade.php` | any entry | fields via `$entry->get()`, assets, flexible-content blocks |
+| `index.blade.php` | collection archives | paginated `$entries`, archive fields |
+| `articles/show.blade.php` | the `articles` collection only | dates, author, terms, relationship fields, `<x-sunrice::entries>` |
+| `taxonomies/show.blade.php` | term archives | `$term`, child terms, term fields via `$term->get()` |
+| `blocks/{hero,text,gallery,form}.blade.php` | flexible-content blocks | one file per fieldset handle |
+| `blocks/default.blade.php` | unknown block types | debug hint when `APP_DEBUG` is on |
+
+Every template works on a fresh install: missing globals, menus and
+fields simply render nothing. Each file starts with a comment listing the
+field handles it expects.
+
+## Reading data
+
+| Field type | `$entry->get('handle')` returns |
+| --- | --- |
+| text, textarea, select | string (multi-select: array) |
+| number / toggle | number / bool |
+| rich text | sanitized HTML — print with `{!! !!}` |
+| date | `Carbon` |
+| asset | `Asset` (`->url()`, `->url('thumbnail'\|'medium'\|'large')`, `->alt`); multiple → collection |
+| entries | collection of `Entry`, resolved for the active language |
+| terms | collection of `Term` (`->name`, `->url`) |
+| link | `['url' => ..., 'label' => ..., 'new_tab' => bool]` |
+| group | array of child values |
+| repeater | collection of row arrays |
+| flexible | collection of `Block` (`->type`, `->id`, values as properties) |
+
+Entries also expose `$entry->title`, `->slug`, `->url`, `->published_at`,
+`->author`, `->terms` and `->isFallback` (true when a language shows the
+main-language content because its translation isn't Ready). Terms expose
+`->name`, `->slug`, `->url` and `->get('handle')` for taxonomy-blueprint
+fields. Globals: `sunrice_global('handle')->field` or
+`->get('field', 'default')`.
+
+Render flexible content with one partial per block type:
+
+```blade
+@foreach ($entry->get('sections') ?? [] as $block)
+    @includeFirst(['sunrice.blocks.'.$block->type, 'sunrice.blocks.default'], ['block' => $block])
+@endforeach
+```
+
+## Resolution order
+
 Templates are plain Blade views. Resolution order for an entry page
-(`pageType = 'single'`):
+(`pageType = 'entry'`):
 
 1. The entry's own `template` column.
 2. `collection.settings.template`.
@@ -10,12 +72,14 @@ Templates are plain Blade views. Resolution order for an entry page
 5. `sunrice::defaults.show` bundled in the package.
 
 Archives use `index` instead of `show` (`sunrice.{collection}.index` →
-`sunrice.index` → `sunrice::defaults.index`); term archives use `term`
-(`sunrice.{taxonomy}.term` → `sunrice.term` → `sunrice::defaults.term`).
+`sunrice.index` → `sunrice::defaults.index`); term archives use
+`sunrice.taxonomies.{taxonomy}.show` → `sunrice.taxonomies.show` →
+`sunrice::defaults.term`.
 
-Every view receives a `TemplateContext`-derived payload: `entry`,
-`resolved` (the hydrated translation), `collection`, `taxonomy`,
-`term`, `entries` (archives), `locale`, `pageType`.
+Every view receives `locale` and `pageType` (`entry`, `archive` or
+`term`) plus: `entry` and `collection` on entry pages; `entries` (a
+paginator) and `collection` on archives; `term`, `taxonomy` and `entries`
+on term archives. Entries are already resolved for the active language.
 
 ## Template hooks
 

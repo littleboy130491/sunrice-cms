@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Starter templates** — `php artisan vendor:publish --tag=sunrice-templates`
+  publishes a layout, header/footer, single, archive, term archive, an
+  articles override and flexible-content block templates that show how to
+  read entries, fields, assets, globals, menus, terms and forms.
+- `Term::get()` reads taxonomy-blueprint fields, hydrated like entry fields.
+- Admin password reset emails now link to the CMS reset page instead of the
+  host app's `password.reset` route.
+- The package's fallback `show` view no longer prints plain-text fields
+  unescaped.
 - **Admin UI refresh** — components regenerated with the official shadcn/ui
   CLI (new-york, Tailwind 4) and the shell rebuilt on the layout patterns of
   Laravel's React starter kit: collapsible inset sidebar with icons and a
