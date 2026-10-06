@@ -19,7 +19,7 @@ The main language can only be changed before any content exists.
 | `sunrice.admin.domain` | `null` | Optional domain restriction for admin routes. |
 | `sunrice.admin.middleware` | `['web']` | Middleware stack for admin routes. |
 | `sunrice.auth.guard` | `web` | Guard used for admin login and permissions. |
-| `sunrice.auth.user_model` | `App\Models\User` | Eloquent user model (must use `HasRoles`). |
+| `sunrice.auth.user_model` | `App\Models\User` (`SUNRICE_USER_MODEL`) | Eloquent user model (must use `HasRoles`). |
 | `sunrice.locales.main` | `id` | Main locale; unprefixed URLs resolve in it. |
 | `sunrice.locales.available` | `['id']` | All locales. |
 | `sunrice.locales.names` | `[]` | Display names keyed by locale. |
