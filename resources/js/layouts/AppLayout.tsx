@@ -1,18 +1,24 @@
 import * as React from 'react';
-import { Link, usePage, router } from '@inertiajs/react';
-import { LogOut } from 'lucide-react';
-import type { SharedProps, NavGroup } from '@/types';
-import { adminUrl } from '@/lib/route';
-import {
-    Sidebar, SidebarProvider, SidebarTrigger, SidebarHeader, SidebarContent, SidebarFooter,
-    SidebarGroup, SidebarGroupLabel, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarInset,
-} from '@/components/ui/sidebar';
-import { Toaster } from '@/components/ui/sonner';
+import { Head, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { AppSidebar } from '@/components/app/app-sidebar';
+import { AppHeader } from '@/components/app/app-header';
+import { useNavMatch } from '@/components/app/use-nav-match';
+import { BreadcrumbProvider } from '@/components/app/breadcrumbs';
+import type { SharedProps } from '@/types';
+
+/** Read the sidebar's persisted open/collapsed state (shadcn stores it in a cookie). */
+function sidebarDefaultOpen(): boolean {
+    if (typeof document === 'undefined') return true;
+    return !document.cookie.split('; ').includes('sidebar_state=false');
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-    const { navigation, auth, flash, adminPath } = usePage<SharedProps>().props;
-    const current = usePage().url;
+    const { flash } = usePage<SharedProps>().props;
+    const match = useNavMatch();
 
     React.useEffect(() => {
         if (flash?.success) toast.success(flash.success);
@@ -20,54 +26,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }, [flash?.success, flash?.error]);
 
     return (
-        <SidebarProvider>
-            <div className="flex min-h-screen w-full bg-background text-foreground">
-                <Sidebar>
-                    <SidebarHeader>
-                        <Link href={adminUrl('', adminPath)} className="text-lg font-semibold tracking-tight">
-                            Sunrice
-                        </Link>
-                    </SidebarHeader>
-                    <SidebarContent>
-                        {(navigation ?? []).map((group: NavGroup) => (
-                            <SidebarGroup key={group.label}>
-                                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-                                <SidebarMenu>
-                                    {group.items.map((item) => (
-                                        <SidebarMenuItem key={item.href}>
-                                            <SidebarMenuButton
-                                                href={adminUrl(item.href, adminPath)}
-                                                active={current.startsWith(adminUrl(item.href, adminPath))}
-                                            >
-                                                {item.label}
-                                            </SidebarMenuButton>
-                                        </SidebarMenuItem>
-                                    ))}
-                                </SidebarMenu>
-                            </SidebarGroup>
-                        ))}
-                    </SidebarContent>
-                    <SidebarFooter>
-                        <div className="flex items-center justify-between gap-2 px-2 text-sm">
-                            <span className="truncate text-muted-foreground">{auth.user?.name ?? auth.user?.email}</span>
-                            <button
-                                className="text-muted-foreground hover:text-foreground"
-                                title="Log out"
-                                onClick={() => router.post(adminUrl('logout', adminPath))}
-                            >
-                                <LogOut className="h-4 w-4" />
-                            </button>
-                        </div>
-                    </SidebarFooter>
-                </Sidebar>
-                <SidebarInset>
-                    <header className="flex h-12 items-center gap-2 border-b px-4">
-                        <SidebarTrigger />
-                    </header>
-                    <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <TooltipProvider delayDuration={0}>
+            <BreadcrumbProvider>
+            <SidebarProvider defaultOpen={sidebarDefaultOpen()}>
+                <Head title={match?.item.label ?? 'Dashboard'} />
+                <AppSidebar />
+                <SidebarInset className="overflow-x-hidden">
+                    <AppHeader />
+                    <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col p-4 md:p-6">{children}</main>
                 </SidebarInset>
-            </div>
-            <Toaster position="top-right" />
-        </SidebarProvider>
+                <Toaster position="top-right" />
+            </SidebarProvider>
+            </BreadcrumbProvider>
+        </TooltipProvider>
     );
 }

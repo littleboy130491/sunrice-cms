@@ -24,7 +24,7 @@ export default function CollectionsIndex({ collections }: { collections: Collect
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Collections</h1>
+                <h1 className="text-xl font-semibold tracking-tight">Collections</h1>
                 {canManage && (
                     <Button asChild>
                         <Link href={adminUrl('structure/collections/create', adminPath)}>

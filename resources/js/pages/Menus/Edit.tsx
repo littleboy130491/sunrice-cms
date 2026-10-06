@@ -62,7 +62,7 @@ export default function MenuEdit({ menu, items }: Props) {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">{menu.title} <code className="text-sm text-muted-foreground">{menu.handle}</code></h1>
+                <h1 className="text-xl font-semibold tracking-tight">{menu.title} <code className="text-sm text-muted-foreground">{menu.handle}</code></h1>
                 <Button onClick={() => openCreate(null)}><Plus className="mr-1 h-4 w-4" /> Add item</Button>
             </div>
 

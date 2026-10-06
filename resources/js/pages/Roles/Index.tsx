@@ -23,7 +23,7 @@ export default function RolesIndex({ roles }: { roles: Row[] }) {
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Roles</h1>
+                <h1 className="text-xl font-semibold tracking-tight">Roles</h1>
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild><Button><Plus className="mr-1 h-4 w-4" /> New role</Button></DialogTrigger>
                     <DialogContent>

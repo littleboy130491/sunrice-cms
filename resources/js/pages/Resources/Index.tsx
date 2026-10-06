@@ -19,7 +19,7 @@ export default function ResourceIndex({ resource, columns, rows, meta, can }: Pr
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">{resource.label}</h1>
+                <h1 className="text-xl font-semibold tracking-tight">{resource.label}</h1>
                 {can.create && (
                     <Button asChild>
                         <Link href={adminUrl(`resources/${resource.key}/create`, adminPath)}>

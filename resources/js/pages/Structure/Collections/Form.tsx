@@ -50,7 +50,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
 
     return (
         <form onSubmit={submit} className="flex max-w-2xl flex-col gap-6">
-            <h1 className="text-2xl font-semibold">{collection ? `Edit ${collection.title}` : 'New collection'}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{collection ? `Edit ${collection.title}` : 'New collection'}</h1>
             <Card>
                 <CardHeader><CardTitle>Basics</CardTitle></CardHeader>
                 <CardContent className="flex flex-col gap-4">
@@ -98,7 +98,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                 <CardHeader><CardTitle>Settings</CardTitle></CardHeader>
                 <CardContent className="flex flex-col gap-3">
                     {(['dated', 'translatable', 'sluggable', 'archivable'] as const).map((key) => (
-                        <label key={key} className="flex items-center gap-2 text-sm">
+                        <label key={key} className="flex items-center gap-3 text-sm capitalize">
                             <Checkbox
                                 checked={!!form.data.settings[key]}
                                 onCheckedChange={(c) => form.setData('settings', { ...form.data.settings, [key]: !!c })}

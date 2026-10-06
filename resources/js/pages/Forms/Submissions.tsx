@@ -29,7 +29,7 @@ export default function Submissions({ form, submissions, filters }: Props) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold">Submissions: {form.title}</h1>
+                <h1 className="text-xl font-semibold tracking-tight">Submissions: {form.title}</h1>
                 {can(`sunrice.forms.${form.id}.export-submissions`) && (
                     <Button variant="outline" asChild>
                         <a href={adminUrl(`forms/${form.id}/submissions/export`, adminPath)}>Export CSV</a>

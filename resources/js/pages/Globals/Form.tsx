@@ -53,11 +53,11 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
 
     return (
         <div className="flex max-w-3xl flex-col gap-4">
-            <h1 className="text-2xl font-semibold">{isNew ? 'New global' : `Edit ${globalSet.title}`}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{isNew ? 'New global' : `Edit ${globalSet.title}`}</h1>
 
             {isNew ? (
                 <Card>
-                    <CardContent className="flex flex-col gap-4 pt-6">
+                    <CardContent className="flex flex-col gap-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="grid gap-2">
                                 <Label>Title</Label>
@@ -108,7 +108,7 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
                         </Tabs>
                     )}
                     <Card>
-                        <CardContent className="pt-6">
+                        <CardContent>
                             <FieldRenderer fields={fields} values={data} onChange={setData} />
                         </CardContent>
                     </Card>

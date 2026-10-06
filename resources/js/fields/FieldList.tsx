@@ -30,7 +30,7 @@ export default function FieldList({ fields, values, errors = {}, pathPrefix = 'd
                 const error = errors[path] ?? errors[`${pathPrefix}s.${field.handle}`];
 
                 return (
-                    <div key={field.handle} className="grid gap-1.5">
+                    <div key={field.handle} className="grid gap-2">
                         {field.type !== 'toggle' && field.type !== 'fieldset' && (
                             <Label>
                                 {field.label || field.handle}

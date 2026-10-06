@@ -17,7 +17,9 @@ use Sunrice\Sunrice;
 class Navigation
 {
     /**
-     * @return array<int, array{label: string, items: array<int, array{label: string, href: string}>}>
+     * Each item carries a lucide icon name (kebab-case) for the sidebar.
+     *
+     * @return array<int, array{label: string, items: array<int, array{label: string, href: string, icon: string}>}>
      */
     public function for(mixed $user): array
     {
@@ -26,7 +28,11 @@ class Navigation
         $content = [];
         foreach (Collection::query()->orderBy('sort_order')->orderBy('title')->get() as $collection) {
             if ($user->can('viewAny', [Entry::class, $collection->id])) {
-                $content[] = ['label' => $collection->title, 'href' => "collections/{$collection->handle}/entries"];
+                $content[] = [
+                    'label' => $collection->title,
+                    'href' => "collections/{$collection->handle}/entries",
+                    'icon' => (string) ($collection->setting('icon') ?: 'file-text'),
+                ];
             }
         }
         if ($content !== []) {
@@ -36,7 +42,7 @@ class Navigation
         $taxonomies = [];
         foreach (Taxonomy::query()->orderBy('handle')->get() as $taxonomy) {
             if ($user->can('view', $taxonomy->id)) {
-                $taxonomies[] = ['label' => $taxonomy->title, 'href' => "taxonomies/{$taxonomy->handle}"];
+                $taxonomies[] = ['label' => $taxonomy->title, 'href' => "taxonomies/{$taxonomy->handle}", 'icon' => 'tags'];
             }
         }
         if ($taxonomies !== []) {
@@ -45,15 +51,15 @@ class Navigation
 
         $structure = [];
         if ($user->can('sunrice.manage-navigation')) {
-            $structure[] = ['label' => 'Menus', 'href' => 'menus'];
+            $structure[] = ['label' => 'Menus', 'href' => 'menus', 'icon' => 'list-tree'];
         }
         if ($user->can('sunrice.manage-globals')) {
-            $structure[] = ['label' => 'Globals', 'href' => 'globals'];
+            $structure[] = ['label' => 'Globals', 'href' => 'globals', 'icon' => 'globe'];
         }
         if ($user->can('viewAny', Form::class) || $user->can('sunrice.manage-structure')) {
             $forms = Form::query()->orderBy('handle')->get()
                 ->filter(fn (Form $form) => $user->can('view', $form))
-                ->map(fn (Form $form) => ['label' => $form->title, 'href' => "forms/{$form->handle}"])
+                ->map(fn (Form $form) => ['label' => $form->title, 'href' => "forms/{$form->handle}", 'icon' => 'inbox'])
                 ->values()->all();
             if ($forms !== []) {
                 $groups[] = ['label' => 'Forms', 'items' => $forms];
@@ -64,27 +70,31 @@ class Navigation
             $groups[] = ['label' => 'Structure', 'items' => $structure];
         }
 
+        $resources = [];
         foreach (app(Sunrice::class)->resources() as $key => $resource) {
             if ($user->can("sunrice.resources.{$key}.view")) {
-                $groups[] = ['label' => 'Resources', 'items' => [['label' => $resource::label(), 'href' => "resources/{$key}"]]];
+                $resources[] = ['label' => $resource::label(), 'href' => "resources/{$key}", 'icon' => 'database'];
             }
+        }
+        if ($resources !== []) {
+            $groups[] = ['label' => 'Resources', 'items' => $resources];
         }
 
         $admin = [];
         if ($user->can('sunrice.assets.view')) {
-            $admin[] = ['label' => 'Assets', 'href' => 'assets'];
+            $admin[] = ['label' => 'Assets', 'href' => 'assets', 'icon' => 'image'];
         }
         if ($user->can('sunrice.manage-structure')) {
-            $admin[] = ['label' => 'Collections', 'href' => 'structure/collections'];
-            $admin[] = ['label' => 'Blueprints', 'href' => 'structure/blueprints'];
-            $admin[] = ['label' => 'Fieldsets', 'href' => 'structure/fieldsets'];
-            $admin[] = ['label' => 'Taxonomies', 'href' => 'structure/taxonomies'];
+            $admin[] = ['label' => 'Collections', 'href' => 'structure/collections', 'icon' => 'library'];
+            $admin[] = ['label' => 'Blueprints', 'href' => 'structure/blueprints', 'icon' => 'layout-template'];
+            $admin[] = ['label' => 'Fieldsets', 'href' => 'structure/fieldsets', 'icon' => 'blocks'];
+            $admin[] = ['label' => 'Taxonomies', 'href' => 'structure/taxonomies', 'icon' => 'tags'];
         }
         if ($user->can('sunrice.manage-users')) {
-            $admin[] = ['label' => 'Users', 'href' => 'users'];
+            $admin[] = ['label' => 'Users', 'href' => 'users', 'icon' => 'users'];
         }
         if ($user->can('sunrice.manage-roles')) {
-            $admin[] = ['label' => 'Roles', 'href' => 'roles'];
+            $admin[] = ['label' => 'Roles', 'href' => 'roles', 'icon' => 'shield'];
         }
         if ($admin !== []) {
             $groups[] = ['label' => 'Manage', 'items' => $admin];

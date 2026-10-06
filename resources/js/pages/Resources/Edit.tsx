@@ -29,7 +29,7 @@ export default function ResourceEdit({ resource, fields, record }: Props) {
 
     return (
         <div className="mx-auto max-w-3xl space-y-6">
-            <h1 className="text-xl font-semibold">
+            <h1 className="text-xl font-semibold tracking-tight">
                 {isNew ? `New ${resource.singularLabel}` : `Edit ${resource.singularLabel}`}
             </h1>
             <Card>

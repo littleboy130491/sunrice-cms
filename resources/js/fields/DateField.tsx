@@ -25,7 +25,7 @@ export default function DateField({ field, value, onChange }: FieldProps) {
                         mode="single"
                         selected={date}
                         onSelect={(d) => onChange(d ? format(d, 'yyyy-MM-dd') : null)}
-                        initialFocus
+                        autoFocus
                     />
                 </PopoverContent>
             </Popover>

@@ -34,7 +34,7 @@ export default function FieldsetForm({ fieldset, fieldTypes, fieldsets }: Props)
 
     return (
         <form onSubmit={submit} className="flex max-w-3xl flex-col gap-6">
-            <h1 className="text-2xl font-semibold">{fieldset ? `Edit ${fieldset.title}` : 'New fieldset'}</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{fieldset ? `Edit ${fieldset.title}` : 'New fieldset'}</h1>
             <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
                     <Label htmlFor="title">Title</Label>

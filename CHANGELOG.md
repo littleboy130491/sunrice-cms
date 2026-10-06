@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- **Admin UI refresh** — components regenerated with the official shadcn/ui
+  CLI (new-york, Tailwind 4) and the shell rebuilt on the layout patterns of
+  Laravel's React starter kit: collapsible inset sidebar with icons and a
+  mobile drawer, user menu with light/dark/system appearance, breadcrumbs,
+  Instrument Sans, and a redesigned login, dashboard, data table and entry
+  editor.
+
 ## 1.0.0
 
 Initial release of Sunrice CMS — a Laravel package CMS with:

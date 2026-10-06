@@ -37,7 +37,7 @@ export default function EntriesIndex({ collection, columns, rows, meta, can }: P
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">{collection.title}</h1>
+                <h1 className="text-xl font-semibold tracking-tight">{collection.title}</h1>
                 {can.create && (
                     <Button asChild>
                         <Link href={adminUrl(`collections/${collection.handle}/entries/create`, adminPath)}>
@@ -63,7 +63,7 @@ export default function EntriesIndex({ collection, columns, rows, meta, can }: P
                 rowHref={(row) => adminUrl(`entries/${row.id}`, adminPath)}
                 renderCell={(row, column) => {
                     if (column.key === 'status') {
-                        return <Badge variant={row.status === 'published' ? 'success' : row.status === 'trashed' ? 'destructive' : 'secondary'}>{row.status}</Badge>;
+                        return <Badge className="capitalize" variant={row.status === 'published' ? 'success' : row.status === 'trashed' ? 'destructive' : 'secondary'}>{row.status}</Badge>;
                     }
                     return undefined;
                 }}

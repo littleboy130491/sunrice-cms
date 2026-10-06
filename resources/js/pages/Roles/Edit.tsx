@@ -34,7 +34,7 @@ export default function RoleEdit({ role, permissionGroups }: { role: { id: numbe
 
     return (
         <form onSubmit={submit} className="flex max-w-3xl flex-col gap-4">
-            <h1 className="text-2xl font-semibold">Edit role</h1>
+            <h1 className="text-xl font-semibold tracking-tight">Edit role</h1>
             <div className="grid max-w-sm gap-2">
                 <Label>Name</Label>
                 <Input value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} required />

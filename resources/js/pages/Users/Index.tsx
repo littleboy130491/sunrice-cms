@@ -45,7 +45,7 @@ export default function UsersIndex({ users, roles }: { users: UserRow[]; roles: 
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-semibold">Users</h1>
+                <h1 className="text-xl font-semibold tracking-tight">Users</h1>
                 <Button onClick={openCreate}><Plus className="mr-1 h-4 w-4" /> New user</Button>
             </div>
             <Table>

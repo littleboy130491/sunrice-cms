@@ -13,7 +13,7 @@ import {
     SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowDown, ArrowUp, ArrowUpDown, Download, GripVertical, Search, Settings2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Download, GripVertical, Search, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -57,6 +57,20 @@ interface Props<T extends { id: number | string }> {
     renderCell?: (row: T, column: ColumnDef) => React.ReactNode;
 }
 
+function PageButton({ url, label, children }: { url: string | null; label: string; children: React.ReactNode }) {
+    return url ? (
+        <Button variant="outline" size="icon" className="size-8" asChild>
+            <Link href={url} preserveScroll aria-label={label}>
+                {children}
+            </Link>
+        </Button>
+    ) : (
+        <Button variant="outline" size="icon" className="size-8" disabled aria-label={label}>
+            {children}
+        </Button>
+    );
+}
+
 function SortableRow({ id, children }: { id: number | string; children: React.ReactNode }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
     const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
@@ -64,7 +78,7 @@ function SortableRow({ id, children }: { id: number | string; children: React.Re
     return (
         <TableRow ref={setNodeRef} style={style}>
             <TableCell className="w-8 cursor-grab" {...attributes} {...listeners}>
-                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <GripVertical className="size-4 text-muted-foreground" />
             </TableCell>
             {children}
         </TableRow>
@@ -173,10 +187,10 @@ export function DataTable<T extends { id: number | string }>({
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2">
-                <div className="relative max-w-xs flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <div className="relative w-full max-w-xs">
+                    <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
                     <Input
-                        className="pl-8"
+                        className="h-8 pl-8"
                         placeholder={searchPlaceholder}
                         value={state.search}
                         onChange={(e) => update({ search: e.target.value }, true)}
@@ -188,7 +202,7 @@ export function DataTable<T extends { id: number | string }>({
                         value={state.filters[f.key] ?? ''}
                         onValueChange={(v) => update({ filters: { ...state.filters, [f.key]: v === '__all' ? '' : v } })}
                     >
-                        <SelectTrigger className="w-36">
+                        <SelectTrigger size="sm" className="w-36 border-dashed">
                             <SelectValue placeholder={f.label} />
                         </SelectTrigger>
                         <SelectContent>
@@ -213,14 +227,14 @@ export function DataTable<T extends { id: number | string }>({
                     {exportUrl && (
                         <Button variant="outline" size="sm" asChild>
                             <a href={exportHref() ?? '#'}>
-                                <Download className="mr-1 h-4 w-4" /> Export
+                                <Download /> Export
                             </a>
                         </Button>
                     )}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm">
-                                <Settings2 className="mr-1 h-4 w-4" /> Columns
+                                <Settings2 /> Columns
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -245,9 +259,10 @@ export function DataTable<T extends { id: number | string }>({
             </div>
 
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                <div className="overflow-hidden rounded-lg border">
                 <Table>
-                    <TableHeader>
-                        <TableRow>
+                    <TableHeader className="bg-muted/50">
+                        <TableRow className="hover:bg-transparent">
                             {reorderable && <TableHead className="w-8" />}
                             <TableHead className="w-8">
                                 <Checkbox
@@ -264,7 +279,11 @@ export function DataTable<T extends { id: number | string }>({
                             {visibleColumns.map((c) => (
                                 <TableHead key={c.key}>
                                     {c.sortable ? (
-                                        <button className="inline-flex items-center gap-1" onClick={() => toggleSort(c.key)}>
+                                        <button
+                                            type="button"
+                                            className="-ml-2 inline-flex h-8 items-center gap-1 rounded-md px-2 hover:bg-accent hover:text-accent-foreground"
+                                            onClick={() => toggleSort(c.key)}
+                                        >
                                             {c.label}
                                             {state.sort === c.key ? (
                                                 <ArrowUp className="h-3 w-3" />
@@ -297,7 +316,7 @@ export function DataTable<T extends { id: number | string }>({
                                         {visibleColumns.map((c) => (
                                             <TableCell key={c.key}>
                                                 {rowHref ? (
-                                                    <Link href={rowHref(row)} className="hover:underline">
+                                                    <Link href={rowHref(row)} className="font-medium underline-offset-4 hover:underline">
                                                         {cellValue(row, c)}
                                                     </Link>
                                                 ) : (
@@ -318,7 +337,7 @@ export function DataTable<T extends { id: number | string }>({
                             })}
                             {orderedData.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={visibleColumns.length + 2} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={visibleColumns.length + (reorderable ? 2 : 1)} className="h-24 text-center text-muted-foreground">
                                         No results.
                                     </TableCell>
                                 </TableRow>
@@ -326,29 +345,26 @@ export function DataTable<T extends { id: number | string }>({
                         </SortableContext>
                     </TableBody>
                 </Table>
+                </div>
             </DndContext>
 
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
                 <span>
-                    {rows.from ?? 0}–{rows.to ?? 0} of {rows.total}
+                    {rows.total === 0 ? 'No rows' : `Showing ${rows.from ?? 0}–${rows.to ?? 0} of ${rows.total}`}
                 </span>
-                <div className="flex gap-1">
-                    {rows.links.map((link, i) => (
-                        <Button
-                            key={i}
-                            size="sm"
-                            variant={link.active ? 'default' : 'outline'}
-                            disabled={!link.url}
-                            asChild={!!link.url}
-                        >
-                            {link.url ? (
-                                <Link href={link.url} preserveScroll dangerouslySetInnerHTML={{ __html: link.label }} />
-                            ) : (
-                                <span dangerouslySetInnerHTML={{ __html: link.label }} />
-                            )}
-                        </Button>
-                    ))}
-                </div>
+                {rows.last_page > 1 && (
+                    <div className="flex items-center gap-2">
+                        <span className="hidden sm:inline">
+                            Page {rows.current_page} of {rows.last_page}
+                        </span>
+                        <PageButton url={rows.links[0]?.url ?? null} label="Previous page">
+                            <ChevronLeft />
+                        </PageButton>
+                        <PageButton url={rows.links[rows.links.length - 1]?.url ?? null} label="Next page">
+                            <ChevronRight />
+                        </PageButton>
+                    </div>
+                )}
             </div>
         </div>
     );

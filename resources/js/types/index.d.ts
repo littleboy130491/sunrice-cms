@@ -7,6 +7,8 @@ export interface User {
 export interface NavItem {
     label: string;
     href: string;
+    /** lucide icon name in kebab-case, e.g. `file-text`. */
+    icon?: string;
 }
 
 export interface NavGroup {

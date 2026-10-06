@@ -17,7 +17,7 @@ export default function FormsIndex({ forms }: Props) {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h1 className="text-xl font-semibold">Forms</h1>
+                <h1 className="text-xl font-semibold tracking-tight">Forms</h1>
                 {can('sunrice.manage-structure') && (
                     <Button asChild>
                         <Link href={adminUrl('forms/create', adminPath)}>

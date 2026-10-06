@@ -1,12 +1,18 @@
 import * as React from 'react';
 import { useForm, usePage, router, Link } from '@inertiajs/react';
-import { ArrowLeft, Copy, History, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Copy, EyeOff, History, LoaderCircle, MoreHorizontal, Send, Trash2, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { InputError } from '@/components/app/input-error';
+import { useBreadcrumbs } from '@/components/app/breadcrumbs';
 import FieldRenderer from '@/fields/FieldRenderer';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
@@ -128,75 +134,117 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         });
     };
 
+    const statusLabel = entry?.status === 'published' ? 'Published' : 'Draft';
+
+    useBreadcrumbs([
+        { label: 'Content' },
+        { label: collection.title, href: adminUrl(`collections/${collection.handle}/entries`, adminPath) },
+        { label: isNew ? 'New entry' : existing[mainLocale]?.title || 'Untitled' },
+    ]);
+
     return (
-        <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <Button variant="ghost" size="icon" asChild>
-                        <Link href={adminUrl(`collections/${collection.handle}/entries`, adminPath)}><ArrowLeft className="h-4 w-4" /></Link>
+        <div className="flex flex-col gap-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                    <Button variant="outline" size="icon" className="size-8 shrink-0" asChild>
+                        <Link href={adminUrl(`collections/${collection.handle}/entries`, adminPath)} aria-label={`Back to ${collection.title}`}>
+                            <ArrowLeft />
+                        </Link>
                     </Button>
-                    <h1 className="text-xl font-semibold">
-                        {isNew ? `New ${collection.title} entry` : form.data.title || 'Untitled'}
-                    </h1>
-                    {entry && <Badge variant={entry.status === 'published' ? 'success' : 'secondary'}>{entry.status}</Badge>}
-                    {current.is_outdated && <Badge variant="warning">unpublished changes</Badge>}
-                </div>
-                <div className="flex items-center gap-2">
-                    {!isNew && (
-                        <>
-                            <Button type="button" variant="outline" size="sm" onClick={markReady}>
-                                {current.is_ready ? 'Unmark ready' : 'Mark ready'}
-                            </Button>
-                            {locale !== mainLocale && current.is_ready && (
-                                <Button type="button" variant="outline" size="sm" onClick={returnToDraft}>
-                                    Return to draft
-                                </Button>
+                    <div className="min-w-0 space-y-1">
+                        <h1 className="truncate text-xl font-semibold tracking-tight">
+                            {isNew ? `New ${collection.title} entry` : form.data.title || 'Untitled'}
+                        </h1>
+                        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                            <span>{collection.title}</span>
+                            {entry && (
+                                <Badge variant={entry.status === 'published' ? 'success' : 'secondary'}>{statusLabel}</Badge>
                             )}
-                            <Button type="button" variant="outline" size="sm" onClick={publish}>
-                                Publish
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={unpublish}>Unpublish</Button>
-                            <Button type="button" variant="outline" size="sm" onClick={duplicate}><Copy className="h-4 w-4" /></Button>
-                            <Button type="button" variant="outline" size="sm" className="text-destructive" onClick={trash}><Trash2 className="h-4 w-4" /></Button>
-                        </>
-                    )}
+                            {current.is_outdated && <Badge variant="warning">Outdated translation</Badge>}
+                            {current.has_draft && entry?.status === 'published' && <Badge variant="outline">Unpublished changes</Badge>}
+                        </div>
+                    </div>
                 </div>
+                {!isNew && (
+                    <div className="flex items-center gap-2">
+                        <Button type="button" onClick={publish}>
+                            <Send /> Publish
+                        </Button>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button type="button" variant="outline" size="icon" aria-label="More actions">
+                                    <MoreHorizontal />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuItem onSelect={markReady}>
+                                    <CheckCircle2 /> {current.is_ready ? 'Unmark ready' : 'Mark ready'}
+                                </DropdownMenuItem>
+                                {locale !== mainLocale && current.is_ready && (
+                                    <DropdownMenuItem onSelect={returnToDraft}>
+                                        <Undo2 /> Return to draft
+                                    </DropdownMenuItem>
+                                )}
+                                {entry?.status === 'published' && (
+                                    <DropdownMenuItem onSelect={unpublish}>
+                                        <EyeOff /> Unpublish
+                                    </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem onSelect={duplicate}>
+                                    <Copy /> Duplicate
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem variant="destructive" onSelect={trash}>
+                                    <Trash2 /> Move to trash
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+                )}
             </div>
 
-            <div className="flex items-center gap-2">
-                <Label className="text-sm">Locale:</Label>
-                {locales.map((lc) => (
-                    <Button
-                        key={lc}
-                        type="button"
-                        size="sm"
-                        variant={locale === lc ? 'default' : 'outline'}
-                        onClick={() => switchLocale(lc)}
-                    >
-                        {lc}
-                        {existing[lc]?.has_draft && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-amber-400" />}
-                    </Button>
-                ))}
-            </div>
+            {locales.length > 1 && (
+                <Tabs value={locale} onValueChange={switchLocale}>
+                    <TabsList>
+                        {locales.map((lc) => (
+                            <TabsTrigger key={lc} value={lc} className="gap-1.5 uppercase">
+                                {lc}
+                                {existing[lc]?.has_draft && <span className="size-1.5 rounded-full bg-amber-500" aria-label="has draft" />}
+                                {lc !== mainLocale && existing[lc]?.is_ready && <span className="size-1.5 rounded-full bg-emerald-500" aria-label="ready" />}
+                            </TabsTrigger>
+                        ))}
+                    </TabsList>
+                </Tabs>
+            )}
 
-            <form onSubmit={submit} className="grid gap-4 lg:grid-cols-[1fr_280px]">
-                <div className="flex flex-col gap-4">
-                    {contentTabs.map((tab) => (
+            <form onSubmit={submit} className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+                <div className="flex min-w-0 flex-col gap-6">
+                    {contentTabs.map((tab, index) => (
                         <Card key={tab.handle}>
-                            <CardHeader><CardTitle>{tab.label}</CardTitle></CardHeader>
-                            <CardContent>
-                                <div className="mb-4 grid grid-cols-2 gap-4">
-                                    <div className="grid gap-2">
-                                        <Label>Title</Label>
-                                        <Input value={form.data.title} onChange={(e) => form.setData('title', e.target.value)} required />
-                                        {form.errors.title && <p className="text-sm text-destructive">{form.errors.title}</p>}
+                            <CardHeader>
+                                <CardTitle>{tab.label}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-col gap-6">
+                                {index === 0 && (
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="entry-title">Title</Label>
+                                            <Input id="entry-title" value={form.data.title} onChange={(e) => form.setData('title', e.target.value)} required />
+                                            <InputError message={form.errors.title} />
+                                        </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="entry-slug">Slug</Label>
+                                            <Input
+                                                id="entry-slug"
+                                                className="font-mono text-sm"
+                                                value={form.data.slug}
+                                                onChange={(e) => form.setData('slug', e.target.value)}
+                                                placeholder="Generated from the title"
+                                            />
+                                            <InputError message={form.errors.slug} />
+                                        </div>
                                     </div>
-                                    <div className="grid gap-2">
-                                        <Label>Slug</Label>
-                                        <Input value={form.data.slug} onChange={(e) => form.setData('slug', e.target.value)} placeholder="auto" />
-                                        {form.errors.slug && <p className="text-sm text-destructive">{form.errors.slug}</p>}
-                                    </div>
-                                </div>
+                                )}
                                 <FieldRenderer
                                     fields={tab.fields}
                                     values={form.data.data}
@@ -208,7 +256,10 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                     ))}
                     {seoTab && (
                         <Card>
-                            <CardHeader><CardTitle>{seoTab.label}</CardTitle></CardHeader>
+                            <CardHeader>
+                                <CardTitle>{seoTab.label}</CardTitle>
+                                <CardDescription>How this entry appears in search results and social shares.</CardDescription>
+                            </CardHeader>
                             <CardContent>
                                 <FieldRenderer
                                     fields={seoTab.fields}
@@ -221,10 +272,30 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                     )}
                 </div>
 
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-6 lg:sticky lg:top-6">
                     <Card>
-                        <CardContent className="flex flex-col gap-3 pt-6">
-                            <Button type="submit" disabled={form.processing}>Save draft</Button>
+                        <CardHeader>
+                            <CardTitle className="text-sm">Status</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex flex-col gap-4">
+                            {entry && (
+                                <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+                                    <dt className="text-muted-foreground">Visibility</dt>
+                                    <dd className="text-right">{statusLabel}</dd>
+                                    {entry.published_at && (
+                                        <>
+                                            <dt className="text-muted-foreground">Published</dt>
+                                            <dd className="text-right">{entry.published_at}</dd>
+                                        </>
+                                    )}
+                                    {locale !== mainLocale && (
+                                        <>
+                                            <dt className="text-muted-foreground">Translation</dt>
+                                            <dd className="text-right">{current.is_ready ? 'Ready' : 'Draft'}</dd>
+                                        </>
+                                    )}
+                                </dl>
+                            )}
                             {isNew && blueprints.length > 1 && (
                                 <div className="grid gap-2">
                                     <Label>Blueprint</Label>
@@ -232,28 +303,42 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                         value={String(form.data.blueprint_id || '')}
                                         onValueChange={(v) => form.setData('blueprint_id', Number(v))}
                                     >
-                                        <SelectTrigger><SelectValue placeholder="Collection default" /></SelectTrigger>
+                                        <SelectTrigger className="w-full"><SelectValue placeholder="Collection default" /></SelectTrigger>
                                         <SelectContent>
                                             {blueprints.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.title}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
                             )}
+                            <Button type="submit" variant={isNew ? 'default' : 'outline'} disabled={form.processing} className="w-full">
+                                {form.processing && <LoaderCircle className="animate-spin" />}
+                                {isNew ? 'Create draft' : 'Save draft'}
+                            </Button>
                         </CardContent>
                     </Card>
 
                     {!isNew && current.revisions.length > 0 && (
                         <Card>
-                            <CardHeader><CardTitle className="flex items-center gap-2 text-sm"><History className="h-4 w-4" /> Revisions</CardTitle></CardHeader>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-sm">
+                                    <History className="size-4" /> Revisions
+                                </CardTitle>
+                                <CardDescription>Restoring copies a revision into the draft.</CardDescription>
+                            </CardHeader>
                             <CardContent>
-                                <ul className="flex flex-col gap-1 text-sm">
+                                <ul className="-mx-2 flex flex-col">
                                     {current.revisions.slice(0, 10).map((r) => (
-                                        <li key={r.id} className="flex items-center justify-between">
-                                            <span>{r.created_at}</span>
+                                        <li key={r.id} className="flex items-center justify-between rounded-md px-2 py-1 text-sm hover:bg-accent">
+                                            <span className="text-muted-foreground">{r.created_at}</span>
                                             <Button
-                                                type="button" variant="link" size="sm"
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7"
                                                 onClick={() => router.post(adminUrl(`revisions/${r.id}/restore`, adminPath), {}, { preserveScroll: true })}
-                                            >Restore</Button>
+                                            >
+                                                Restore
+                                            </Button>
                                         </li>
                                     ))}
                                 </ul>
