@@ -22,8 +22,19 @@ export interface LocaleInfo {
     names: Record<string, string>;
 }
 
+export interface Branding {
+    name: string;
+    tagline: string;
+    logo: string | null;
+    font: string;
+    color: string | null;
+    /** Still named Sunrice (shows "Powered by"). */
+    is_default: boolean;
+}
+
 export interface SharedProps {
     auth: { user: User | null };
+    branding?: Branding;
     permissions: string[] | ['*'];
     navigation: NavGroup[];
     locales: LocaleInfo;

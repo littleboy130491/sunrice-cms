@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Head } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/sonner';
-import { AppLogoIcon } from '@/components/app/app-logo';
+import { AppLogoIcon, useBranding } from '@/components/app/app-logo';
 import { AtmosphereArt } from '@/components/app/atmosphere-art';
 
 interface AuthLayoutProps {
@@ -10,14 +10,20 @@ interface AuthLayoutProps {
     description?: string;
 }
 
-export default function AuthLayout({ children, title = 'Log in to Sunrice', description = 'Enter your email and password below to log in.' }: AuthLayoutProps) {
+export default function AuthLayout({ children, title, description = 'Enter your email and password below to log in.' }: AuthLayoutProps) {
+    const brand = useBranding();
+    title ??= `Log in to ${brand.name}`;
+    const mark = (
+        <>
+            <AppLogoIcon className="size-6" /> {brand.name}{brand.is_default && '.'}
+        </>
+    );
+
     return (
         <div className="sunrice-shell grid min-h-svh bg-background p-4 lg:grid-cols-2 lg:gap-4">
             <Head title={title} />
             <aside className="sunrice-atmosphere relative hidden flex-col justify-between overflow-hidden rounded-xl p-10 lg:flex xl:p-14">
-                <div className="flex items-center gap-3 text-lg font-semibold tracking-tight">
-                    <AppLogoIcon className="size-6" /> Sunrice.
-                </div>
+                <div className="flex items-center gap-3 text-lg font-semibold tracking-tight">{mark}</div>
                 <div className="relative z-10 mt-12">
                     <p className="mb-5 text-xs font-medium tracking-[0.18em] uppercase">A little space to create</p>
                     <h2 className="max-w-md text-5xl leading-[1.08] font-medium tracking-[-0.05em] xl:text-6xl">Good content.<br /><span className="opacity-60">Beautifully managed.</span></h2>
@@ -28,9 +34,7 @@ export default function AuthLayout({ children, title = 'Log in to Sunrice', desc
             </aside>
             <div className="flex flex-col items-center justify-center px-4 py-12 sm:px-8">
                 <div className="w-full max-w-sm">
-                    <div className="mb-12 flex items-center gap-2 text-lg font-semibold tracking-tight lg:hidden">
-                        <AppLogoIcon className="size-6" /> Sunrice.
-                    </div>
+                    <div className="mb-12 flex items-center gap-2 text-lg font-semibold tracking-tight lg:hidden">{mark}</div>
                     <div className="flex flex-col gap-8">
                         <div className="space-y-3">
                             <p className="text-[10px] font-semibold tracking-[0.16em] text-muted-foreground uppercase">Your content workspace</p>
@@ -39,7 +43,7 @@ export default function AuthLayout({ children, title = 'Log in to Sunrice', desc
                         </div>
                         {children}
                     </div>
-                    <p className="mt-10 text-xs text-muted-foreground">Powered by Sunrice CMS</p>
+                    {brand.is_default && <p className="mt-10 text-xs text-muted-foreground">Powered by Sunrice CMS</p>}
                 </div>
             </div>
             <Toaster position="top-right" />

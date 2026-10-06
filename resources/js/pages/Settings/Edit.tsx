@@ -23,6 +23,7 @@ interface Settings {
     locales: { main: string; available: string[]; names: Record<string, string> };
     seo: { noindex: boolean; twitter_site: string | null; image: number | null };
     code: { head: string | null; body_start: string | null; body_end: string | null };
+    branding?: { name: string | null; tagline: string | null; logo: number | null; font: string | null; color: string | null };
 }
 
 interface Props {
@@ -31,12 +32,15 @@ interface Props {
     shareImage: { id: number; url: string; filename: string } | null;
     timezones: string[];
     mainLocked: boolean;
+    brandLogo?: { id: number; url: string; filename: string } | null;
+    fonts?: { value: string; label: string }[];
 }
 
-export default function SettingsEdit({ settings, homepage, shareImage, timezones, mainLocked }: Props) {
+export default function SettingsEdit({ settings, homepage, shareImage, timezones, mainLocked, brandLogo = null, fonts = [] }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const [home, setHome] = React.useState<PickedEntry[]>(homepage ? [homepage] : []);
     const [image, setImage] = React.useState(shareImage);
+    const [logo, setLogo] = React.useState(brandLogo);
     const [newLocale, setNewLocale] = React.useState('');
 
     const form = useForm({
@@ -54,6 +58,13 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
             twitter_site: settings.seo.twitter_site ?? '',
             image: settings.seo.image ?? null as number | null,
         },
+        branding: {
+            name: settings.branding?.name ?? 'Sunrice',
+            tagline: settings.branding?.tagline ?? '',
+            logo: settings.branding?.logo ?? null as number | null,
+            font: settings.branding?.font ?? 'instrument-sans',
+            color: settings.branding?.color ?? '',
+        },
         code: {
             head: settings.code.head ?? '',
             body_start: settings.code.body_start ?? '',
@@ -62,6 +73,7 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
     });
     const errors = form.errors as Record<string, string>;
     const locales = form.data.locales;
+    const savedBranding = React.useRef(JSON.stringify(form.data.branding));
 
     useBreadcrumbs([{ label: 'Settings' }]);
 
@@ -82,7 +94,14 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        form.put(adminUrl('settings', adminPath), { preserveScroll: true });
+        // Font and color live in the page head: reload to apply them.
+        const brandingChanged = JSON.stringify(form.data.branding) !== savedBranding.current;
+        form.put(adminUrl('settings', adminPath), {
+            preserveScroll: true,
+            onSuccess: () => {
+                if (brandingChanged) window.location.reload();
+            },
+        });
     };
 
     return (
@@ -221,6 +240,107 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                 </div>
             </CollapsibleCard>
 
+            <CollapsibleCard
+                title="Branding"
+                description="White-label the admin panel: its name, logo, font and accent color. The public site isn't affected."
+                storageKey="settings:branding"
+                contentClassName="flex flex-col gap-4"
+            >
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                        <Label htmlFor="brand-name">Panel name</Label>
+                        <Input id="brand-name" maxLength={60} value={form.data.branding.name} onChange={(e) => form.setData('branding', { ...form.data.branding, name: e.target.value })} />
+                        <InputError message={errors['branding.name']} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="brand-tagline">Tagline</Label>
+                        <Input id="brand-tagline" maxLength={80} placeholder="Optional" value={form.data.branding.tagline} onChange={(e) => form.setData('branding', { ...form.data.branding, tagline: e.target.value })} />
+                        <InputError message={errors['branding.tagline']} />
+                    </div>
+                </div>
+                <p className="-mt-2 text-xs text-muted-foreground">Shown in the sidebar, on the login page and in browser tabs. Renaming it also hides "Powered by Sunrice CMS".</p>
+
+                <div className="grid gap-2">
+                    <Label>Logo</Label>
+                    <div className="flex flex-wrap items-center gap-3">
+                        {logo ? (
+                            <div className="flex items-center gap-2 rounded-md border p-2 text-sm">
+                                <img src={logo.url} alt="" className="size-10 rounded object-contain" />
+                                <span className="max-w-48 truncate">{logo.filename}</span>
+                                <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="Remove logo"
+                                    onClick={() => { setLogo(null); form.setData('branding', { ...form.data.branding, logo: null }); }}>
+                                    <X className="size-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <span className="flex items-center gap-2 text-sm text-muted-foreground"><ImageIcon className="size-4" /> Sunrice mark</span>
+                        )}
+                        <AssetPicker
+                            imageOnly
+                            trigger={<Button type="button" variant="outline" size="sm">Choose logo</Button>}
+                            onSelect={(assets: PickedAsset[]) => {
+                                const a = assets[0];
+                                if (!a) return;
+                                setLogo({ id: a.id, url: a.url, filename: a.filename });
+                                form.setData('branding', { ...form.data.branding, logo: a.id });
+                            }}
+                        />
+                    </div>
+                    <InputError message={errors['branding.logo']} />
+                    <p className="text-xs text-muted-foreground">A square image works best (SVG or PNG). Also used as the browser tab icon.</p>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                        <Label htmlFor="brand-font">Font</Label>
+                        <Select value={form.data.branding.font} onValueChange={(v) => form.setData('branding', { ...form.data.branding, font: v })}>
+                            <SelectTrigger id="brand-font" className="w-full"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                {fonts.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors['branding.font']} />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="brand-color">Accent color</Label>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="color"
+                                aria-label="Pick accent color"
+                                className="size-9 shrink-0 cursor-pointer rounded-lg border border-input bg-card p-1"
+                                value={form.data.branding.color || '#2a2a2a'}
+                                onChange={(e) => form.setData('branding', { ...form.data.branding, color: e.target.value })}
+                            />
+                            <Input
+                                id="brand-color"
+                                className="font-mono"
+                                placeholder="Default (neutral)"
+                                value={form.data.branding.color}
+                                onChange={(e) => form.setData('branding', { ...form.data.branding, color: e.target.value.trim() })}
+                            />
+                            {form.data.branding.color && (
+                                <Button type="button" variant="ghost" size="sm" onClick={() => form.setData('branding', { ...form.data.branding, color: '' })}>Reset</Button>
+                            )}
+                        </div>
+                        <InputError message={errors['branding.color']} />
+                    </div>
+                </div>
+                <p className="-mt-2 text-xs text-muted-foreground">
+                    The accent color is used for primary buttons, the active menu item and focus outlines; text on it switches between black and white to stay readable.
+                </p>
+                {/^#[0-9a-fA-F]{6}$/.test(form.data.branding.color) && (
+                    <div className="flex items-center gap-3 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
+                        Preview
+                        <span
+                            className="inline-flex h-8 items-center rounded-lg px-3 text-sm font-medium"
+                            style={{ background: form.data.branding.color, color: readableOn(form.data.branding.color) }}
+                        >
+                            Publish
+                        </span>
+                    </div>
+                )}
+            </CollapsibleCard>
+
             <CollapsibleCard title="Code snippets" description={<>
                         Analytics, tag managers, verification tags… Added to every page through{' '}
                         <code>&lt;x-sunrice::code position="…" /&gt;</code> in your layout. Printed as-is.
@@ -292,4 +412,11 @@ function MainLanguageHelp({ example }: { example: string }) {
             </div>
         </details>
     );
+}
+
+/** Black or white text on a #rrggbb background (mirrors Branding::readableOn). */
+function readableOn(hex: string): string {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return 1.05 / (luminance + 0.05) >= (luminance + 0.05) / 0.05 ? '#ffffff' : '#111111';
 }

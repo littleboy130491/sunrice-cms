@@ -12,7 +12,10 @@ type PageModule = {
 
 initializeAppearance();
 
+const brand = (window as unknown as { sunriceBrand?: string }).sunriceBrand || 'Sunrice';
+
 createInertiaApp({
+    title: (title) => (title && title !== brand ? `${title} · ${brand}` : brand),
     resolve: (name) => {
         const pages = import.meta.glob<PageModule>('./pages/**/*.tsx', { eager: true });
         const page = pages[`./pages/${name}.tsx`];
