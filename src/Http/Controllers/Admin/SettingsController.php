@@ -31,7 +31,7 @@ class SettingsController extends Controller
             'settings' => SiteSettings::current(),
             'homepage' => $homepage === null ? null : [
                 'id' => $homepage->id,
-                'title' => $homepage->mainTranslation()?->title ?? "Entry #{$homepage->id}",
+                'title' => $homepage->mainTranslation()->title ?? "Entry #{$homepage->id}",
                 'collection' => '',
             ],
             'shareImage' => $asset === null ? null : ['id' => $asset->id, 'url' => $asset->url('thumbnail'), 'filename' => $asset->filename],
