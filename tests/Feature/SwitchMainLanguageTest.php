@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Cache;
 use Sunrice\Actions\Entries\PublishTranslation;
 use Sunrice\Actions\Entries\SaveDraft;
 use Sunrice\Frontend\RouteMatcher;
@@ -12,14 +13,22 @@ use Sunrice\Models\GlobalSet;
 use Sunrice\Models\Menu;
 use Sunrice\Models\MenuItem;
 use Sunrice\Models\Redirect;
+use Sunrice\Models\Setting;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
+use Sunrice\Support\SiteSettings;
 
 use function Pest\Laravel\artisan;
 use function Pest\Laravel\get;
 
 beforeEach(function () {
+    // Site settings are read at boot, before the database is reset: on
+    // MySQL a switched main language from the previous test can leak in.
+    Setting::query()->where('key', 'site')->delete();
+    Cache::forget(SiteSettings::CACHE_KEY);
+    config(['sunrice.locales.main' => 'id', 'sunrice.locales.available' => ['id', 'en']]);
+
     actingAsSuperAdmin();
     RouteMatcher::flush();
 
@@ -35,6 +44,11 @@ beforeEach(function () {
 });
 
 /** An Indonesian (main) page with an English translation, both published. */
+afterEach(function () {
+    Setting::query()->where('key', 'site')->delete();
+    Cache::forget(SiteSettings::CACHE_KEY);
+});
+
 function bilingualPage(): Entry
 {
     $entry = createEntry(test()->pages, 'Beranda');
