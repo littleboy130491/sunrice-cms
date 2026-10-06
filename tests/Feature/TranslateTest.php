@@ -88,7 +88,7 @@ it('saves entry translations as unready drafts, copying non-text fields', functi
             ['handle' => 'question', 'type' => 'text', 'label' => 'Question'],
         ]]],
     ]]);
-    $pages = createCollection('pages', ['route' => '/pages/{slug}'], $blueprint);
+    $pages = createCollection('pages', ['route' => '/pages/{slug}', 'translatable' => true], $blueprint);
     $entry = createEntry($pages, 'Tentang kami', [
         'intro' => 'Selamat datang',
         'body' => '<p>Isi <strong>tebal</strong></p>',
@@ -120,7 +120,7 @@ it('skips fields that are already translated unless --force is used', function (
         ['handle' => 'intro', 'type' => 'text', 'label' => 'Intro'],
         ['handle' => 'outro', 'type' => 'text', 'label' => 'Outro'],
     ]]);
-    $pages = createCollection('pages', ['route' => '/pages/{slug}'], $blueprint);
+    $pages = createCollection('pages', ['route' => '/pages/{slug}', 'translatable' => true], $blueprint);
     $entry = createEntry($pages, 'Halo', ['intro' => 'Pagi', 'outro' => 'Malam']);
     // An editor already translated "intro"; "outro" still holds the copied source text.
     $entry->translations()->create([
@@ -188,10 +188,21 @@ it('translates Laravel language files, keeping existing keys', function () {
     File::deleteDirectory($lang);
 });
 
+it('leaves collections that are not translatable alone', function () {
+    fakeTranslations();
+    $pages = createCollection('pages', ['route' => '/pages/{slug}', 'translatable' => false]);
+    $entry = createEntry($pages, 'Halo');
+
+    $this->artisan('sunrice:translate', ['--to' => ['en'], '--only' => ['entries'], '--no-interaction' => true])
+        ->assertSuccessful();
+
+    expect(Entry::query()->find($entry->id)->translation('en'))->toBeNull();
+});
+
 it('counts strings on --dry-run without calling the API or writing', function () {
     config(['sunrice.translation.gemini.key' => null]);
     Http::fake();
-    $pages = createCollection('pages', ['route' => '/pages/{slug}']);
+    $pages = createCollection('pages', ['route' => '/pages/{slug}', 'translatable' => true]);
     $entry = createEntry($pages, 'Halo');
 
     $this->artisan('sunrice:translate', ['--to' => ['en'], '--only' => ['entries'], '--dry-run' => true])
