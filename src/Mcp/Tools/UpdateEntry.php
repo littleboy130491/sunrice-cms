@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sunrice\Mcp\Tools;
 
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
@@ -15,6 +16,7 @@ use Sunrice\Actions\Entries\PublishTranslation;
 use Sunrice\Actions\Entries\SaveDraft;
 use Sunrice\Actions\Entries\SetEntryParent;
 use Sunrice\Actions\Entries\SyncEntryTerms;
+use Sunrice\Events\ContentChanged;
 use Sunrice\Mcp\Presenter;
 use Sunrice\Models\Entry;
 use Sunrice\Rules\ValidSlug;
@@ -84,6 +86,15 @@ class UpdateEntry extends SunriceTool
         if (! empty($args['publish'])) {
             $this->authorize('publish', $entry);
             app(PublishTranslation::class)->handle($translation->fresh() ?? $translation, Locales::isMain($locale) ? ($args['published_at'] ?? null) : null);
+        } elseif (! empty($args['published_at'])) {
+            // Only the date (backdate or reschedule), without publishing the draft.
+            $this->authorize('publish', $entry);
+            if ($entry->status !== 'published') {
+                return Response::error('Publish the entry first (publish: true, with published_at to set its date).');
+            }
+            $entry->published_at = Carbon::parse($args['published_at']);
+            $entry->save();
+            ContentChanged::dispatch('entry_saved');
         }
 
         return $this->json(['saved' => true, 'published' => ! empty($args['publish'])] + Presenter::entry($entry->fresh() ?? $entry));
@@ -102,7 +113,7 @@ class UpdateEntry extends SunriceTool
             'parent_id' => $schema->integer()->nullable()->description('Parent entry, or null for the top level (hierarchical collections).'),
             'template' => $schema->string()->description('Blade view for this entry; empty to use the collection\'s.'),
             'publish' => $schema->boolean()->description('Publish the result (default: keep as draft).'),
-            'published_at' => $schema->string()->description('ISO date when publishing the main language; future = scheduled.'),
+            'published_at' => $schema->string()->description('ISO date shown as the publish date. With publish: true it is used when publishing (future = scheduled); alone it changes the date of an already published entry (backdate or reschedule).'),
         ];
     }
 }

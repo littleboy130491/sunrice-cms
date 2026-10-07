@@ -63,6 +63,10 @@ it('creates, edits, translates and publishes entries', function () {
     expect($english['translations']['en']['ready'])->toBeTrue()
         ->and($english['translations']['en']['url'])->toBe('/en/about-en');
 
+    // Only the date of a published entry (backdating an article).
+    $dated = mcpResult(SunriceServer::actingAs($this->admin)->tool(Tools\UpdateEntry::class, ['id' => $id, 'published_at' => '2024-01-15 09:00:00']));
+    expect($dated['published_at'])->toStartWith('2024-01-15');
+
     $child = mcpResult(SunriceServer::actingAs($this->admin)->tool(Tools\CreateEntry::class, ['collection' => 'pages', 'title' => 'Team', 'parent_id' => $id, 'publish' => true]));
     expect($child['parent_id'])->toBe($id);
 

@@ -35,6 +35,23 @@ Sunrice::entries('articles')
     ->get();                // or ->paginate(12)
 ```
 
+`where()` reads custom fields from the main language's data, plus these
+entry columns: `id`, `parent_id`, `title`, `status`, `author_id`,
+`published_at`, `sort_order`, `created_at`, `updated_at`. Columns also
+take `in` / `not in` with an array, and `null` for "has none":
+
+```php
+// Other jobs than this one (a "related" sidebar)
+sunrice_entries('careers')->where('id', '!=', $entry->id)->limit(3)->get();
+
+// Top-level pages, articles from before 2025
+sunrice_entries('pages')->where('parent_id', null)->get();
+sunrice_entries('articles')->where('published_at', '<', '2025-01-01')->get();
+```
+
+`published_at` is the date shown on the site; editors change it in the
+entry's Status card (backdate, or a future date to schedule).
+
 ### Reverse relationships
 
 `entries` and `terms` fields store ids on the entry that links. To go the

@@ -93,24 +93,37 @@ class EntryQuery
     }
 
     /**
-     * Filter on a standard column (published_at, sort_order, title,
-     * author_id) or a custom field of the main translation's data.
+     * Filter on a standard column (id, parent_id, published_at,
+     * sort_order, created_at, updated_at, status, author_id, title) or a
+     * custom field of the main translation's data. Columns also take
+     * 'in' / 'not in' with an array, and null for "is (not) null".
      *
      * Custom-field filters use main-language values — the simplest
      * consistent rule across locales.
      */
-    public function where(string $field, string $operator, mixed $value = null): static
+    public function where(string $field, mixed $operator, mixed $value = null): static
     {
+        // where('featured', true): the second argument is the value.
         if (func_num_args() === 2) {
             $value = $operator;
             $operator = '=';
         }
+        $operator = (string) $operator;
 
         $this->filters['where'][] = [$field, $operator, $value];
 
         if ($this->isStandardColumn($field)) {
+            if ($field === 'title') {
+                $this->joinTranslation();
+            }
             $column = $field === 'title' ? 't.title' : 'sunrice_entries.'.$field;
-            $this->query->where($column, $operator, $value);
+            match (strtolower($operator)) {
+                'in' => $this->query->whereIn($column, (array) $value),
+                'not in' => $this->query->whereNotIn($column, (array) $value),
+                default => $value === null && in_array($operator, ['=', '!=', '<>'], true)
+                    ? $this->query->whereNull($column, not: $operator !== '=')
+                    : $this->query->where($column, $operator, $value),
+            };
 
             return $this;
         }
@@ -298,7 +311,7 @@ class EntryQuery
         $this->filters['order'][] = [$field, $direction];
 
         match ($field) {
-            'published_at', 'sort_order', 'created_at', 'updated_at' => $this->query->orderBy('sunrice_entries.'.$field, $direction),
+            'id', 'published_at', 'sort_order', 'created_at', 'updated_at' => $this->query->orderBy('sunrice_entries.'.$field, $direction),
             'title' => tap($this->query, fn () => $this->joinTranslation())->orderBy('t.title', $direction),
             default => tap($this->query, function () use ($field, $direction): void {
                 $this->joinTranslation();
@@ -410,7 +423,7 @@ class EntryQuery
 
     protected function isStandardColumn(string $field): bool
     {
-        return in_array($field, ['published_at', 'sort_order', 'created_at', 'updated_at', 'status', 'author_id', 'title'], true);
+        return in_array($field, ['id', 'parent_id', 'published_at', 'sort_order', 'created_at', 'updated_at', 'status', 'author_id', 'title'], true);
     }
 
     protected function joinTranslation(): void
