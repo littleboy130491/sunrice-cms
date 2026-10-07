@@ -1,7 +1,8 @@
+import * as React from 'react';
 import { Languages } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import type { AdminField, Json } from '@/types';
-import { fieldComponents } from './registry';
+import { fieldComponents, fieldsVersion, subscribeFields } from './registry';
 import { useTranslationMode } from './translation-mode';
 
 interface Props {
@@ -21,6 +22,8 @@ interface Props {
  */
 export default function FieldList({ fields, values, errors = {}, pathPrefix = 'data', onChange }: Props) {
     const { secondary, mainLocale } = useTranslationMode();
+    // Re-render when an admin script registers a field component.
+    React.useSyncExternalStore(subscribeFields, fieldsVersion);
 
     return (
         <div className="flex flex-col gap-5">
@@ -28,8 +31,10 @@ export default function FieldList({ fields, values, errors = {}, pathPrefix = 'd
                 const Component = fieldComponents[field.display_type ?? field.type] ?? fieldComponents[field.type];
                 if (!Component) {
                     return (
-                        <p key={field.handle} className="text-sm text-muted-foreground">
-                            Unknown field type: {field.type}
+                        <p key={field.handle} className="rounded-md border border-dashed px-3 py-2 text-sm text-muted-foreground">
+                            <span className="font-medium text-foreground">{field.label || field.handle}</span>: no admin control for the field
+                            type “{field.display_type ?? field.type}”. Register one with <code>Sunrice.registerField()</code> in an admin
+                            script, or extend <code>CustomField</code> to reuse a built-in control (see Docs → Custom field types).
                         </p>
                     );
                 }

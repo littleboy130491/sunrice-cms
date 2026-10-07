@@ -19,6 +19,11 @@ return [
         'path' => env('SUNRICE_ADMIN_PATH', 'cms'),
         'domain' => null,
         'middleware' => ['web'],
+        // Extra JS/CSS loaded in the admin after its own bundle, e.g. React
+        // components for custom field types (see docs/custom-fields.md).
+        // Paths go through asset(); full URLs are used as they are.
+        'scripts' => [],
+        'styles' => [],
     ],
 
     /*

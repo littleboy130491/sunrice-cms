@@ -52,6 +52,13 @@
             @endforeach
         @endif
     @endif
+    {{-- Site extensions: custom field components etc. (sunrice.admin.scripts). They run after the admin bundle, which sets up window.Sunrice. --}}
+    @foreach (app(\Sunrice\Sunrice::class)->adminStyles() as $sunriceStyle)
+        <link rel="stylesheet" href="{{ $sunriceStyle }}">
+    @endforeach
+    @foreach (app(\Sunrice\Sunrice::class)->adminScripts() as $sunriceScript)
+        <script type="module" src="{{ $sunriceScript }}"></script>
+    @endforeach
     @inertiaHead
 </head>
 <body class="font-sans antialiased">

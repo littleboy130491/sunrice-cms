@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Custom field components without rebuilding the admin**: list scripts in
+  `sunrice.admin.scripts` (or `Sunrice::registerAdminScript()`) and register
+  React components with `window.Sunrice.registerField(type, Component)`;
+  `window.Sunrice` also exposes the admin's React, UI primitives, `fetchJson`
+  and `toast`. The custom fields guide now leads with `CustomField` (reuse a
+  built-in control, no JavaScript) and documents the admin-script route. A
+  field type without an admin control shows a helpful notice.
 - Entry, term and asset pickers no longer offer items that are already
   chosen in the field (remove a chip to pick it again).
 - **Reverse relationships** in `EntryQuery`: `whereEntry('related_articles',
