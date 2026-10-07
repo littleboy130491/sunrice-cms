@@ -64,3 +64,14 @@ it('combines with other filters', function () {
 it('refuses field names that could reach raw SQL', function () {
     expect(fn () => sunrice_entries('projects')->whereEntry("x') or 1=1 --", 1))->toThrow(InvalidArgumentException::class);
 });
+
+it('filters on entry columns: id, parent, title and publish date', function () {
+    expect(reverseTitles(sunrice_entries('projects')->where('id', '!=', $this->p1->id)->get()))->toBe(['Cloud', 'Robot'])
+        ->and(reverseTitles(sunrice_entries('projects')->where('id', 'in', [$this->p1->id, $this->p2->id])->get()))->toBe(['Robot', 'Shop'])
+        ->and(reverseTitles(sunrice_entries('projects')->where('title', 'Robot')->get()))->toBe(['Robot'])
+        ->and(reverseTitles(sunrice_entries('projects')->where('parent_id', null)->get()))->toBe(['Cloud', 'Robot', 'Shop']);
+
+    $this->p3->update(['published_at' => now()->subYear()]);
+    expect(reverseTitles(sunrice_entries('projects')->where('published_at', '<', now()->subMonth())->get()))->toBe(['Cloud'])
+        ->and(sunrice_entries('projects')->orderBy('id', 'desc')->get()->first()->id)->toBe($this->p3->id);
+});
