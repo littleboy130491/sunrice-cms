@@ -52,6 +52,38 @@ switch in the editor; templates read keyed items with `->byKey('key')`.
 - Slugs are unique per `(collection, locale)` including trashed rows;
   rename + publish leaves a `301` redirect on the old slug.
 
+## Which URL wins
+
+Every collection's entry URL (`route`) and listing URL (`archive_route`),
+and every taxonomy's term URL, is a pattern. For each request Sunrice tries
+them in this order and stops at the **first pattern that matches**:
+
+1. **Fixed URLs** (no `{slug}`): collection listing pages such as `/blog`
+   or `/products`.
+2. **Patterns with `{slug}`**, the most specific first: the one with more
+   fixed characters wins, so `/blog/category/{slug}` comes before
+   `/blog/{slug}`, which comes before `/{slug}`.
+3. On a tie (same fixed text), collections before taxonomies, then in the
+   order they were created.
+
+The first match is final: when no entry or term has that slug, the page
+is a 404 (or a [redirect](#entries) from an old slug). Sunrice doesn't try
+the next pattern.
+
+What that means in practice:
+
+| Set up | Visiting | Shows |
+| --- | --- | --- |
+| Pages at `/{slug}` with a page whose slug is `blog`, and Articles' listing at `/blog` | `/blog` | The Articles listing. The page can't be reached: rename its slug. |
+| Pages at `/{slug}` and Articles at `/blog/{slug}` | `/blog/hello` | The article. `/hello` is a page. |
+| Pages at `/{slug}` and a taxonomy's terms at `/{slug}` | `/news` | Only pages are looked up (collections first); give the terms a prefix such as `/topic/{slug}`. |
+| Two collections at the same pattern | — | Not allowed: saving the second collection is refused. |
+
+Slugs only have to be unique within a collection and language, so give
+listing pages and root-level pages different names, and keep root-level
+patterns (`/` or `/{slug}`) to one collection. Fixed URLs in your own
+Laravel routes (`routes/web.php`) win over all of these.
+
 ## Parent pages
 
 Turn on **Hierarchical** for a collection (Structure → Collections →
