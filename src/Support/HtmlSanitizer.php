@@ -55,6 +55,7 @@ class HtmlSanitizer
             ->allowElement('td', ['colspan', 'rowspan'])
             ->allowLinkSchemes(['https', 'http', 'mailto', 'tel'])
             ->allowRelativeLinks()
+            ->allowRelativeMedias()
             ->forceAttribute('a', 'rel', 'noopener noreferrer')
             ->allowAttribute('class', ['p', 'figure', 'figcaption', 'blockquote', 'pre', 'code', 'table', 'img'])
             ->withMaxInputLength(500_000);

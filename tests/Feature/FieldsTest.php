@@ -202,6 +202,11 @@ it('sanitizes rich text and extracts asset ids', function () {
     expect(HtmlSanitizer::extractAssetIds($html))->toBe([12, 9]);
 });
 
+it('keeps relative image sources in rich text', function () {
+    $clean = HtmlSanitizer::sanitize('<img src="/storage/2026/10/a.jpg" data-asset-id="5" alt="x">');
+    expect($clean)->toContain('src="/storage/2026/10/a.jpg"')->toContain('data-asset-id="5"');
+});
+
 it('queries JSON fields with casts', function () {
     $collection = createCollection();
     $cheap = createEntry($collection, 'Cheap', ['price' => 2]);
