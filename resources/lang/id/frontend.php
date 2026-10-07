@@ -22,4 +22,11 @@ return [
     'upload_size' => 'Berkas terlalu besar. Maksimal :size.',
     'upload_hint' => 'Format: :types. Maksimal :size.',
     'upload_hint_any' => 'Maksimal :size.',
+    // Banner above unpublished pages, for signed-in editors.
+    'draft' => 'Draf',
+    'draft_scheduled' => 'Entri ini dijadwalkan terbit :date dan belum terlihat oleh publik.',
+    'draft_unpublished' => 'Entri ini masih draf dan tidak terlihat oleh publik.',
+    'draft_not_ready' => 'Terjemahan ini belum ditandai Siap, jadi publik melihat versi :language.',
+    'draft_signed_in' => 'Anda dapat melihatnya karena sedang masuk.',
+    'edit_entry' => 'Edit entri',
 ];

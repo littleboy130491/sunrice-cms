@@ -38,7 +38,7 @@ it('shows a draft entry with a banner to users who may view drafts', function ()
         ->assertOk()
         ->assertSee('Coming soon')
         ->assertSee('data-sunrice-draft-banner', false)
-        ->assertSee('is a draft and isn&#039;t visible to the public', false)
+        ->assertSee('masih draf dan tidak terlihat oleh publik', false)
         ->assertSee(route('sunrice.admin.entries.edit', $entry), false)
         ->assertHeader('X-Robots-Tag', 'noindex');
 });
@@ -57,7 +57,7 @@ it('explains scheduled entries in the banner', function () {
     $entry->update(['published_at' => now()->addWeek()]);
     signedInWith(['sunrice.view-drafts']);
 
-    get('/pages/launch')->assertOk()->assertSee('is scheduled for', false);
+    get('/pages/launch')->assertOk()->assertSee('dijadwalkan terbit', false);
 });
 
 it('renders the draft content, not the live content', function () {

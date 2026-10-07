@@ -23,4 +23,11 @@ return [
     'upload_size' => 'The file is too large. The maximum is :size.',
     'upload_hint' => 'Accepted: :types. Up to :size.',
     'upload_hint_any' => 'Up to :size.',
+    // Banner above unpublished pages, for signed-in editors.
+    'draft' => 'Draft',
+    'draft_scheduled' => 'This entry is scheduled for :date and isn\'t visible to the public yet.',
+    'draft_unpublished' => 'This entry is a draft and isn\'t visible to the public.',
+    'draft_not_ready' => 'This translation isn\'t marked Ready, so the public sees the :language version.',
+    'draft_signed_in' => 'You can see it because you\'re signed in.',
+    'edit_entry' => 'Edit entry',
 ];

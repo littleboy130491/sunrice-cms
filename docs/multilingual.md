@@ -122,3 +122,21 @@ What it does (in one transaction):
 Options: `--dry-run` (report only), `--copy-missing`, `--force` (no
 confirmation). If routes or config are cached, run `php artisan optimize`
 afterwards.
+
+## Interface text
+
+Words the site itself prints (buttons, "Previous" / "Next", form errors,
+the draft banner…) come from translation files:
+
+- Sunrice's own lines: `__('sunrice::frontend.*')`, shipped in English and
+  Indonesian. Change them or add a language with
+  `php artisan vendor:publish --tag=sunrice-translations`.
+- Laravel's own lines (pagination, validation messages, login errors):
+  Laravel ships these in English only. Sunrice adds Indonesian for
+  `pagination`, `validation`, `auth` and `passwords` and the pagination
+  view's words ("Showing … of … results"). A file you publish yourself
+  (`lang/id/validation.php`, `lang/id.json`) always wins; get every
+  language with `php artisan lang:publish` or the `laravel-lang/lang`
+  package.
+- A line missing in the visitor's language and in the fallback language
+  shows in English rather than as its key (e.g. `pagination.previous`).
