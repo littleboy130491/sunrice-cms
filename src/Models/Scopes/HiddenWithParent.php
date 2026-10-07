@@ -27,7 +27,7 @@ class HiddenWithParent implements Scope
     public function __construct(protected string $column, protected string $parentTable) {}
 
     /**
-     * @param  Builder<Model>  $builder
+     * @param  Builder<covariant Model>  $builder
      */
     public function apply(Builder $builder, Model $model): void
     {
