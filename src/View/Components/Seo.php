@@ -45,6 +45,7 @@ class Seo extends Component
     public ?string $twitterSite;
 
     /**
+     * @param  string|null  $defaultTitle  used when the page has no meta title of its own
      * @param  Term|null  $term  on term pages, for hreflang links to the term in each language
      * @param  ContentCollection|null  $collection  on per-collection term pages
      */
@@ -52,24 +53,88 @@ class Seo extends Component
         ?Entry $entry = null,
         ?string $title = null,
         ?string $description = null,
+        ?string $defaultTitle = null,
         ?bool $noindex = null,
         protected ?Term $term = null,
         protected ?ContentCollection $collection = null,
     ) {
         $this->entry = $entry;
-        $seo = $entry === null ? [] : ($entry->seo ?? []);
         $this->locale = $entry === null ? Locales::current() : ($entry->resolvedLocale ?? Locales::current());
         $this->isFallback = $entry !== null && (bool) $entry->isFallback;
 
-        $this->title = $title ?? $seo['title'] ?? ($entry === null ? null : $entry->title) ?? (string) config('app.name');
-        // The page's own description, else the site description from Settings.
-        $this->description = $description ?? (($seo['description'] ?? '') ?: (config('sunrice.seo.description') ?: null));
+        // The page's own SEO, then its collection's or taxonomy's defaults,
+        // then the site settings.
+        $seo = $this->pageSeo();
+        $defaults = $this->defaultSeo();
+
+        // An explicit title (passed by the template) wins, as before.
+        $this->title = $title
+            ?? ((($seo['title'] ?? '') ?: null)
+            ?? $defaultTitle
+            ?? $entry?->title
+            ?? $term?->name
+            ?? $collection?->titleIn($this->locale)
+            ?? (string) config('app.name'));
+        $this->description = $description
+            ?? ((($seo['description'] ?? '') ?: (($defaults['description'] ?? '') ?: config('sunrice.seo.description'))) ?: null);
+        if (! is_numeric($seo['image'] ?? null) && is_numeric($defaults['image'] ?? null)) {
+            $seo['image'] = $defaults['image'];
+        }
+        if (! empty($defaults['noindex'])) {
+            $seo['noindex'] = true;
+        }
         $this->image = $this->image($seo);
         $this->canonical = $this->canonical($seo);
         $this->alternates = $this->alternates();
         $this->robots = $this->robots($seo, $noindex);
         $this->siteName = (string) config('app.name');
         $this->twitterSite = config('sunrice.seo.twitter_site') ?: null;
+    }
+
+    /**
+     * This page's own SEO fields: the entry's, the term's (in the page's
+     * language, else the main one), or the listing page's.
+     *
+     * @return array<string, mixed>
+     */
+    protected function pageSeo(): array
+    {
+        if ($this->entry !== null) {
+            return (array) ($this->entry->seo ?? []);
+        }
+        if ($this->term !== null) {
+            $translation = $this->term->resolved ?? $this->term->translation($this->locale) ?? $this->term->mainTranslation();
+
+            return (array) ($translation?->seo ?? []);
+        }
+        if ($this->collection !== null) {
+            $byLocale = ContentCollection::archiveByLocale($this->collection->archive_data);
+            $own = (array) ($byLocale[$this->locale]['seo'] ?? []);
+            $main = (array) ($byLocale[Locales::main()]['seo'] ?? []);
+
+            // Field by field: a translation's empty field uses the main one.
+            return array_merge($main, array_filter($own, fn ($v) => $v !== null && $v !== ''));
+        }
+
+        return [];
+    }
+
+    /**
+     * Defaults from the page's collection (entries, listing pages) or
+     * taxonomy (term pages): description, image, noindex.
+     *
+     * @return array<string, mixed>
+     */
+    protected function defaultSeo(): array
+    {
+        if ($this->entry !== null) {
+            return (array) ($this->entry->collection?->setting('seo') ?? []);
+        }
+        if ($this->term !== null) {
+            return (array) ($this->term->taxonomy?->setting('seo') ?? []);
+        }
+
+        return (array) ($this->collection?->setting('seo') ?? []);
     }
 
     /** @param array<string, mixed> $seo */

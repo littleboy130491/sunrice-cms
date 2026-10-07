@@ -38,6 +38,7 @@ class ListingController extends Controller
                 'intro' => $byLocale[$locale]['intro'] ?? '',
                 // Secondary languages edit their text in the main layout.
                 'data' => (object) $collection->archiveFields($locale),
+                'seo' => (object) ($byLocale[$locale]['seo'] ?? []),
             ];
         }
 
@@ -62,7 +63,7 @@ class ListingController extends Controller
         $locale = (string) $request->input('locale', '');
         abort_unless(Locales::isMain($locale) ? $can['edit'] : ($can['edit'] || $can['translate']), 403);
 
-        $save->handle($collection, $request->only(['locale', 'title', 'intro', 'data']));
+        $save->handle($collection, $request->only(['locale', 'title', 'intro', 'data', 'seo']));
 
         return back()->with('success', 'Listing page saved.');
     }

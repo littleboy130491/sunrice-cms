@@ -30,6 +30,12 @@ class SaveListing
             'title' => ['nullable', 'string', 'max:255'],
             'intro' => ['nullable', 'string', 'max:2000'],
             'data' => ['nullable', 'array'],
+            'seo' => ['nullable', 'array'],
+            'seo.title' => ['nullable', 'string', 'max:255'],
+            'seo.description' => ['nullable', 'string', 'max:500'],
+            'seo.canonical' => ['nullable', 'string', 'max:500'],
+            'seo.image' => ['nullable', 'integer'],
+            'seo.noindex' => ['nullable', 'boolean'],
         ] + ($schema === null ? [] : $schema->rules('data')))->validate();
 
         $locale = (string) $validated['locale'];
@@ -51,6 +57,7 @@ class SaveListing
             'title' => ($validated['title'] ?? null) ?: null,
             'intro' => ($validated['intro'] ?? null) ?: null,
             'data' => $data === [] ? null : $data,
+            'seo' => array_filter((array) ($validated['seo'] ?? []), fn ($v) => $v !== null && $v !== '' && $v !== false) ?: null,
         ], fn ($value) => $value !== null);
 
         $collection->archive_data = array_filter($byLocale);

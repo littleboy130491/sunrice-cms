@@ -35,6 +35,10 @@ class SaveTaxonomy
             'settings.per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'settings.titles' => ['nullable', 'array'],
             'settings.titles.*' => ['nullable', 'string', 'max:255'],
+            'settings.seo' => ['nullable', 'array'],
+            'settings.seo.description' => ['nullable', 'string', 'max:500'],
+            'settings.seo.image' => ['nullable', 'integer'],
+            'settings.seo.noindex' => ['nullable', 'boolean'],
             'settings.template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'collection_ids' => ['array'],
             'collection_ids.*' => ['integer', Rule::exists('sunrice_collections', 'id')],
@@ -51,6 +55,12 @@ class SaveTaxonomy
             $settings['titles'] = Taxonomy::cleanTitles($settings['titles']);
             if ($settings['titles'] === []) {
                 unset($settings['titles']);
+            }
+        }
+        if (array_key_exists('seo', $settings)) {
+            $settings['seo'] = array_filter((array) $settings['seo'], fn ($v) => $v !== null && $v !== '' && $v !== false);
+            if ($settings['seo'] === []) {
+                unset($settings['seo']);
             }
         }
         if (isset($settings['per_page'])) {

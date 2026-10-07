@@ -3,7 +3,7 @@
 
     Child templates `@extends('sunrice.layouts.app')` and fill:
       - @section('content')   the page body
-    and may pass `seoTitle` (e.g. @extends('sunrice.layouts.app', ['seoTitle' => '...'])).
+    and may pass `seoTitle`, the title used when the page has no meta title of its own (e.g. @extends('sunrice.layouts.app', ['seoTitle' => '...'])).
 
     Variables Sunrice passes to every template: $locale, $pageType
     ('entry' | 'archive' | 'term'), plus $entry / $entries / $collection /
@@ -24,7 +24,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     {{-- SEO tags. Without an entry it falls back to app.name and the current URL. --}}
-    <x-sunrice::seo :entry="$pageEntry" :term="$page?->term" :collection="$page?->collection" :title="$seoTitle ?? null" />
+    <x-sunrice::seo :entry="$pageEntry" :term="$page?->term" :collection="$page?->collection" :default-title="$seoTitle ?? null" />
 
     {{-- Starter styles: delete this block and use your own CSS (Vite, Tailwind, ...). --}}
     <style>

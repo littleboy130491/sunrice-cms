@@ -46,6 +46,7 @@ class TemplateResolver
                 'sunrice::defaults.index',
             ]),
             'term' => array_filter([
+                $context->term?->template,
                 $context->taxonomy?->setting('template'),
                 'sunrice.taxonomies.'.$context->taxonomy?->handle.'.show',
                 'sunrice.taxonomies.show',

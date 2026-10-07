@@ -299,6 +299,7 @@ class SwitchMainLanguage
                 'title' => ($new['title'] ?? null) ?: ($old['title'] ?? null),
                 'intro' => ($new['intro'] ?? null) ?: ($old['intro'] ?? null),
                 'data' => $newData ?: null,
+                'seo' => $new['seo'] ?? null,
             ], fn ($v) => $v !== null);
             if ($old !== []) {
                 $overlay = $fields === null ? $oldData : TranslationOverlay::extract($fields, $oldData, $newData);
@@ -306,6 +307,7 @@ class SwitchMainLanguage
                     'title' => $old['title'] ?? null,
                     'intro' => $old['intro'] ?? null,
                     'data' => $overlay ?: null,
+                    'seo' => $old['seo'] ?? null,
                 ], fn ($v) => $v !== null);
             }
 

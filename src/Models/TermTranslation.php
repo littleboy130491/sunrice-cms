@@ -18,6 +18,7 @@ use Sunrice\Database\Factories\TermTranslationFactory;
  * @property string $name
  * @property string $slug
  * @property array<string,mixed> $data
+ * @property array<string,mixed>|null $seo
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
@@ -34,7 +35,7 @@ class TermTranslation extends Model
 
     protected $attributes = ['data' => '{}'];
 
-    protected $casts = ['data' => 'array'];
+    protected $casts = ['data' => 'array', 'seo' => 'array'];
 
     protected static function newFactory(): TermTranslationFactory
     {
