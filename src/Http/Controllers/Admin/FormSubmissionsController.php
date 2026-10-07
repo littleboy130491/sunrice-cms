@@ -14,6 +14,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
+use Sunrice\Support\CsvCell;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -67,8 +68,18 @@ class FormSubmissionsController extends Controller
     {
         Gate::authorize('viewSubmissions', $submission->form);
 
+        // Only file fields hold upload paths: any other value (e.g. text a
+        // visitor typed) is never treated as one.
+        $fileFields = array_filter($submission->form->schema()->fields(), fn (array $f) => ($f['type'] ?? null) === 'file');
+        $isFileField = in_array($field, array_column($fileFields, 'handle'), true);
         $path = $submission->data[$field] ?? null;
-        abort_unless(is_string($path) && str_starts_with($path, "form-uploads/{$submission->form->handle}/"), 404);
+        abort_unless(
+            $isFileField
+            && is_string($path)
+            && str_starts_with($path, "form-uploads/{$submission->form->handle}/")
+            && ! in_array('..', explode('/', str_replace('\\', '/', $path)), true),
+            404,
+        );
 
         $disk = Storage::disk(config('sunrice.forms.upload_disk'));
         abort_unless($disk->exists($path), 404);
@@ -100,7 +111,7 @@ class FormSubmissionsController extends Controller
                     $row = [$sub->id, $sub->created_at?->toIso8601String()];
                     foreach ($handles as $handle) {
                         $value = $sub->data[$handle] ?? '';
-                        $row[] = is_scalar($value) ? $value : json_encode($value);
+                        $row[] = CsvCell::safe(is_scalar($value) ? $value : json_encode($value));
                     }
                     fputcsv($out, $row);
                 }

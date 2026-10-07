@@ -236,6 +236,8 @@ return [
     */
     'forms' => [
         'upload_disk' => 'local',
+        // Size limit (KB) for file fields that don't set their own "max_kb".
+        'upload_max_kb' => 10240,
         'prune_after_days' => null,
         'rate_limit' => ['attempts' => 5, 'per_minutes' => 1],
     ],

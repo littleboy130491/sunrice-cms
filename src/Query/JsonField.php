@@ -6,6 +6,7 @@ namespace Sunrice\Query;
 
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
+use InvalidArgumentException;
 
 /**
  * Filtering and sorting on custom-field values inside a JSON `data`
@@ -14,6 +15,23 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class JsonField
 {
+    /** Operators accepted by where(); anything else is a programming error. */
+    public const OPERATORS = ['=', '!=', '<>', '<', '<=', '>', '>=', 'like', 'not like', 'in', 'contains'];
+
+    /**
+     * Field paths go into raw SQL (castExpression), so only plain handle
+     * characters and dots between segments are allowed.
+     */
+    public static function assertSafe(string $path, ?string $operator = null): void
+    {
+        if (preg_match('/^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/', $path) !== 1) {
+            throw new InvalidArgumentException("Invalid field path [{$path}].");
+        }
+        if ($operator !== null && ! in_array(strtolower($operator), static::OPERATORS, true)) {
+            throw new InvalidArgumentException("Invalid operator [{$operator}].");
+        }
+    }
+
     /**
      * @param  'in'|'contains'|'='|'!='|'<'|'<='|'>'|'>='|string  $operator
      *
@@ -30,6 +48,9 @@ class JsonField
         mixed $value,
         ?string $cast = null,
     ): Builder {
+        static::assertSafe($path, $operator);
+        $operator = strtolower($operator);
+
         return match ($operator) {
             'in' => $query->where(function (Builder $q) use ($column, $path, $value, $cast): void {
                 foreach ((array) $value as $v) {
@@ -72,6 +93,7 @@ class JsonField
      */
     public static function orderBy(Builder $query, string $column, string $path, ?string $cast, string $direction = 'asc'): Builder
     {
+        static::assertSafe($path);
         $direction = strtolower($direction) === 'desc' ? 'desc' : 'asc';
 
         if ($cast === 'number' || $cast === 'date') {
@@ -88,6 +110,7 @@ class JsonField
      */
     public static function castExpression(Builder $query, string $column, string $path, string $cast): string
     {
+        static::assertSafe($path);
         $connection = $query->getConnection();
         $driver = $connection instanceof Connection
             ? $connection->getDriverName()

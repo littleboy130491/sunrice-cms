@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- **Security fixes** (from a code review):
+  - Submission downloads only serve uploads of file fields, never a path
+    typed into another field, and refuse `..` in paths.
+  - SVG uploads containing scripts, event handlers, `javascript:` links or
+    entities are refused (they'd run on the site's domain when opened).
+  - Passwords set in Users are hashed by Sunrice itself, even when the
+    host's User model has no `hashed` cast.
+  - Menu item and Link field URLs only accept http(s), mailto, tel and
+    relative links; `javascript:` and similar saved earlier aren't printed.
+  - CSV exports prefix cells starting with `= + - @` so spreadsheets don't
+    run them as formulas.
+  - Blueprint/fieldset field handles allow only letters, numbers, `-` and
+    `_`; `JsonField` refuses other paths and unknown operators.
+  - Password reset requests answer the same whether or not the email has
+    an account.
+- Entry and term slugs must be lowercase kebab-case, not a language code or
+  the admin path (an existing slug can still be saved unchanged).
+- Menu items can't be moved under their own sub-items (they used to vanish).
+- Form file fields default to a 10 MB limit (`sunrice.forms.upload_max_kb`).
+- The sitemap streams entries and terms instead of loading them all.
 - **Two-factor login** — Settings → Security can require a 6-digit code,
   emailed after the password, for every admin login (off by default).
   Codes expire after 10 minutes; wrong guesses are limited.

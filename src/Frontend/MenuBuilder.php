@@ -12,6 +12,7 @@ use Sunrice\Models\Menu;
 use Sunrice\Models\MenuItem;
 use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
+use Sunrice\Support\SafeUrl;
 
 /**
  * Resolves a menu's items into a tree of MenuNodes for the active
@@ -129,7 +130,7 @@ class MenuBuilder
         $resolved = [];
         foreach ($items as $item) {
             $resolved[$item->id] = match ($item->type) {
-                'url' => ['title' => null, 'url' => (string) $item->url],
+                'url' => SafeUrl::isSafe($item->url) ? ['title' => null, 'url' => (string) $item->url] : null,
                 'entry' => $this->entryTarget($entries->get($item->target_id), $locale),
                 'collection' => $this->collectionTarget($collections->get($item->target_id), $locale),
                 'term' => $this->termTarget($terms->get($item->target_id), $locale),

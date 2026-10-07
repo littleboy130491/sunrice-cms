@@ -12,6 +12,7 @@ use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Models\TermTranslation;
+use Sunrice\Rules\ValidSlug;
 use Sunrice\Support\Locales;
 use Sunrice\Support\SlugValidator;
 
@@ -49,7 +50,7 @@ class SaveTerm
             ],
             'translations' => ['required', 'array'],
             'translations.*.title' => ['required', 'string', 'max:255'],
-            'translations.*.slug' => ['nullable', 'string', 'max:255'],
+            'translations.*.slug' => ['nullable', 'string', 'max:255', new ValidSlug($term === null ? [] : $term->translations()->pluck('slug')->all())],
             'translations.*.data' => ['array'],
             'translations.*.seo' => ['nullable', 'array'],
             'translations.*.seo.title' => ['nullable', 'string', 'max:255'],

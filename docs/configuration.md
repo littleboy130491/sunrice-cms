@@ -44,6 +44,7 @@ The main language can only be changed before any content exists.
 | `sunrice.assets.max_upload_kb` | `20480` | Upload size limit in KB. |
 | `sunrice.assets.image_sizes` | thumbnail/medium/large | Named derived sizes `{name: [width, height, mode]}` with mode `crop` or `fit`. |
 | `sunrice.forms.upload_disk` | `local` | Private disk for form uploads. |
+| `sunrice.forms.upload_max_kb` | `10240` | Size limit (KB) for form file fields that don't set their own `max_kb`. |
 | `sunrice.forms.prune_after_days` | `null` | Days to keep submissions (`null` = keep forever). |
 | `sunrice.forms.rate_limit` | `{attempts: 5, per_minutes: 1}` | Per-IP+form submission limit. |
 | `sunrice.revisions.keep` | `50` | Revisions kept per entry translation. |

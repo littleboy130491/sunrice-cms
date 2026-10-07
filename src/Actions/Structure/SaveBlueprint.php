@@ -28,8 +28,8 @@ class SaveBlueprint
         // Checked on its own: as part of the rules above it would reduce
         // each field to just its handle in $validated.
         validator(['fields' => $attributes['fields'] ?? []], [
-            'fields.*.handle' => ['required', 'string', 'max:100', 'distinct'],
-        ], [], ['fields.*.handle' => 'field handle'])->validate();
+            'fields.*.handle' => ['required', 'string', 'max:100', 'distinct', 'regex:/^[A-Za-z0-9_-]+$/'],
+        ], ['fields.*.handle.regex' => 'Field handles may only use letters, numbers, dashes and underscores.'], ['fields.*.handle' => 'field handle'])->validate();
 
         $blueprint ??= new Blueprint;
         $blueprint->fill([
