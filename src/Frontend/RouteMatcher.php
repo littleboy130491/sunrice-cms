@@ -42,9 +42,12 @@ class RouteMatcher
     }
 
     /** Forget the per-request memoization (mainly for tests/long runs). */
-    public static function flush(): void
+    public static function flush(bool $keepCache = false): void
     {
         static::$compiled = null;
+        if ($keepCache) {
+            return;
+        }
         Cache::store(config('sunrice.cache.store'))->forget(
             'sunrice:'.ContentVersion::current().':shared:routematcher'
         );
@@ -56,10 +59,34 @@ class RouteMatcher
         return static::$compiled ??= $this->compile();
     }
 
-    /** @return array<int, array{regex: string, match: RouteMatch}> */
+    /**
+     * The cache holds plain arrays (ids, not models): sites may refuse to
+     * unserialize objects from the cache (cache.serializable_classes).
+     *
+     * @return array<int, array{regex: string, match: RouteMatch}>
+     */
     protected function compile(): array
     {
-        return ContentCache::remember('routematcher', fn () => $this->buildRoutes(), 'shared');
+        $routes = ContentCache::remember('routematcher', fn () => array_map(fn (array $r) => [
+            'regex' => $r['regex'],
+            'type' => $r['match']->type,
+            'collection' => $r['match']->collection?->id,
+            'taxonomy' => $r['match']->taxonomy?->id,
+            'slug' => $r['match']->slug,
+        ], $this->buildRoutes()), 'shared');
+
+        $collections = Collection::query()->whereKey(array_filter(array_column($routes, 'collection')))->get()->keyBy('id');
+        $taxonomies = Taxonomy::query()->whereKey(array_filter(array_column($routes, 'taxonomy')))->get()->keyBy('id');
+
+        return array_map(fn (array $r) => [
+            'regex' => $r['regex'],
+            'match' => new RouteMatch(
+                type: $r['type'],
+                collection: $r['collection'] === null ? null : $collections->get($r['collection']),
+                taxonomy: $r['taxonomy'] === null ? null : $taxonomies->get($r['taxonomy']),
+                slug: $r['slug'],
+            ),
+        ], $routes);
     }
 
     /** @return array<int, array{regex: string, match: RouteMatch}> */

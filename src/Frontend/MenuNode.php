@@ -45,4 +45,16 @@ class MenuNode implements Arrayable
             'children' => $this->children->map->toArray()->all(),
         ];
     }
+
+    /** @param array<string, mixed> $node as from toArray() */
+    public static function fromArray(array $node): self
+    {
+        return new self(
+            label: (string) ($node['label'] ?? ''),
+            url: (string) ($node['url'] ?? ''),
+            newTab: (bool) ($node['new_tab'] ?? false),
+            isActive: (bool) ($node['is_active'] ?? false),
+            children: (new Collection((array) ($node['children'] ?? [])))->map(fn (array $child) => self::fromArray($child))->values(),
+        );
+    }
 }

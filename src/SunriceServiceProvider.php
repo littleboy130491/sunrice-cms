@@ -109,6 +109,8 @@ class SunriceServiceProvider extends PackageServiceProvider
     {
         $this->fillMissingConfig();
         $this->app->singleton(Sunrice::class);
+        // Per request: remembers the globals already hydrated for this request.
+        $this->app->scoped(Frontend\GlobalsRepository::class);
         $this->app->singleton(Fields\FieldRegistry::class, function (): Fields\FieldRegistry {
             $registry = new Fields\FieldRegistry;
 
