@@ -49,6 +49,10 @@ class FormSubmissionsController extends Controller
                 'id' => $s->id,
                 'data' => $s->data,
                 'created_at' => $s->created_at?->toIso8601String(),
+                // Shown in the submission's detail popup.
+                'ip_address' => $s->getAttribute('ip_address'),
+                'user_agent' => $s->getAttribute('user_agent'),
+                'locale' => $s->getAttribute('locale'),
             ]),
             'filters' => $request->only(['search', 'from', 'to']),
         ]);

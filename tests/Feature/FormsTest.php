@@ -6,6 +6,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Inertia\Testing\AssertableInertia as Assert;
 use Sunrice\Actions\Forms\DeleteForm;
 use Sunrice\Actions\Forms\SaveForm;
 use Sunrice\Actions\Forms\SubmitForm;
@@ -14,6 +15,7 @@ use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
 
 use function Pest\Laravel\artisan;
+use function Pest\Laravel\get;
 use function Pest\Laravel\post;
 
 beforeEach(function () {
@@ -128,4 +130,17 @@ it('deletes uploaded files when submissions are pruned', function () {
 
     Storage::disk('local')->assertMissing($path);
     expect(FormSubmission::query()->count())->toBe(0);
+});
+
+it('lists submissions with what the detail popup needs', function () {
+    $form = makeForm();
+    app(SubmitForm::class)->handle($form, ['name' => 'Ada', 'email' => 'ada@example.com', 'message' => str_repeat('A long message. ', 40)], ['ip' => '10.0.0.1', 'user_agent' => 'Firefox', 'locale' => 'en']);
+
+    get("/cms/forms/{$form->id}/submissions")->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('Forms/Submissions')
+        // The whole message is sent; the table shortens it, the popup shows it all.
+        ->where('submissions.data.0.data.message', str_repeat('A long message. ', 40))
+        ->where('submissions.data.0.ip_address', '10.0.0.1')
+        ->where('submissions.data.0.user_agent', 'Firefox')
+        ->where('submissions.data.0.locale', 'en'));
 });

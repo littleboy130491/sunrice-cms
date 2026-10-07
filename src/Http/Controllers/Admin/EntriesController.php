@@ -32,6 +32,7 @@ use Sunrice\Actions\Entries\UnpublishEntry;
 use Sunrice\Actions\Support\Reorder;
 use Sunrice\Admin\Export\CsvExporter;
 use Sunrice\Admin\Table\Column;
+use Sunrice\Admin\Table\EntryFieldColumns;
 use Sunrice\Admin\Table\TableQuery;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Frontend\UrlGenerator;
@@ -56,7 +57,8 @@ class EntriesController extends Controller
         $query = Entry::query()
             ->where('collection_id', $collection->id)
             ->with(['translations' => fn ($q) => $q->where('locale', Locales::main()), 'author']);
-        $table = $this->entriesTable($request, $collection, $query);
+        $fieldColumns = new EntryFieldColumns($collection);
+        $table = $this->entriesTable($request, $collection, $query, $fieldColumns);
         $meta = $table->meta();
         [$defaultColumn] = $collection->defaultSort();
 
@@ -76,7 +78,12 @@ class EntriesController extends Controller
             new Column('author', 'Created by'),
             new Column('created_at', 'Created', sortable: true, type: 'date'),
             new Column('updated_at', 'Updated', sortable: true, type: 'date'),
+            // The blueprint's fields, hidden until picked under Columns.
+            ...$fieldColumns->columns(),
         ];
+        $visible = $this->visibleEntryColumns((int) $userId, $collection, $fieldColumns);
+        $rows = $table->paginate($request);
+        $fieldColumns->preload($rows->getCollection(), $visible);
 
         // People who wrote entries here, for the "Created by" filter.
         $authorIds = Entry::withTrashed()->where('collection_id', $collection->id)->whereNotNull('author_id')->distinct()->pluck('author_id');
@@ -89,7 +96,7 @@ class EntriesController extends Controller
         return Inertia::render('Entries/Index', [
             'collection' => $collection->only('id', 'handle', 'title', 'settings'),
             'columns' => $columns,
-            'rows' => $table->paginate($request)->through(function (Model $e): array {
+            'rows' => $rows->through(function (Model $e) use ($fieldColumns, $visible): array {
                 /** @var Entry $e */
                 $t = $e->translations->first();
 
@@ -104,13 +111,15 @@ class EntriesController extends Controller
                     'author' => $e->author?->getAttribute('name') ?? '—',
                     'created_at' => $e->created_at?->format('j M Y'),
                     'updated_at' => $e->updated_at?->diffForHumans(),
+                    ...$fieldColumns->values($e, $visible),
                 ];
             }),
             'authors' => $authors,
             'meta' => $meta,
             // Ordered by hand, but a search, filter or column sort hides that order.
             'reorderPaused' => $mayReorder && ! $canReorder,
-            'visibleColumns' => $this->visibleEntryColumns((int) $userId),
+            'visibleColumns' => $visible,
+            'columnsKey' => self::columnsKey($collection),
             'can' => [
                 'create' => $request->user()->can('create', [Entry::class, $collection->id]),
                 'reorder' => $canReorder,
@@ -122,18 +131,27 @@ class EntriesController extends Controller
     }
 
     /**
-     * Columns this user shows. A choice saved before the list gained
-     * "Created" and "Created by" (it had an ID column) starts over.
+     * Columns this user shows in this collection. A choice saved before
+     * the list gained "Created" and "Created by" (it had an ID column)
+     * starts over; one saved before columns were per collection is the
+     * starting point.
      *
      * @return array<int, string>
      */
-    protected function visibleEntryColumns(int $userId): array
+    protected function visibleEntryColumns(int $userId, Collection $collection, EntryFieldColumns $fieldColumns): array
     {
         $default = ['title', 'status', 'author', 'created_at', 'updated_at'];
-        $saved = TablePreferencesController::columnsFor($userId, 'entries', $default);
-        $known = array_values(array_intersect($saved, ['title', 'status', 'author', 'created_at', 'updated_at']));
+        $saved = TablePreferencesController::columnsFor($userId, self::columnsKey($collection), [])
+            ?: TablePreferencesController::columnsFor($userId, 'entries', $default);
+        $known = array_values(array_intersect($saved, [...$default, ...$fieldColumns->keys()]));
 
         return in_array('id', $saved, true) || $known === [] ? $default : $known;
+    }
+
+    /** The saved column choice is per collection: each has its own fields. */
+    protected static function columnsKey(Collection $collection): string
+    {
+        return "entries-{$collection->handle}";
     }
 
     /**
@@ -143,7 +161,7 @@ class EntriesController extends Controller
      *
      * @param  Builder<Entry>  $query
      */
-    protected function entriesTable(Request $request, Collection $collection, Builder $query): TableQuery
+    protected function entriesTable(Request $request, Collection $collection, Builder $query, ?EntryFieldColumns $fieldColumns = null): TableQuery
     {
         $main = Locales::main();
         $mainTitle = EntryTranslation::query()
@@ -171,8 +189,9 @@ class EntriesController extends Controller
                 ? $q->whereNull('author_id')
                 : $q->where('author_id', $value))
             ->sortUsing('title', fn (Builder $q, string $direction) => $q->orderBy($mainTitle, $direction))
-            ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at'])
-            ->apply($request);
+            ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at']);
+        $fieldColumns?->applySorts($table);
+        $table->apply($request);
 
         // No column clicked: the collection's own order (Structure →
         // Collections → Order).
@@ -192,7 +211,7 @@ class EntriesController extends Controller
     {
         $this->authorize('viewAny', [Entry::class, $collection->id]);
 
-        $table = $this->entriesTable($request, $collection, Entry::query()->where('collection_id', $collection->id)->with('translations'));
+        $table = $this->entriesTable($request, $collection, Entry::query()->where('collection_id', $collection->id)->with('translations'), new EntryFieldColumns($collection));
 
         return $csv->download($table, [
             new Column('id', 'ID'),
