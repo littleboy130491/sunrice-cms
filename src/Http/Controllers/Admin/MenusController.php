@@ -43,7 +43,7 @@ class MenusController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('Menus/Form', ['menu' => null]);
+        return Inertia::render('Menus/Create');
     }
 
     public function store(Request $request): RedirectResponse
@@ -62,40 +62,59 @@ class MenusController extends Controller
 
     public function edit(Menu $menu): Response
     {
-        $items = $menu->items()->orderBy('sort_order')->get();
-
-        // Titles of the linked entries/collections/terms, for the editor.
-        $ids = fn (string $type) => $items->where('type', $type)->pluck('target_id')->filter()->all();
-        $entries = Entry::query()->with('translations')->whereIn('id', $ids('entry'))->get()->keyBy('id');
-        $collections = Collection::query()->orderBy('sort_order')->orderBy('title')->get();
-        $terms = Term::query()->with(['translations', 'taxonomy'])->whereIn('id', $ids('term'))->get()->keyBy('id');
-
         return Inertia::render('Menus/Edit', [
             'menu' => $menu->only('id', 'handle', 'title'),
-            'items' => $items->map(fn (MenuItem $i) => [
-                'id' => $i->id,
-                'parent_id' => $i->parent_id,
-                'type' => $i->type,
-                'target_id' => $i->target_id,
-                'target_title' => match ($i->type) {
-                    'entry' => $entries->get($i->target_id)?->mainTranslation()?->title,
-                    'collection' => $collections->firstWhere('id', $i->target_id)?->title,
-                    'term' => ($t = $terms->get($i->target_id)) ? $t->taxonomy->title.': '.$t->mainTranslation()?->name : null,
-                    default => null,
-                },
-                // The term's taxonomy, so editing the item searches the right one.
-                'target_taxonomy' => $i->type === 'term' ? $terms->get($i->target_id)?->taxonomy?->handle : null,
-                'url' => $i->url,
-                'labels' => $i->labels,
-                'new_tab' => $i->new_tab,
-            ])->values(),
-            'collections' => $collections->map(fn (Collection $c) => [
+            'items' => static::presentItems($menu->items()->orderBy('sort_order')->get()),
+        ]);
+    }
+
+    /**
+     * Menu items for the admin, with the title of what each links to.
+     *
+     * @param  \Illuminate\Support\Collection<int, MenuItem>  $items
+     * @return array<int, array<string, mixed>>
+     */
+    public static function presentItems(\Illuminate\Support\Collection $items): array
+    {
+        $ids = fn (string $type) => $items->where('type', $type)->pluck('target_id')->filter()->all();
+        $entries = Entry::query()->with('translations')->whereIn('id', $ids('entry'))->get()->keyBy('id');
+        $collections = Collection::query()->whereIn('id', $ids('collection'))->get()->keyBy('id');
+        $terms = Term::query()->with(['translations', 'taxonomy'])->whereIn('id', $ids('term'))->get()->keyBy('id');
+
+        return $items->map(fn (MenuItem $i) => [
+            'id' => $i->id,
+            'parent_id' => $i->parent_id,
+            'type' => $i->type,
+            'target_id' => $i->target_id,
+            'target_title' => match ($i->type) {
+                'entry' => $entries->get($i->target_id)?->mainTranslation()?->title,
+                'collection' => $collections->get($i->target_id)?->title,
+                'term' => ($t = $terms->get($i->target_id)) ? $t->taxonomy->title.': '.$t->mainTranslation()?->name : null,
+                default => null,
+            },
+            // The term's taxonomy, so editing the item searches the right one.
+            'target_taxonomy' => $i->type === 'term' ? $terms->get($i->target_id)?->taxonomy?->handle : null,
+            'url' => $i->url,
+            'labels' => $i->labels,
+            'new_tab' => $i->new_tab,
+        ])->values()->all();
+    }
+
+    /**
+     * Link targets offered by the menu item editor.
+     *
+     * @return array{collections: mixed, taxonomies: mixed}
+     */
+    public static function itemOptions(): array
+    {
+        return [
+            'collections' => Collection::query()->orderBy('sort_order')->orderBy('title')->get()->map(fn (Collection $c) => [
                 'id' => $c->id,
                 'title' => $c->title,
                 'has_archive' => (bool) $c->setting('has_archive', false),
             ])->values(),
             'taxonomies' => Taxonomy::query()->orderBy('title')->get(['id', 'handle', 'title']),
-        ]);
+        ];
     }
 
     public function update(Request $request, Menu $menu): RedirectResponse

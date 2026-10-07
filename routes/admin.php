@@ -87,7 +87,9 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
 
     // Taxonomy terms (T8.4)
     Route::get('taxonomies/{taxonomy:handle}', [Admin\TermsController::class, 'index'])->name('terms.index');
+    Route::get('taxonomies/{taxonomy:handle}/terms/create', [Admin\TermsController::class, 'create'])->name('terms.create');
     Route::post('taxonomies/{taxonomy:handle}/terms', [Admin\TermsController::class, 'store'])->name('terms.store');
+    Route::get('terms/{term}/edit', [Admin\TermsController::class, 'edit'])->name('terms.edit');
     Route::put('terms/{term}', [Admin\TermsController::class, 'update'])->name('terms.update');
     Route::delete('terms/{term}', [Admin\TermsController::class, 'destroy'])->name('terms.destroy');
     Route::post('taxonomies/{taxonomy:handle}/terms/reorder', [Admin\TermsController::class, 'reorder'])->name('terms.reorder');
@@ -95,11 +97,14 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
 
     // Menus (T8.5)
     Route::get('menus', [Admin\MenusController::class, 'index'])->name('menus.index');
+    Route::get('menus/create', [Admin\MenusController::class, 'create'])->name('menus.create');
     Route::post('menus', [Admin\MenusController::class, 'store'])->name('menus.store');
     Route::get('menus/{menu}', [Admin\MenusController::class, 'edit'])->name('menus.edit');
     Route::put('menus/{menu}', [Admin\MenusController::class, 'update'])->name('menus.update');
     Route::delete('menus/{menu}', [Admin\MenusController::class, 'destroy'])->name('menus.destroy');
+    Route::get('menus/{menu}/items/create', [Admin\MenuItemsController::class, 'create'])->name('menu-items.create');
     Route::post('menus/{menu}/items', [Admin\MenuItemsController::class, 'store'])->name('menu-items.store');
+    Route::get('menu-items/{item}/edit', [Admin\MenuItemsController::class, 'edit'])->name('menu-items.edit');
     Route::put('menu-items/{item}', [Admin\MenuItemsController::class, 'update'])->name('menu-items.update');
     Route::delete('menu-items/{item}', [Admin\MenuItemsController::class, 'destroy'])->name('menu-items.destroy');
     Route::post('menus/{menu}/items/reorder', [Admin\MenuItemsController::class, 'reorder'])->name('menu-items.reorder');
@@ -119,10 +124,13 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
 
     // Users & roles (T8.7)
     Route::get('users', [Admin\UsersController::class, 'index'])->name('users.index');
+    Route::get('users/create', [Admin\UsersController::class, 'create'])->name('users.create');
     Route::post('users', [Admin\UsersController::class, 'store'])->name('users.store');
+    Route::get('users/{user}/edit', [Admin\UsersController::class, 'edit'])->name('users.edit');
     Route::put('users/{user}', [Admin\UsersController::class, 'update'])->name('users.update');
     Route::delete('users/{user}', [Admin\UsersController::class, 'destroy'])->name('users.destroy');
     Route::get('roles', [Admin\RolesController::class, 'index'])->name('roles.index');
+    Route::get('roles/create', [Admin\RolesController::class, 'create'])->name('roles.create');
     Route::post('roles', [Admin\RolesController::class, 'store'])->name('roles.store');
     Route::get('roles/{role}/edit', [Admin\RolesController::class, 'edit'])->name('roles.edit');
     Route::put('roles/{role}', [Admin\RolesController::class, 'update'])->name('roles.update');
@@ -133,12 +141,15 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::post('assets', [Admin\AssetsController::class, 'store'])->name('assets.store');
     Route::post('assets/bulk-trash', [Admin\AssetsController::class, 'bulkTrash'])->name('assets.bulk-trash');
     Route::get('assets/{asset}', [Admin\AssetsController::class, 'show'])->name('assets.show');
+    Route::get('assets/{asset}/edit', [Admin\AssetsController::class, 'edit'])->whereNumber('asset')->name('assets.edit');
     Route::put('assets/{asset}', [Admin\AssetsController::class, 'update'])->name('assets.update');
     Route::post('assets/{asset}/replace', [Admin\AssetsController::class, 'replace'])->name('assets.replace');
     Route::delete('assets/{asset}', [Admin\AssetsController::class, 'destroy'])->name('assets.destroy');
     Route::post('assets/{asset}/restore', [Admin\AssetsController::class, 'restore'])->name('assets.restore');
     Route::delete('assets/{asset}/force', [Admin\AssetsController::class, 'forceDelete'])->name('assets.force-delete');
+    Route::get('asset-folders/create', [Admin\AssetFoldersController::class, 'create'])->name('asset-folders.create');
     Route::post('asset-folders', [Admin\AssetFoldersController::class, 'store'])->name('asset-folders.store');
+    Route::get('asset-folders/{folder}/edit', [Admin\AssetFoldersController::class, 'edit'])->name('asset-folders.edit');
     Route::put('asset-folders/{folder}', [Admin\AssetFoldersController::class, 'update'])->name('asset-folders.update');
     Route::delete('asset-folders/{folder}', [Admin\AssetFoldersController::class, 'destroy'])->name('asset-folders.destroy');
 

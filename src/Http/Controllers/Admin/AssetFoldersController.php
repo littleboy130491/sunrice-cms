@@ -8,6 +8,8 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Inertia\Inertia;
+use Inertia\Response;
 use Sunrice\Actions\Assets\CreateFolder;
 use Sunrice\Actions\Assets\DeleteFolder;
 use Sunrice\Actions\Assets\RenameFolder;
@@ -18,6 +20,28 @@ class AssetFoldersController extends Controller
 {
     use AuthorizesRequests;
 
+    public function create(Request $request): Response
+    {
+        $this->authorize('createFolder', Asset::class);
+
+        return Inertia::render('Assets/Folder', [
+            'folder' => null,
+            'parentId' => $request->integer('parent') ?: null,
+            'folders' => AssetsController::folderTree(),
+        ]);
+    }
+
+    public function edit(AssetFolder $folder): Response
+    {
+        $this->authorize('updateFolder', Asset::class);
+
+        return Inertia::render('Assets/Folder', [
+            'folder' => $folder->only('id', 'name', 'parent_id'),
+            'parentId' => $folder->parent_id,
+            'folders' => AssetsController::folderTree(),
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $this->authorize('createFolder', Asset::class);
@@ -27,9 +51,9 @@ class AssetFoldersController extends Controller
             'parent_id' => ['nullable', 'integer', 'exists:sunrice_asset_folders,id'],
         ]);
 
-        app(CreateFolder::class)->handle($validated['name'], $validated['parent_id'] ?? null);
+        $folder = app(CreateFolder::class)->handle($validated['name'], $validated['parent_id'] ?? null);
 
-        return back()->with('success', "Folder \"{$validated['name']}\" created.");
+        return redirect()->route('sunrice.admin.assets.index', ['folder' => $folder->id])->with('success', "Folder \"{$validated['name']}\" created.");
     }
 
     public function update(Request $request, AssetFolder $folder): RedirectResponse
@@ -39,7 +63,7 @@ class AssetFoldersController extends Controller
         $validated = $request->validate(['name' => ['required', 'string', 'max:255']]);
         app(RenameFolder::class)->handle($folder, $validated['name']);
 
-        return back()->with('success', 'Folder renamed.');
+        return redirect()->route('sunrice.admin.assets.index', ['folder' => $folder->id])->with('success', 'Folder renamed.');
     }
 
     public function destroy(AssetFolder $folder): RedirectResponse
@@ -47,6 +71,6 @@ class AssetFoldersController extends Controller
         $this->authorize('deleteFolder', Asset::class);
         app(DeleteFolder::class)->handle($folder);
 
-        return back()->with('success', 'Folder deleted.');
+        return redirect()->route('sunrice.admin.assets.index')->with('success', 'Folder deleted.');
     }
 }

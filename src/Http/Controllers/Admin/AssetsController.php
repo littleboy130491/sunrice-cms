@@ -21,6 +21,9 @@ use Sunrice\Actions\Assets\UpdateAssetMeta;
 use Sunrice\Actions\Assets\UploadAsset;
 use Sunrice\Models\Asset;
 use Sunrice\Models\AssetFolder;
+use Sunrice\Models\EntryTranslation;
+use Sunrice\Models\GlobalValue;
+use Sunrice\Models\TermTranslation;
 
 class AssetsController extends Controller
 {
@@ -86,6 +89,45 @@ class AssetsController extends Controller
         $this->authorize('view', $asset);
 
         return response()->json($this->serialize($asset) + ['usages' => $asset->usages()]);
+    }
+
+    /** The asset's own page: preview, details, where it's used, file actions. */
+    public function edit(int $asset): Response
+    {
+        $model = Asset::withTrashed()->findOrFail($asset);
+        $this->authorize('view', $model);
+
+        return Inertia::render('Assets/Edit', [
+            'asset' => $this->serialize($model),
+            'folder' => $model->folder_id === null ? null : AssetFolder::query()->find($model->folder_id)?->only('id', 'name'),
+            'usages' => $this->describeUsages($model),
+        ]);
+    }
+
+    /**
+     * Where an asset is used, as readable links: the entry, term or
+     * global set behind each reference.
+     *
+     * @return array<int, array{label: string, type: string, href: string|null}>
+     */
+    protected function describeUsages(Asset $asset): array
+    {
+        return $asset->usages()->map(function (array $u): array {
+            $id = (int) $u['source_id'];
+
+            return match ($u['source_type']) {
+                'entry' => ($t = EntryTranslation::query()->with('entry.collection')->find($id)) !== null
+                    ? ['type' => $t->entry?->collection?->title ?? 'Entry', 'label' => $t->title.' ('.strtoupper($t->locale).')', 'href' => route('sunrice.admin.entries.edit', $t->entry_id)]
+                    : ['type' => 'Entry', 'label' => 'Deleted entry', 'href' => null],
+                'term' => ($t = TermTranslation::query()->with('term.taxonomy')->find($id)) !== null
+                    ? ['type' => $t->term?->taxonomy?->title ?? 'Term', 'label' => $t->name.' ('.strtoupper($t->locale).')', 'href' => route('sunrice.admin.terms.edit', $t->term_id)]
+                    : ['type' => 'Term', 'label' => 'Deleted term', 'href' => null],
+                'global' => ($v = GlobalValue::query()->with('globalSet')->find($id)) !== null
+                    ? ['type' => 'Globals', 'label' => (string) $v->globalSet?->title, 'href' => route('sunrice.admin.globals.edit', $v->global_id)]
+                    : ['type' => 'Globals', 'label' => 'Deleted global', 'href' => null],
+                default => ['type' => ucfirst((string) $u['source_type']), 'label' => '#'.$id, 'href' => null],
+            };
+        })->values()->all();
     }
 
     /**
@@ -199,7 +241,7 @@ class AssetsController extends Controller
 
         app(ForceDeleteAsset::class)->handle($model, $request->boolean('force'));
 
-        return back()->with('success', 'Asset deleted permanently.');
+        return redirect()->route('sunrice.admin.assets.index')->with('success', 'Asset deleted permanently.');
     }
 
     /**
