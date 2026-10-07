@@ -13,6 +13,7 @@ import TranslatedTitles from '@/components/TranslatedTitles';
 import type { Json, SharedProps } from '@/types';
 import FieldRenderer from '@/fields/FieldRenderer';
 import { SEO_DEFAULT_FIELDS, type SeoDefaults } from '@/lib/seo-fields';
+import { HandleChangeWarning } from '@/components/app/handle-change-warning';
 
 interface CollectionShape {
     id: number;
@@ -94,6 +95,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                     <Label htmlFor="handle">Handle</Label>
                     <Input id="handle" value={form.data.handle} onChange={(e) => form.setData('handle', e.target.value)} required />
                     <InputError message={errors.handle} />
+                    <HandleChangeWarning kind="collection" original={collection?.handle} current={form.data.handle} />
                 </div>
                 <div className="grid gap-2">
                     <Label>Sidebar icon</Label>

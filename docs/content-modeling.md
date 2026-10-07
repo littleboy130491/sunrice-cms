@@ -85,3 +85,35 @@ URLs and drops unpublished targets.
 (group `template_part`) hold header/footer-type blocks. Both read via
 `Sunrice::global('handle')` / `sunrice_global('handle')`, honoring the
 whole-entity fallback.
+
+## Deleting collections and taxonomies
+
+Deleting a collection or taxonomy in the admin doesn't erase its content.
+Its entries (or terms) stay in the database but disappear from the admin,
+the site, menus, sitemaps and queries.
+
+- **Bring them back:** create a collection (or taxonomy) with the same
+  handle. The old one is restored with all its entries or terms, and roles
+  keep their permissions for it.
+- **Erase them for good:** list what's kept, then purge it on the server:
+
+```bash
+php artisan sunrice:orphans                         # list
+php artisan sunrice:orphans --purge                 # delete everything listed (asks first)
+php artisan sunrice:orphans --purge --handle=news   # only the "news" collection
+```
+
+While a deleted collection keeps its handle, no other collection can be
+renamed to it. In code, `Entry::withoutGlobalScope(HiddenWithParent::class)`
+(and the same on `EntryTranslation`, `Term`, `TermTranslation`) includes
+the hidden rows.
+
+## Changing handles
+
+Handles are how templates, code and URLs find a collection, taxonomy,
+blueprint or fieldset: template folders (`sunrice/{handle}/…`),
+`sunrice_entries('{handle}')`, `whereTerm('{handle}', …)`, fieldset imports
+and default URLs. Renaming one doesn't update any of those, so the admin
+warns before you save a new handle. Only rename when you'll update every
+reference too.
+

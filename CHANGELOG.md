@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+- **Custom field components without rebuilding the admin**: list scripts in
+  `sunrice.admin.scripts` (or `Sunrice::registerAdminScript()`) and register
+  React components with `window.Sunrice.registerField(type, Component)`;
+  `window.Sunrice` also exposes the admin's React, UI primitives, `fetchJson`
+  and `toast`. The custom fields guide now leads with `CustomField` (reuse a
+  built-in control, no JavaScript) and documents the admin-script route. A
+  field type without an admin control shows a helpful notice.
+- Entry, term and asset pickers no longer offer items that are already
+  chosen in the field (remove a chip to pick it again).
+- **Reverse relationships** in `EntryQuery`: `whereEntry('related_articles',
+  $entry)` finds entries whose entries field links to an entry, and
+  `whereFieldTerm('industries', $term)` (model, id or slug; optional
+  `includeChildren`) finds entries whose terms field holds a term.
+- **Form file uploads**: the form builder sets accepted file types (grouped
+  presets plus custom extensions) and a maximum size in MB, and shows the
+  server's PHP upload limit. Upload errors have readable messages in English
+  and Indonesian (no more raw `validation.mimes`); the file input gets an
+  `accept` attribute and a hint. Files that could run as code are always
+  refused. Submission downloads stream through the storage disk (local or
+  cloud) and report a missing file clearly.
+- **Deleting a collection or taxonomy keeps its content**, hidden from
+  the admin and the site. Creating one with the same handle restores it with
+  its entries or terms (and roles keep their permissions).
+  `php artisan sunrice:orphans` lists what's kept; `--purge` deletes it for
+  good. Run `php artisan migrate` (adds `deleted_at` to collections and
+  taxonomies).
+- Editing a collection, taxonomy, blueprint or fieldset handle shows a
+  warning explaining what the change can break.
 - **Security fixes** (from a code review):
   - Submission downloads only serve uploads of file fields, never a path
     typed into another field, and refuse `..` in paths.

@@ -12,6 +12,7 @@ import TranslatedTitles from '@/components/TranslatedTitles';
 import type { Json, SharedProps } from '@/types';
 import FieldRenderer from '@/fields/FieldRenderer';
 import { SEO_DEFAULT_FIELDS, type SeoDefaults } from '@/lib/seo-fields';
+import { HandleChangeWarning } from '@/components/app/handle-change-warning';
 
 interface TaxonomyShape {
     id: number; handle: string; title: string; blueprint_id: number | null; hierarchical: boolean;
@@ -75,6 +76,7 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
                             <Label htmlFor="handle">Handle</Label>
                             <Input id="handle" value={form.data.handle} onChange={(e) => form.setData('handle', e.target.value)} required />
                             <InputError message={errors.handle} />
+                            <HandleChangeWarning kind="taxonomy" original={taxonomy?.handle} current={form.data.handle} />
                         </div>
                     </div>
                     <TranslatedTitles

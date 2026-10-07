@@ -16,6 +16,7 @@ use Sunrice\Database\Factories\TermFactory;
 use Sunrice\Fields\HydrationContext;
 use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Collection as ContentCollection;
+use Sunrice\Models\Scopes\HiddenWithParent;
 use Sunrice\Support\Locales;
 
 /**
@@ -49,6 +50,12 @@ class Term extends Model
     protected static function newFactory(): TermFactory
     {
         return TermFactory::new();
+    }
+
+    protected static function booted(): void
+    {
+        // Hidden while its taxonomy is deleted (see HiddenWithParent).
+        static::addGlobalScope(new HiddenWithParent('taxonomy_id', 'sunrice_taxonomies'));
     }
 
     /** @return BelongsTo<Taxonomy, $this> */

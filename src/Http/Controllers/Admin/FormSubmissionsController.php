@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Http\Controllers\Admin;
 
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,7 +16,6 @@ use Inertia\Response;
 use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
 use Sunrice\Support\CsvCell;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FormSubmissionsController extends Controller
@@ -64,7 +64,7 @@ class FormSubmissionsController extends Controller
     /**
      * Authorized download of a private form-upload file.
      */
-    public function download(FormSubmission $submission, string $field): BinaryFileResponse
+    public function download(FormSubmission $submission, string $field): StreamedResponse
     {
         Gate::authorize('viewSubmissions', $submission->form);
 
@@ -81,10 +81,13 @@ class FormSubmissionsController extends Controller
             404,
         );
 
+        /** @var FilesystemAdapter $disk */
         $disk = Storage::disk(config('sunrice.forms.upload_disk'));
-        abort_unless($disk->exists($path), 404);
+        abort_unless($disk->exists($path), 404, 'The uploaded file is missing from the "'.config('sunrice.forms.upload_disk').'" disk.');
 
-        return response()->download($disk->path($path));
+        // Streamed through the disk (works for local and cloud disks alike),
+        // as an attachment so the browser never renders it.
+        return $disk->download($path, basename($path));
     }
 
     public function destroy(FormSubmission $submission): RedirectResponse

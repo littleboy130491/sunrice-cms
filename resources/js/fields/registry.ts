@@ -26,6 +26,7 @@ export interface ContainerFieldProps {
     onChange: (value: unknown) => void;
 }
 
+/** Built-in field components, by type. Sites add more with registerField(). */
 export const fieldComponents: Record<string, ComponentType<ContainerFieldProps>> = {
     text: TextField,
     textarea: TextareaField,
@@ -46,3 +47,27 @@ export const fieldComponents: Record<string, ComponentType<ContainerFieldProps>>
     belongs_to: BelongsToField,
     belongs_to_many: BelongsToField,
 };
+
+// ---- Custom field components (window.Sunrice.registerField) ---------------
+// Admin scripts may load after the first render, so lookups go through a
+// tiny store that re-renders field lists when a component is registered.
+
+let version = 0;
+const listeners = new Set<() => void>();
+
+/** Register (or replace) the admin component for a field type. */
+export function registerField(type: string, component: ComponentType<ContainerFieldProps>): void {
+    fieldComponents[type] = component;
+    version++;
+    listeners.forEach((listener) => listener());
+}
+
+export function subscribeFields(listener: () => void): () => void {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+}
+
+export function fieldsVersion(): number {
+    return version;
+}
+

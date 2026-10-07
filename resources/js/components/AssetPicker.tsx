@@ -21,6 +21,8 @@ interface Props {
     imageOnly?: boolean;
     trigger: React.ReactNode;
     onSelect: (assets: PickedAsset[]) => void;
+    /** Asset ids to leave out of the library (already attached). */
+    exclude?: number[];
 }
 
 interface ApiAsset {
@@ -36,7 +38,7 @@ interface ApiAsset {
  * Asset library dialog: folder navigation, search, upload. Returns
  * selected asset summaries to the caller.
  */
-export default function AssetPicker({ multiple = false, imageOnly = false, trigger, onSelect }: Props) {
+export default function AssetPicker({ multiple = false, imageOnly = false, trigger, onSelect, exclude = [] }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const [open, setOpen] = React.useState(false);
     const [assets, setAssets] = React.useState<ApiAsset[]>([]);
@@ -154,7 +156,7 @@ export default function AssetPicker({ multiple = false, imageOnly = false, trigg
                     ))}
                 </div>
                 <div className="grid max-h-80 grid-cols-4 gap-3 overflow-y-auto sm:grid-cols-5">
-                    {assets.map((a) => {
+                    {assets.filter((a) => !exclude.includes(a.id)).map((a) => {
                         const isImage = a.mime_type.startsWith('image/');
                         return (
                             <button

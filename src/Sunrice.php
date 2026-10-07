@@ -24,6 +24,12 @@ class Sunrice
     /** @var array<string, class-string> */
     protected array $resources = [];
 
+    /** @var array<int, string> */
+    protected array $adminScripts = [];
+
+    /** @var array<int, string> */
+    protected array $adminStyles = [];
+
     public function version(): string
     {
         return '1.0.0';
@@ -44,6 +50,59 @@ class Sunrice
     public function registerField(string $class): void
     {
         $this->fields()->register($class);
+    }
+
+    /**
+     * Load a JavaScript file in the admin, after its own bundle: the place
+     * to register React components for custom field types with
+     * `window.Sunrice.registerField()`. A path ("js/fields.js") is served
+     * through asset(); full URLs are used as they are.
+     */
+    public function registerAdminScript(string $url): void
+    {
+        $this->adminScripts[] = $url;
+    }
+
+    /** Load a stylesheet in the admin (e.g. for custom field components). */
+    public function registerAdminStyle(string $url): void
+    {
+        $this->adminStyles[] = $url;
+    }
+
+    /**
+     * Admin scripts from config `sunrice.admin.scripts` and
+     * registerAdminScript(), as URLs.
+     *
+     * @return array<int, string>
+     */
+    public function adminScripts(): array
+    {
+        return static::assetUrls([...(array) config('sunrice.admin.scripts', []), ...$this->adminScripts]);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function adminStyles(): array
+    {
+        return static::assetUrls([...(array) config('sunrice.admin.styles', []), ...$this->adminStyles]);
+    }
+
+    /**
+     * @param  array<mixed>  $paths
+     * @return array<int, string>
+     */
+    protected static function assetUrls(array $paths): array
+    {
+        $urls = [];
+        foreach ($paths as $path) {
+            if (! is_string($path) || trim($path) === '') {
+                continue;
+            }
+            $urls[] = preg_match('#^(https?:)?//#i', $path) === 1 ? $path : asset(ltrim($path, '/'));
+        }
+
+        return array_values(array_unique($urls));
     }
 
     /**

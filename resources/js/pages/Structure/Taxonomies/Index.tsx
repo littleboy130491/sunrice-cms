@@ -36,7 +36,7 @@ export default function TaxonomiesIndex({ taxonomies }: { taxonomies: Row[] }) {
                                 {can('sunrice.taxonomies.delete') && (
                                     <Button
                                         variant="ghost" size="sm" className="text-destructive"
-                                        onClick={() => window.confirm(`Delete "${t.title}" and all its terms?`) && router.delete(adminUrl(`structure/taxonomies/${t.id}`, adminPath))}
+                                        onClick={() => window.confirm(`Delete the "${t.title}" taxonomy?\n\nIts terms are hidden from the admin and the site, but kept: create a taxonomy with the handle "${t.handle}" again to bring them back. To erase them for good, run "php artisan sunrice:orphans --purge" on the server.`) && router.delete(adminUrl(`structure/taxonomies/${t.id}`, adminPath))}
                                     >Delete</Button>
                                 )}
                             </TableCell>

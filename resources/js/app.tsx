@@ -3,6 +3,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
 import AppLayout from '@/layouts/AppLayout';
 import { initializeAppearance } from '@/hooks/use-appearance';
+import { installPluginApi } from '@/lib/plugin-api';
 
 type PageModule = {
     default: React.ComponentType<Record<string, unknown>> & {
@@ -11,6 +12,9 @@ type PageModule = {
 };
 
 initializeAppearance();
+// Before the first render: admin scripts (sunrice.admin.scripts) run after
+// this bundle and register custom field components on window.Sunrice.
+installPluginApi();
 
 const brand = (window as unknown as { sunriceBrand?: string }).sunriceBrand || 'Sunrice';
 

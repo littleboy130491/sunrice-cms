@@ -17,4 +17,10 @@ return [
     'footer_menu' => 'Footer',
     'submit' => 'Submit',
     'thank_you' => 'Thank you!',
+    'upload_failed' => 'The file could not be uploaded. It may be larger than :size.',
+    'upload_type' => 'This file type isn\'t accepted. Please upload: :types.',
+    'upload_type_blocked' => 'This file type isn\'t accepted.',
+    'upload_size' => 'The file is too large. The maximum is :size.',
+    'upload_hint' => 'Accepted: :types. Up to :size.',
+    'upload_hint_any' => 'Up to :size.',
 ];

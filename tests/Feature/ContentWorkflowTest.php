@@ -14,6 +14,7 @@ use Sunrice\Actions\Entries\SaveDraft;
 use Sunrice\Actions\Entries\TrashEntry;
 use Sunrice\Actions\Entries\UnpublishEntry;
 use Sunrice\Actions\Structure\DeleteCollection;
+use Sunrice\Actions\Structure\PurgeDeleted;
 use Sunrice\Actions\Structure\SaveCollection;
 use Sunrice\Events\EntryPublished;
 use Sunrice\Models\Blueprint;
@@ -171,7 +172,12 @@ it('syncs permissions for collections', function () {
         ->map(fn ($a) => "sunrice.entries.{$collection->id}.{$a}");
     expect(Permission::query()->whereIn('name', $expected)->count())->toBe(count(PermissionRegistry::ENTRY_ACTIONS));
 
+    // Kept while the collection is only deleted (it can be restored)…
     app(DeleteCollection::class)->handle($collection);
+    expect(Permission::query()->whereIn('name', $expected)->count())->toBe(count(PermissionRegistry::ENTRY_ACTIONS));
+
+    // …and removed when it's purged.
+    app(PurgeDeleted::class)->collection($collection);
     expect(Permission::query()->whereIn('name', $expected)->count())->toBe(0);
 });
 

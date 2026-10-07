@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use Sunrice\Database\Factories\EntryTranslationFactory;
+use Sunrice\Models\Scopes\HiddenWithParent;
 use Sunrice\Support\Locales;
 
 /**
@@ -55,6 +56,12 @@ class EntryTranslation extends Model
     protected static function newFactory(): EntryTranslationFactory
     {
         return EntryTranslationFactory::new();
+    }
+
+    protected static function booted(): void
+    {
+        // Hidden while its collection is deleted (see HiddenWithParent).
+        static::addGlobalScope(new HiddenWithParent('collection_id', 'sunrice_collections'));
     }
 
     /** @return BelongsTo<Entry, $this> */

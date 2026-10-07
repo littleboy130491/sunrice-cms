@@ -19,11 +19,23 @@ class SaveCollection
     /** @param array<string, mixed> $attributes */
     public function handle(array $attributes, ?Collection $collection = null): Collection
     {
+        // A deleted collection with this handle comes back, with its entries.
+        $restoring = $collection === null && is_string($attributes['handle'] ?? null)
+            ? Collection::onlyTrashed()->where('handle', $attributes['handle'])->first()
+            : null;
+        $collection ??= $restoring;
+
         $validated = validator($attributes, [
             'handle' => [
                 $collection === null ? 'required' : 'sometimes',
                 'string', 'max:100', 'regex:/^[a-z][a-z0-9_]*$/',
                 Rule::unique('sunrice_collections', 'handle')->ignore($collection),
+                function (string $attribute, mixed $value, \Closure $fail) use ($collection): void {
+                    if ($collection !== null && $value !== $collection->handle
+                        && Collection::onlyTrashed()->where('handle', $value)->exists()) {
+                        $fail('A deleted collection still uses this handle (its entries are kept). Create a new collection with it to bring them back, or remove them with "php artisan sunrice:orphans --purge".');
+                    }
+                },
             ],
             'title' => ['required', 'string', 'max:255'],
             'blueprint_id' => ['nullable', 'integer', Rule::exists('sunrice_blueprints', 'id')],
@@ -76,6 +88,9 @@ class SaveCollection
             'blueprint_id' => Arr::get($validated, 'blueprint_id', $collection->blueprint_id),
             'settings' => $settings,
         ]);
+        if ($restoring !== null) {
+            $collection->deleted_at = null;
+        }
         $collection->save();
 
         if (array_key_exists('taxonomy_ids', $validated)) {

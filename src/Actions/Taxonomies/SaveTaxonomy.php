@@ -19,11 +19,23 @@ class SaveTaxonomy
     /** @param array<string, mixed> $attributes */
     public function handle(array $attributes, ?Taxonomy $taxonomy = null): Taxonomy
     {
+        // A deleted taxonomy with this handle comes back, with its terms.
+        $restoring = $taxonomy === null && is_string($attributes['handle'] ?? null)
+            ? Taxonomy::onlyTrashed()->where('handle', $attributes['handle'])->first()
+            : null;
+        $taxonomy ??= $restoring;
+
         $validated = validator($attributes, [
             'handle' => [
                 $taxonomy === null ? 'required' : 'sometimes',
                 'string', 'max:100', 'regex:/^[a-z][a-z0-9_]*$/',
                 Rule::unique('sunrice_taxonomies', 'handle')->ignore($taxonomy),
+                function (string $attribute, mixed $value, \Closure $fail) use ($taxonomy): void {
+                    if ($taxonomy !== null && $value !== $taxonomy->handle
+                        && Taxonomy::onlyTrashed()->where('handle', $value)->exists()) {
+                        $fail('A deleted taxonomy still uses this handle (its terms are kept). Create a new taxonomy with it to bring them back, or remove them with "php artisan sunrice:orphans --purge".');
+                    }
+                },
             ],
             'title' => ['required', 'string', 'max:255'],
             'blueprint_id' => ['nullable', 'integer', Rule::exists('sunrice_blueprints', 'id')],
@@ -82,6 +94,9 @@ class SaveTaxonomy
             'hierarchical' => (bool) ($validated['hierarchical'] ?? $taxonomy->hierarchical ?? false),
             'settings' => $settings,
         ]);
+        if ($restoring !== null) {
+            $taxonomy->deleted_at = null;
+        }
         $taxonomy->save();
 
         if (array_key_exists('collection_ids', $validated)) {

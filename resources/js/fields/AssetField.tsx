@@ -66,6 +66,7 @@ export default function AssetField({ field, value, onChange }: FieldProps) {
             {(multiple || ids.length === 0) && (
                 <AssetPicker
                     multiple={multiple}
+                    exclude={ids}
                     imageOnly={imageOnly}
                     trigger={
                         ids.length ? (

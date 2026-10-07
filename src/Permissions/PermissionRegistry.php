@@ -63,23 +63,39 @@ class PermissionRegistry
     public const RESOURCE_ACTIONS = ['view', 'create', 'edit', 'delete', 'export'];
 
     /**
+     * @param  bool  $withDeleted  also deleted collections and taxonomies, whose
+     *                             permissions are kept so a restore keeps access
      * @return array<int, array{name: string, label: string, group: string}>
      */
-    public function all(): array
+    public function all(bool $withDeleted = false): array
     {
         return array_merge(
             $this->global(),
-            $this->forEntries(),
-            $this->forTaxonomies(),
+            $this->forEntries($withDeleted),
+            $this->forTaxonomies($withDeleted),
             $this->forForms(),
             $this->forResources(),
         );
     }
 
     /**
+     * Every permission that should exist, including those of deleted
+     * collections and taxonomies (kept until they're purged).
+     *
      * @return array<int, string>
      */
     public function names(): array
+    {
+        return array_column($this->all(true), 'name');
+    }
+
+    /**
+     * Permissions shown in the role editor (none for deleted collections
+     * or taxonomies).
+     *
+     * @return array<int, string>
+     */
+    public function visibleNames(): array
     {
         return array_column($this->all(), 'name');
     }
@@ -140,10 +156,11 @@ class PermissionRegistry
     /**
      * @return array<int, array{name: string, label: string, group: string}>
      */
-    public function forEntries(): array
+    public function forEntries(bool $withDeleted = false): array
     {
         $out = [];
-        foreach (Collection::query()->orderBy('handle')->get() as $collection) {
+        $query = $withDeleted ? Collection::withTrashed() : Collection::query();
+        foreach ($query->orderBy('handle')->get() as $collection) {
             foreach (static::ENTRY_ACTIONS as $action) {
                 $out[] = [
                     'name' => "sunrice.entries.{$collection->id}.{$action}",
@@ -161,10 +178,11 @@ class PermissionRegistry
     /**
      * @return array<int, array{name: string, label: string, group: string}>
      */
-    public function forTaxonomies(): array
+    public function forTaxonomies(bool $withDeleted = false): array
     {
         $out = [];
-        foreach (Taxonomy::query()->orderBy('handle')->get() as $taxonomy) {
+        $query = $withDeleted ? Taxonomy::withTrashed() : Taxonomy::query();
+        foreach ($query->orderBy('handle')->get() as $taxonomy) {
             foreach (static::TERM_ACTIONS as $action) {
                 $out[] = [
                     'name' => "sunrice.terms.{$taxonomy->id}.{$action}",
