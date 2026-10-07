@@ -151,6 +151,96 @@ class EntryQuery
     }
 
     /**
+     * Reverse relationship through an `entries` field: entries whose
+     * $field links to the given entry (or to any of several).
+     *
+     *     sunrice_entries('articles')->whereEntry('related_articles', $entry)->get();
+     *
+     * @param  Entry|int|array<int, Entry|int>  $entries
+     */
+    public function whereEntry(string $field, Entry|int|array $entries): static
+    {
+        $ids = [];
+        foreach (is_array($entries) ? $entries : [$entries] as $entry) {
+            $ids[] = $entry instanceof Entry ? (int) $entry->id : (int) $entry;
+        }
+
+        $this->filters['entry_fields'][] = [$field, $ids];
+
+        return $this->whereFieldHolds($field, $ids);
+    }
+
+    /**
+     * Entries whose `terms` field $field holds the given term(s): Term
+     * models, ids or slugs (looked up in the field's taxonomy). Unlike
+     * whereTerm(), which uses the taxonomies attached to the collection,
+     * this reads a terms field in the blueprint.
+     *
+     *     sunrice_entries('projects')->whereFieldTerm('industries', $term)->get();
+     *
+     * @param  Term|int|string|array<int, Term|int|string>  $terms
+     */
+    public function whereFieldTerm(string $field, Term|int|string|array $terms, bool $includeChildren = false): static
+    {
+        $ids = [];
+        $slugs = [];
+        foreach (is_array($terms) ? $terms : [$terms] as $term) {
+            match (true) {
+                $term instanceof Term => $ids[] = (int) $term->id,
+                is_int($term) => $ids[] = $term,
+                default => $slugs[] = (string) $term,
+            };
+        }
+
+        if ($slugs !== []) {
+            $taxonomyHandle = $this->collection?->blueprint?->schema()->field($field)['config']['taxonomy'] ?? null;
+            $taxonomy = is_string($taxonomyHandle) ? Taxonomy::query()->where('handle', $taxonomyHandle)->first() : null;
+            $ids = array_merge($ids, TermTranslation::query()
+                ->whereIn('slug', $slugs)
+                ->when($taxonomy !== null, fn ($q) => $q->where('taxonomy_id', $taxonomy?->id))
+                ->pluck('term_id')->map(fn ($id) => (int) $id)->all());
+        }
+
+        if ($includeChildren) {
+            foreach (Term::query()->whereIn('id', $ids)->get() as $term) {
+                $ids = array_merge($ids, $term->descendantIds());
+            }
+        }
+
+        $ids = array_values(array_unique($ids));
+        $this->filters['term_fields'][] = [$field, $ids, $includeChildren];
+
+        return $this->whereFieldHolds($field, $ids);
+    }
+
+    /**
+     * Entries whose id-list field $field (entries, terms, assets) holds any
+     * of $ids, in the main translation's data.
+     *
+     * @param  array<int, int>  $ids
+     */
+    protected function whereFieldHolds(string $field, array $ids): static
+    {
+        JsonField::assertSafe($field);
+
+        if ($ids === []) {
+            $this->query->whereRaw('1 = 0'); // nothing given: nothing matches
+
+            return $this;
+        }
+
+        $this->joinTranslation();
+        $path = 't.data->'.str_replace('.', '->', $field);
+        $this->query->where(function (Builder $q) use ($path, $ids): void {
+            foreach ($ids as $id) {
+                $q->orWhereJsonContains($path, $id);
+            }
+        });
+
+        return $this;
+    }
+
+    /**
      * @param  string|int|array<int, int|string>  $term
      * @return array<int, int>
      */

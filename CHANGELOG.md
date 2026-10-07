@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Reverse relationships** in `EntryQuery`: `whereEntry('related_articles',
+  $entry)` finds entries whose entries field links to an entry, and
+  `whereFieldTerm('industries', $term)` (model, id or slug; optional
+  `includeChildren`) finds entries whose terms field holds a term.
 - **Form file uploads**: the form builder sets accepted file types (grouped
   presets plus custom extensions) and a maximum size in MB, and shows the
   server's PHP upload limit. Upload errors have readable messages in English

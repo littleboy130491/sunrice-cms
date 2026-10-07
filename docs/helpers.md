@@ -35,6 +35,31 @@ Sunrice::entries('articles')
     ->get();                // or ->paginate(12)
 ```
 
+### Reverse relationships
+
+`entries` and `terms` fields store ids on the entry that links. To go the
+other way, from the linked entry or term to the entries pointing at it:
+
+```php
+// Articles whose "related_articles" entries field includes $entry
+sunrice_entries('articles')->whereEntry('related_articles', $entry)->get();
+
+// Projects whose "industries" terms field includes $term
+sunrice_entries('projects')->whereFieldTerm('industries', $term)->get();
+```
+
+- `whereEntry($field, $entry)` takes an `Entry`, an id, or an array of them
+  (matches any).
+- `whereFieldTerm($field, $term, includeChildren: false)` takes a `Term`, an
+  id, a slug (looked up in the field's taxonomy) or an array of them;
+  `includeChildren: true` also matches child terms.
+- `whereTerm($taxonomy, …)` is different: it filters by the taxonomies
+  attached to the collection (the editor's Taxonomies card), not by a
+  `terms` field in the blueprint.
+
+Both read the main language's values, like `where()`, and combine with
+the other filters.
+
 Public queries only ever return published, non-trashed entries and
 resolve the whole-entity translation (Ready translation, otherwise the
 whole main-locale translation).
