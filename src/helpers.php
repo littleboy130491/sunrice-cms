@@ -3,6 +3,7 @@
 declare(strict_types=1);
 use Illuminate\Support\Collection as SupportCollection;
 use Sunrice\Facades\Sunrice;
+use Sunrice\Frontend\BodyClass;
 use Sunrice\Frontend\MenuNode;
 use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Collection;
@@ -55,5 +56,20 @@ if (! function_exists('sunrice_locale_urls')) {
     function sunrice_locale_urls(Entry|Term|null $page = null, ?Collection $collection = null): array
     {
         return app(UrlGenerator::class)->localeUrls($page, $collection);
+    }
+}
+
+if (! function_exists('sunrice_body_class')) {
+    /**
+     * Classes for the page's <body> (page type, collection, entry or term
+     * id and slug, template, language...), as one string. Use the
+     *
+     * @bodyClass directive to print a whole class="..." attribute.
+     *
+     * @param  array<int, string>|string  $extra
+     */
+    function sunrice_body_class(array|string $extra = []): string
+    {
+        return implode(' ', BodyClass::for(request(), $extra));
     }
 }

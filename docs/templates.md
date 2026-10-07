@@ -167,6 +167,60 @@ Sunrice::resolveTemplateUsing(function (string $view, TemplateContext $context):
 Hooks run after normal resolution, in registration order; the last
 non-null return wins.
 
+## Body classes
+
+Like WordPress' `body_class()`, Sunrice gives the `<body>` classes that
+say what the page is, so CSS and scripts can target one page, one
+collection or one template without extra markup. The starter layout and
+the package's fallback views already use it:
+
+```blade
+<body @bodyClass>
+{{-- or with classes of your own --}}
+<body @bodyClass('dark wide')>
+```
+
+`sunrice_body_class('dark')` returns the same classes as a string, for
+when you build the attribute yourself.
+
+| Page | Classes |
+| --- | --- |
+| Entry | `page-entry collection-{handle} entry-{id} entry-{slug}`, plus `home` on the homepage and `has-parent parent-{id}` on child pages |
+| Listing page | `page-archive collection-{handle}` |
+| Term page | `page-term taxonomy-{handle} term-{id} term-{slug}`, plus `collection-{handle}` on per-collection term pages |
+| Every page | `template-{view} lang-{locale}` |
+| When it applies | `paged paged-{n}` (page 2 and on of a listing or term page), `logged-in`, `is-draft` (unpublished entry seen by an editor), `is-preview` |
+
+`template-{view}` is the view that rendered the page, without the
+`sunrice.` prefix and with dots as dashes: `sunrice.articles.show` gives
+`template-articles-show`, a per-entry template `landing` gives
+`template-landing`. Slugs are in the page's language. All classes are
+lowercase letters, digits, `-` and `_`.
+
+```css
+body.collection-articles h1 { font-size: 3rem; }
+body.entry-42 .hero { display: none; }
+body.template-landing main { max-width: none; }
+```
+
+Add, remove or rename classes in a service provider:
+
+```php
+use Sunrice\Facades\Sunrice;
+use Sunrice\Frontend\TemplateContext;
+
+Sunrice::bodyClassUsing(function (array $classes, ?TemplateContext $page): array {
+    if ($page?->entry?->get('dark_mode')) {
+        $classes[] = 'theme-dark';
+    }
+
+    return array_diff($classes, ['logged-in']);
+});
+```
+
+`$page` is null outside Sunrice's own pages (your own routes using the
+layout); those get `lang-{locale}` and `logged-in` only.
+
 ## Homepage
 
 `Setting::set('homepage_entry_id', $entry->id)` (or the Settings admin

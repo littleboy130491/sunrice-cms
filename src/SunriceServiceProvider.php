@@ -219,6 +219,8 @@ class SunriceServiceProvider extends PackageServiceProvider
 
     protected function registerBladeComponents(): void
     {
+        // <body @bodyClass> or <body @bodyClass('dark wide')>
+        Blade::directive('bodyClass', fn (string $extra) => '<?php echo \'class="\'.e(sunrice_body_class('.($extra === '' ? '[]' : $extra).')).\'"\'; ?>');
         Blade::component(Entries::class, 'sunrice::entries');
         Blade::component(Seo::class, 'sunrice::seo');
         Blade::component(SiteCode::class, 'sunrice::code');

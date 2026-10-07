@@ -10,7 +10,7 @@
     <x-sunrice::seo />
     <x-sunrice::code position="head" />
 </head>
-<body>
+<body @bodyClass>
     <x-sunrice::code position="body_start" />
     <article>
         <h1>{{ $entry->title ?? '' }}</h1>

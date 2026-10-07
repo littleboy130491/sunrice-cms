@@ -271,6 +271,7 @@ class PageController extends Controller
     protected function renderDraft(Entry $entry, string $locale): Response
     {
         PreviewController::applyDraft($entry, $locale);
+        request()->attributes->set('sunrice.draft', true);
 
         $response = $this->render(new TemplateContext(
             pageType: 'entry',
@@ -314,6 +315,7 @@ class PageController extends Controller
         $view = app(TemplateResolver::class)->resolve($context);
         // For components in any layout (<x-sunrice::seo />) to find the page.
         request()->attributes->set('sunrice.page', $context);
+        request()->attributes->set('sunrice.template', $view);
 
         return response()->view($view, $viewData + [
             'locale' => $context->locale,
