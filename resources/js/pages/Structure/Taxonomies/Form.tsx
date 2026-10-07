@@ -9,11 +9,13 @@ import { adminUrl } from '@/lib/route';
 import { InputError } from '@/components/app/input-error';
 import { TemplateHelp } from '@/components/app/template-help';
 import TranslatedTitles from '@/components/TranslatedTitles';
-import type { SharedProps } from '@/types';
+import type { Json, SharedProps } from '@/types';
+import FieldRenderer from '@/fields/FieldRenderer';
+import { SEO_DEFAULT_FIELDS, type SeoDefaults } from '@/lib/seo-fields';
 
 interface TaxonomyShape {
     id: number; handle: string; title: string; blueprint_id: number | null; hierarchical: boolean;
-    settings: { sluggable?: boolean; route?: string; has_archive?: boolean; per_page?: number; template?: string; titles?: Record<string, string> };
+    settings: { sluggable?: boolean; route?: string; has_archive?: boolean; per_page?: number; template?: string; titles?: Record<string, string>; seo?: SeoDefaults };
     collection_ids: number[];
 }
 
@@ -37,6 +39,7 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
             per_page: taxonomy?.settings?.per_page ?? ('' as number | ''),
             template: taxonomy?.settings?.template ?? '',
             titles: taxonomy?.settings?.titles ?? {},
+            seo: (taxonomy?.settings?.seo ?? {}) as SeoDefaults,
         },
         collection_ids: taxonomy?.collection_ids ?? [],
     });
@@ -158,6 +161,19 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
                                 onChange={(e) => form.setData('settings', { ...form.data.settings, template: e.target.value })} />
                             <TemplateHelp example={`taxonomies.${handle}`} defaults={[`sunrice.taxonomies.${handle}.show`, 'sunrice.taxonomies.show']} />
                             <InputError message={errors['settings.template']} />
+                        </div>
+                    )}
+                    {form.data.settings.has_archive && (
+                        <div className="grid gap-2 rounded-lg border border-border/80 p-4">
+                            <p className="text-sm font-medium">SEO defaults for term pages</p>
+                            <p className="-mt-1 text-xs text-muted-foreground">Each term can set its own SEO in its editor; these fill in what a term leaves empty.</p>
+                            <FieldRenderer
+                                fields={SEO_DEFAULT_FIELDS}
+                                values={form.data.settings.seo as Record<string, Json>}
+                                pathPrefix="settings.seo"
+                                errors={errors}
+                                onChange={(seo) => form.setData('settings', { ...form.data.settings, seo: seo as SeoDefaults })}
+                            />
                         </div>
                     )}
                     <div className="flex gap-2">

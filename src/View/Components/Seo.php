@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sunrice\View\Components;
 
 use Illuminate\View\Component;
+use Sunrice\Frontend\TemplateContext;
 use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Asset;
 use Sunrice\Models\Collection as ContentCollection;
@@ -13,10 +14,15 @@ use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
 
 /**
- * `<x-sunrice::seo :entry="$entry" />` — title, description, robots,
+ * `<x-sunrice::seo />` — title, description, robots,
  * canonical, Open Graph, Twitter card and hreflang alternates. Fallback
  * pages get a canonical pointing at the main-language URL and no hreflang
  * output. All URLs are absolute, as search engines require.
+ *
+ * Put it once in the <head> of your site layout: without attributes it
+ * describes the page being rendered (entry, term or listing page). Pass
+ * :entry / :term / :collection to describe another page, :title to force
+ * a title, or :default-title for pages without a meta title of their own.
  */
 class Seo extends Component
 {
@@ -45,6 +51,7 @@ class Seo extends Component
     public ?string $twitterSite;
 
     /**
+     * @param  string|null  $defaultTitle  used when the page has no meta title of its own
      * @param  Term|null  $term  on term pages, for hreflang links to the term in each language
      * @param  ContentCollection|null  $collection  on per-collection term pages
      */
@@ -52,24 +59,103 @@ class Seo extends Component
         ?Entry $entry = null,
         ?string $title = null,
         ?string $description = null,
+        ?string $defaultTitle = null,
         ?bool $noindex = null,
         protected ?Term $term = null,
         protected ?ContentCollection $collection = null,
     ) {
+        // Nothing passed: the page being rendered (set by the page
+        // controller), so a bare <x-sunrice::seo /> works in any layout.
+        if ($entry === null && $term === null && $collection === null) {
+            $page = request()->attributes->get('sunrice.page');
+            if ($page instanceof TemplateContext) {
+                $entry = $page->pageType === 'entry' ? $page->entry : null;
+                $term = $page->term;
+                $collection = $page->collection;
+                $this->term = $term;
+                $this->collection = $collection;
+            }
+        }
+
         $this->entry = $entry;
-        $seo = $entry === null ? [] : ($entry->seo ?? []);
         $this->locale = $entry === null ? Locales::current() : ($entry->resolvedLocale ?? Locales::current());
         $this->isFallback = $entry !== null && (bool) $entry->isFallback;
 
-        $this->title = $title ?? $seo['title'] ?? ($entry === null ? null : $entry->title) ?? (string) config('app.name');
-        // The page's own description, else the site description from Settings.
-        $this->description = $description ?? (($seo['description'] ?? '') ?: (config('sunrice.seo.description') ?: null));
+        // The page's own SEO, then its collection's or taxonomy's defaults,
+        // then the site settings.
+        $seo = $this->pageSeo();
+        $defaults = $this->defaultSeo();
+
+        // An explicit title (passed by the template) wins, as before.
+        $this->title = $title
+            ?? ((($seo['title'] ?? '') ?: null)
+            ?? $defaultTitle
+            ?? ($entry !== null ? $entry->title : null)
+            ?? ($term !== null ? $term->name : null)
+            ?? $collection?->titleIn($this->locale)
+            ?? (string) config('app.name'));
+        $this->description = $description
+            ?? ((($seo['description'] ?? '') ?: (($defaults['description'] ?? '') ?: config('sunrice.seo.description'))) ?: null);
+        if (! is_numeric($seo['image'] ?? null) && is_numeric($defaults['image'] ?? null)) {
+            $seo['image'] = $defaults['image'];
+        }
+        if (! empty($defaults['noindex'])) {
+            $seo['noindex'] = true;
+        }
         $this->image = $this->image($seo);
         $this->canonical = $this->canonical($seo);
         $this->alternates = $this->alternates();
         $this->robots = $this->robots($seo, $noindex);
         $this->siteName = (string) config('app.name');
         $this->twitterSite = config('sunrice.seo.twitter_site') ?: null;
+    }
+
+    /**
+     * This page's own SEO fields: the entry's, the term's (in the page's
+     * language, else the main one), or the listing page's.
+     *
+     * @return array<string, mixed>
+     */
+    protected function pageSeo(): array
+    {
+        if ($this->entry !== null) {
+            return (array) ($this->entry->seo ?? []);
+        }
+        if ($this->term !== null) {
+            $translation = $this->term->resolved ?? $this->term->translation($this->locale) ?? $this->term->mainTranslation();
+
+            return $translation === null ? [] : (array) ($translation->seo ?? []);
+        }
+        if ($this->collection !== null) {
+            $byLocale = ContentCollection::archiveByLocale($this->collection->archive_data);
+            /** @var array<string, mixed> $own */
+            $own = (array) ($byLocale[$this->locale]['seo'] ?? []);
+            /** @var array<string, mixed> $main */
+            $main = (array) ($byLocale[Locales::main()]['seo'] ?? []);
+
+            // Field by field: a translation's empty field uses the main one.
+            return array_merge($main, array_filter($own, fn (mixed $v) => ! in_array($v, [null, ''], true)));
+        }
+
+        return [];
+    }
+
+    /**
+     * Defaults from the page's collection (entries, listing pages) or
+     * taxonomy (term pages): description, image, noindex.
+     *
+     * @return array<string, mixed>
+     */
+    protected function defaultSeo(): array
+    {
+        if ($this->entry !== null) {
+            return (array) ($this->entry->collection?->setting('seo') ?? []);
+        }
+        if ($this->term !== null) {
+            return (array) ($this->term->taxonomy?->setting('seo') ?? []);
+        }
+
+        return (array) ($this->collection?->setting('seo') ?? []);
     }
 
     /** @param array<string, mixed> $seo */

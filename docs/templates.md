@@ -108,16 +108,28 @@ fetch them directly:
 Templates are plain Blade views. Resolution order for an entry page
 (`pageType = 'entry'`):
 
-1. The entry's own `template` column.
-2. `collection.settings.template`.
+1. The entry's own template (entry editor → Template card).
+2. The collection's entry template (`collection.settings.template`).
 3. `sunrice.{collection-handle}.show` in the app (`resources/views/`).
 4. `sunrice.show` in the app.
 5. `sunrice::defaults.show` bundled in the package.
 
-Archives use `index` instead of `show` (`sunrice.{collection}.index` →
-`sunrice.index` → `sunrice::defaults.index`); term archives use
-`sunrice.taxonomies.{taxonomy}.show` → `sunrice.taxonomies.show` →
-`sunrice::defaults.term`.
+Archives use `index` instead of `show` (the collection's listing
+template → `sunrice.{collection}.index` → `sunrice.index` →
+`sunrice::defaults.index`); term archives use the term's own template
+(term editor) → the taxonomy's template → `sunrice.taxonomies.{taxonomy}.show`
+→ `sunrice.taxonomies.show` → `sunrice::defaults.term`.
+
+## SEO
+
+`<x-sunrice::seo>` reads the page's own SEO fields — an entry's, a
+term's (per language, in the term editor) or a listing page's (per
+language, in the listing page editor) — then the defaults of its
+collection (entries and listing page) or taxonomy (term pages): default
+description, share image and noindex, set in Structure. Site settings
+come last. A `title` passed to the component wins over everything;
+`defaultTitle` (the starter layout's `seoTitle`) is used only when the
+page has no meta title of its own.
 
 Every view receives `locale` and `pageType` (`entry`, `archive` or
 `term`) plus: `entry` and `collection` on entry pages; `entries` (a

@@ -9,11 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { InputError } from '@/components/app/input-error';
 import FieldRenderer from '@/fields/FieldRenderer';
+import { SEO_FIELDS } from '@/lib/seo-fields';
 import { TranslationModeProvider } from '@/fields/translation-mode';
 import { adminUrl } from '@/lib/route';
 import type { AdminField, Json, SharedProps } from '@/types';
 
-interface LocaleValues { title: string; intro: string; data: Record<string, Json> }
+interface LocaleValues { title: string; intro: string; data: Record<string, Json>; seo?: Record<string, Json> }
 
 interface Props {
     collection: { id: number; handle: string; title: string; has_archive: boolean; urls: Record<string, string> };
@@ -137,6 +138,12 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
                         Want more on this page, such as a hero image? Choose a listing blueprint in the collection's settings.
                     </p>
                 )}
+
+                <CollapsibleCard title="SEO" description="How this listing page appears in search results and social shares." storageKey="listing:seo" defaultOpen={false}>
+                    <fieldset disabled={!editable} className="min-w-0">
+                        <FieldRenderer fields={SEO_FIELDS} values={(form.seo ?? {}) as Record<string, Json>} pathPrefix="seo" errors={errors} onChange={(seo) => setForm({ ...form, seo })} />
+                    </fieldset>
+                </CollapsibleCard>
             </div>
 
             {editable && (

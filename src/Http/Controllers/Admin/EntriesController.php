@@ -266,9 +266,15 @@ class EntriesController extends Controller
             'data' => ['array'],
             'seo' => ['array'],
             'is_ready' => ['nullable', 'boolean'],
+            'template' => ['sometimes', 'nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'term_ids' => ['sometimes', 'array'],
             'term_ids.*' => ['integer'],
         ]);
+
+        // The template belongs to the entry too (editors only, saved now).
+        if (array_key_exists('template', $validated) && $request->user()->can('update', $entry)) {
+            $entry->update(['template' => $validated['template'] ?: null]);
+        }
 
         // Terms belong to the entry, not a language: editors only (not
         // translate-only users), saved right away rather than as a draft.
@@ -608,6 +614,7 @@ class EntriesController extends Controller
                 'blueprint_id' => $entry->blueprint_id,
                 'author_id' => $entry->author_id,
                 'term_ids' => $entry->terms->pluck('id'),
+                'template' => $entry->template,
                 // {taxonomy id: [term ids]} for the Taxonomies card.
                 'terms_by_taxonomy' => (object) $entry->terms->groupBy('taxonomy_id')->map(fn ($terms) => $terms->pluck('id')->values())->all(),
                 'translations' => $translations,

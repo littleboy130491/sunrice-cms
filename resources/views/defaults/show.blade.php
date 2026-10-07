@@ -7,7 +7,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <x-sunrice::seo :entry="$entry ?? null" />
+    <x-sunrice::seo />
     <x-sunrice::code position="head" />
 </head>
 <body>

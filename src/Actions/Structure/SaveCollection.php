@@ -47,6 +47,10 @@ class SaveCollection
             'settings.archive_template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'settings.single_term_taxonomies' => ['nullable', 'array'],
             'settings.single_term_taxonomies.*' => ['integer'],
+            'settings.seo' => ['nullable', 'array'],
+            'settings.seo.description' => ['nullable', 'string', 'max:500'],
+            'settings.seo.image' => ['nullable', 'integer'],
+            'settings.seo.noindex' => ['nullable', 'boolean'],
             'settings.icon' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/'],
             'settings.archive_entries_in' => ['nullable', 'string', 'max:100'],
             'taxonomy_ids' => ['array'],
@@ -113,6 +117,12 @@ class SaveCollection
      */
     protected function cleanSettings(array $settings): array
     {
+        if (array_key_exists('seo', $settings)) {
+            $settings['seo'] = array_filter((array) $settings['seo'], fn ($v) => $v !== null && $v !== '' && $v !== false);
+            if ($settings['seo'] === []) {
+                unset($settings['seo']);
+            }
+        }
         if (array_key_exists('titles', $settings)) {
             $settings['titles'] = Collection::cleanTitles($settings['titles']);
             if ($settings['titles'] === []) {

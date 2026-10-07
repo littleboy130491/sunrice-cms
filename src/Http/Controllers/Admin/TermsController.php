@@ -125,15 +125,17 @@ class TermsController extends Controller
             && $request->user()->can('reorder', [Term::class, $taxonomy->id]);
 
         return Inertia::render('Taxonomies/Terms', [
-            'taxonomy' => $taxonomy->only('id', 'handle', 'title', 'hierarchical', 'blueprint_id'),
+            'taxonomy' => $taxonomy->only('id', 'handle', 'title', 'hierarchical', 'blueprint_id') + ['template' => $taxonomy->setting('template')],
             // Every term: the editor's parent picker and the term being edited.
             'terms' => $all->map(fn (Term $t) => [
                 'id' => $t->id,
                 'parent_id' => $t->parent_id,
+                'template' => $t->template,
                 'translations' => $t->translations->keyBy('locale')->map(fn (TermTranslation $tr) => [
                     'title' => $tr->name,
                     'slug' => $tr->slug,
                     'data' => $tr->data,
+                    'seo' => (object) ($tr->seo ?? []),
                 ]),
                 'count' => $t->entries_count,
             ]),

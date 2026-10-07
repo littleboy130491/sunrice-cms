@@ -18,7 +18,7 @@ use Sunrice\Support\SlugValidator;
 class SaveTerm
 {
     /**
-     * @param  array{parent_id?: int|null, translations?: array<string, array{title?: string, name?: string, slug?: string, data?: array<string, mixed>}>}  $attributes
+     * @param  array{parent_id?: int|null, template?: string|null, translations?: array<string, array{title?: string, name?: string, slug?: string, data?: array<string, mixed>}>}  $attributes
      */
     public function handle(Taxonomy $taxonomy, array $attributes, ?Term $term = null): Term
     {
@@ -51,6 +51,13 @@ class SaveTerm
             'translations.*.title' => ['required', 'string', 'max:255'],
             'translations.*.slug' => ['nullable', 'string', 'max:255'],
             'translations.*.data' => ['array'],
+            'translations.*.seo' => ['nullable', 'array'],
+            'translations.*.seo.title' => ['nullable', 'string', 'max:255'],
+            'translations.*.seo.description' => ['nullable', 'string', 'max:500'],
+            'translations.*.seo.canonical' => ['nullable', 'string', 'max:500'],
+            'translations.*.seo.image' => ['nullable', 'integer'],
+            'translations.*.seo.noindex' => ['nullable', 'boolean'],
+            'template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
         ], ['parent_id.not_in' => 'A term can\'t be placed under itself or one of its own children.'], ['translations.*.title' => 'title', 'translations.*.slug' => 'slug'])->after(function ($v) {
             foreach ($v->safe()?->toArray()['translations'] ?? [] as $locale => $t) {
                 if (! Locales::isAvailable($locale)) {
@@ -70,6 +77,9 @@ class SaveTerm
         $term ??= new Term;
         $term->taxonomy_id = $taxonomy->id;
         $term->parent_id = Arr::get($validated, 'parent_id');
+        if (array_key_exists('template', $validated)) {
+            $term->template = $validated['template'] ?: null;
+        }
         if (! $term->exists) {
             $term->sort_order = (int) $taxonomy->terms()->max('sort_order') + 1;
         }
@@ -87,6 +97,9 @@ class SaveTerm
                 ? $slug
                 : SlugValidator::uniqueForTerm(SlugValidator::fromTitle($t['title']), $taxonomy->id, $locale, $term->id);
             $translation->data = $t['data'] ?? $translation->data ?? [];
+            if (array_key_exists('seo', $t)) {
+                $translation->seo = array_filter((array) $t['seo'], fn ($v) => $v !== null && $v !== '' && $v !== false) ?: null;
+            }
 
             if ($translation->slug !== $translation->getOriginal('slug')
                 && ! SlugValidator::isUniqueForTerm($translation->slug, $taxonomy->id, $locale, $term->id)) {

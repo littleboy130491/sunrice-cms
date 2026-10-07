@@ -10,6 +10,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import FieldRenderer from '@/fields/FieldRenderer';
+import { SEO_FIELDS } from '@/lib/seo-fields';
+import { TemplateHelp } from '@/components/app/template-help';
 import { adminUrl } from '@/lib/route';
 import { InputError } from '@/components/app/input-error';
 import { useCan } from '@/lib/can';
@@ -18,7 +20,8 @@ import type { AdminTab, ColumnDef, Json, Paginated, SharedProps } from '@/types'
 interface TermRow {
     id: number;
     parent_id: number | null;
-    translations: Record<string, { title: string; slug: string; data: Record<string, Json> }>;
+    template?: string | null;
+    translations: Record<string, { title: string; slug: string; data: Record<string, Json>; seo?: Record<string, Json> }>;
     count: number;
     url?: string | null;
 }
@@ -36,7 +39,7 @@ interface Row {
 }
 
 interface Props {
-    taxonomy: { id: number; handle: string; title: string; hierarchical: boolean };
+    taxonomy: { id: number; handle: string; title: string; hierarchical: boolean; template?: string | null };
     terms: TermRow[];
     columns: ColumnDef[];
     rows: Paginated<Row>;
@@ -57,11 +60,11 @@ export default function TermsPage({ taxonomy, terms, columns, rows, meta, parent
     const [errors, setErrors] = React.useState<Record<string, string>>({});
     const [processing, setProcessing] = React.useState(false);
     const [editing, setEditing] = React.useState<TermRow | null>(null);
-    const [form, setForm] = React.useState<{ parent_id: number | null; translations: Record<string, { title: string; slug: string; data: Record<string, Json> }> }>({ parent_id: null, translations: {} });
+    const [form, setForm] = React.useState<{ parent_id: number | null; template: string; translations: Record<string, { title: string; slug: string; data: Record<string, Json>; seo?: Record<string, Json> }> }>({ parent_id: null, template: '', translations: {} });
 
     const openCreate = () => {
         setEditing(null);
-        setForm({ parent_id: null, translations: Object.fromEntries(locales.map((l) => [l, { title: '', slug: '', data: {} }])) });
+        setForm({ parent_id: null, template: '', translations: Object.fromEntries(locales.map((l) => [l, { title: '', slug: '', data: {}, seo: {} }])) });
         setErrors({});
         setTab(main);
         setOpen(true);
@@ -71,8 +74,9 @@ export default function TermsPage({ taxonomy, terms, columns, rows, meta, parent
         setEditing(term);
         setForm({
             parent_id: term.parent_id,
+            template: term.template ?? '',
             translations: Object.fromEntries(
-                locales.map((l) => [l, term.translations[l] ?? { title: '', slug: '', data: {} }]),
+                locales.map((l) => [l, { seo: {}, ...(term.translations[l] ?? { title: '', slug: '', data: {} }) }]),
             ),
         });
         setErrors({});
@@ -173,7 +177,7 @@ export default function TermsPage({ taxonomy, terms, columns, rows, meta, parent
             />
 
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
                     <DialogHeader><DialogTitle>{editing ? 'Edit term' : 'New term'}</DialogTitle></DialogHeader>
                     <div className="flex flex-col gap-4">
                         {taxonomy.hierarchical && (
@@ -245,6 +249,26 @@ export default function TermsPage({ taxonomy, terms, columns, rows, meta, parent
                                             })}
                                         />
                                     )}
+                                    <details className="group rounded-lg border border-border/80">
+                                        <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-medium">
+                                            SEO ({l.toUpperCase()})
+                                            <span aria-hidden className="text-muted-foreground transition-transform group-open:rotate-90">›</span>
+                                        </summary>
+                                        <div className="border-t border-border/70 p-3">
+                                            <FieldRenderer
+                                                fields={SEO_FIELDS}
+                                                values={(form.translations[l]?.seo ?? {}) as Record<string, Json>}
+                                                pathPrefix="seo"
+                                                errors={Object.fromEntries(Object.entries(errors)
+                                                    .filter(([k]) => k.startsWith(`translations.${l}.seo.`))
+                                                    .map(([k, v]) => [k.replace(`translations.${l}.`, ''), v]))}
+                                                onChange={(values) => setForm({
+                                                    ...form,
+                                                    translations: { ...form.translations, [l]: { ...form.translations[l], seo: values } },
+                                                })}
+                                            />
+                                        </div>
+                                    </details>
                                 </TabsContent>
                             ))}
                         </Tabs>
@@ -259,6 +283,22 @@ export default function TermsPage({ taxonomy, terms, columns, rows, meta, parent
                                 .
                             </p>
                         )}
+                        <div className="grid gap-2">
+                            <Label htmlFor="term-template">Template</Label>
+                            <Input
+                                id="term-template"
+                                className="font-mono text-sm"
+                                placeholder={taxonomy.template || `e.g. taxonomies.${taxonomy.handle}-featured`}
+                                value={form.template}
+                                onChange={(e) => setForm({ ...form, template: e.target.value })}
+                            />
+                            <TemplateHelp
+                                example={`taxonomies.${taxonomy.handle}-featured`}
+                                defaults={[...(taxonomy.template ? [taxonomy.template] : []), `sunrice.taxonomies.${taxonomy.handle}.show`, 'sunrice.taxonomies.show']}
+                                lead="Overrides the taxonomy's template for this term's page."
+                            />
+                            <InputError message={errors.template} />
+                        </div>
                         <InputError message={errors.translations} />
                         <Button onClick={submit} disabled={processing}>{processing ? 'Saving…' : 'Save term'}</Button>
                     </div>

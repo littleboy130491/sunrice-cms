@@ -11,6 +11,8 @@ import { TemplateHelp } from '@/components/app/template-help';
 import { InputError } from '@/components/app/input-error';
 import TranslatedTitles from '@/components/TranslatedTitles';
 import type { Json, SharedProps } from '@/types';
+import FieldRenderer from '@/fields/FieldRenderer';
+import { SEO_DEFAULT_FIELDS, type SeoDefaults } from '@/lib/seo-fields';
 
 interface CollectionShape {
     id: number;
@@ -48,6 +50,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             archive_blueprint_id: (collection?.settings?.archive_blueprint_id as number | undefined) ?? ('' as number | ''),
             titles: ((collection?.settings?.titles ?? {}) as Record<string, string>),
             single_term_taxonomies: ((collection?.settings?.single_term_taxonomies ?? []) as number[]),
+            seo: ((collection?.settings?.seo ?? {}) as SeoDefaults),
         },
         taxonomy_ids: collection?.taxonomy_ids ?? [],
     });
@@ -256,6 +259,14 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                         <InputError message={errors['settings.archive_template']} />
                     </div>
                 )}
+            </CollapsibleCard>
+            <CollapsibleCard
+                title="SEO defaults"
+                description="For this collection's entries and listing page. Each entry (and the listing page) can set its own SEO; these fill in what they leave empty."
+                storageKey="collection:seo"
+                hasErrors={Object.keys(errors).some((k) => k.startsWith('settings.seo'))}
+            >
+                <FieldRenderer fields={SEO_DEFAULT_FIELDS} values={settings.seo as Record<string, Json>} pathPrefix="settings.seo" errors={errors} onChange={(seo) => setSetting('seo', seo as Json)} />
             </CollapsibleCard>
             <div className="flex gap-2">
                 <Button type="submit" disabled={form.processing}>Save</Button>

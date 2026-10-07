@@ -16,6 +16,7 @@ import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 import { useBreadcrumbs } from '@/components/app/breadcrumbs';
 import FieldRenderer from '@/fields/FieldRenderer';
 import TermsField from '@/fields/TermsField';
+import { TemplateHelp } from '@/components/app/template-help';
 import { TranslationModeProvider } from '@/fields/translation-mode';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
@@ -44,10 +45,10 @@ interface TranslationState {
 }
 
 interface Props {
-    collection: { id: number; handle: string; title: string };
+    collection: { id: number; handle: string; title: string; settings?: Record<string, unknown> };
     entry: {
         id: number; status: string; published_at: string | null; blueprint_id: number | null;
-        author_id: number | null; term_ids: number[]; terms_by_taxonomy?: Record<number, number[]>; translations: Record<string, TranslationState>;
+        author_id: number | null; term_ids: number[]; template?: string | null; terms_by_taxonomy?: Record<number, number[]>; translations: Record<string, TranslationState>;
     } | null;
     blueprint: AdminTab[] | null;
     blueprints: { id: number; title: string }[];
@@ -121,6 +122,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         is_ready?: boolean;
         blueprint_id?: number | string;
         term_ids: number[];
+        template: string;
     }>({
         blueprint_id: '',
         locale: mainLocale,
@@ -129,6 +131,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         data: initial(mainLocale).data,
         seo: initial(mainLocale).seo,
         term_ids: entry?.term_ids ?? [],
+        template: entry?.template ?? '',
     });
 
     // Picked terms per taxonomy. The picker only knows ids, so each
@@ -521,6 +524,27 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                 ))}
                                 <InputError message={(form.errors as Record<string, string>).term_ids} />
                                 {!perms.update && <p className="text-xs text-muted-foreground">Only editors can change terms.</p>}
+                            </fieldset>
+                        </CollapsibleCard>
+                    )}
+
+                    {collection.settings?.has_single !== false && (
+                        <CollapsibleCard title="Template" titleClassName="text-sm" storageKey="entry:template" defaultOpen={false} contentClassName="flex flex-col gap-2">
+                            <fieldset disabled={!perms.update} className="grid gap-2 disabled:opacity-60">
+                                <Label htmlFor="entry-template" className="sr-only">Template</Label>
+                                <Input
+                                    id="entry-template"
+                                    className="font-mono text-sm"
+                                    placeholder={(collection.settings?.template as string) || `e.g. ${collection.handle}.landing`}
+                                    value={form.data.template}
+                                    onChange={(e) => form.setData('template', e.target.value)}
+                                />
+                                <InputError message={(form.errors as Record<string, string>).template} />
+                                <TemplateHelp
+                                    example={`${collection.handle}.landing`}
+                                    defaults={[...(collection.settings?.template ? [collection.settings.template as string] : []), `sunrice.${collection.handle}.show`, 'sunrice.show']}
+                                    lead="Overrides the collection's template for this entry's page."
+                                />
                             </fieldset>
                         </CollapsibleCard>
                     )}

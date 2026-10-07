@@ -23,6 +23,7 @@ use Sunrice\Support\Locales;
  * @property int $taxonomy_id
  * @property int|null $parent_id
  * @property int $sort_order
+ * @property string|null $template
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property Carbon|null $deleted_at
