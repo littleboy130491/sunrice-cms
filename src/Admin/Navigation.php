@@ -98,6 +98,9 @@ class Navigation
         if ($user->can('sunrice.settings.edit')) {
             $admin[] = ['label' => 'Settings', 'href' => 'settings', 'icon' => 'settings'];
         }
+        if ($user->can('sunrice.docs.view')) {
+            $admin[] = ['label' => 'Docs', 'href' => 'docs', 'icon' => 'book-open'];
+        }
         if ($admin !== []) {
             $groups[] = ['label' => 'Manage', 'items' => $admin];
         }

@@ -52,6 +52,8 @@ class SaveSiteSettings
             'code.head' => ['nullable', 'string', 'max:20000'],
             'code.body_start' => ['nullable', 'string', 'max:20000'],
             'code.body_end' => ['nullable', 'string', 'max:20000'],
+            'security' => ['array'],
+            'security.two_factor' => ['boolean'],
         ], [
             'locales.*.regex' => 'Use a language code such as "en", "id" or "pt-BR".',
             'locales.available.*.regex' => 'Use a language code such as "en", "id" or "pt-BR".',
@@ -93,6 +95,9 @@ class SaveSiteSettings
                 'head' => $validated['code']['head'] ?? null,
                 'body_start' => $validated['code']['body_start'] ?? null,
                 'body_end' => $validated['code']['body_end'] ?? null,
+            ],
+            'security' => [
+                'two_factor' => (bool) ($validated['security']['two_factor'] ?? false),
             ],
         ]);
 

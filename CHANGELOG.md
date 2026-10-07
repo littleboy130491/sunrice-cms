@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **Two-factor login** — Settings → Security can require a 6-digit code,
+  emailed after the password, for every admin login (off by default).
+  Codes expire after 10 minutes; wrong guesses are limited.
+  `php artisan sunrice:two-factor off` turns it off if mail stops working.
+- **Test email** — Settings → Email shows the mail setup in use and sends
+  a test email to any address, showing the server's error if it fails.
+- **Docs in the admin** — Manage → Docs shows the developer guides
+  (templates, artisan commands, languages, mail/SMTP and more) to users
+  with the new `sunrice.docs.view` permission. New guides: artisan commands
+  and mail (SMTP). `php artisan sunrice:sync-permissions` creates the
+  permission and gives it to the existing Administrator role (new global
+  permissions now go to the default roles whose patterns cover them).
 - **Site settings** — Manage → Settings edits the site name, description,
   timezone, homepage, languages (main, available, names), site-wide
   noindex (also empties the sitemap), X/Twitter handle and default share

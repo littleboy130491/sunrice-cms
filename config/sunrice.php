@@ -34,6 +34,9 @@ return [
     'auth' => [
         'guard' => 'web',
         'user_model' => env('SUNRICE_USER_MODEL', User::class),
+        // Two-factor login: after the password, a one-time code is emailed
+        // and must be entered. Usually switched on in Settings → Security.
+        'two_factor' => (bool) env('SUNRICE_TWO_FACTOR', false),
     ],
 
     /*
