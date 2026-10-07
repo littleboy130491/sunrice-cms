@@ -11,6 +11,7 @@ Every Sunrice command, what it does and its options. Run
 | `sunrice:publish-assets` | Republishes the prebuilt admin assets to `public/vendor/sunrice`. Run after every package upgrade. |
 | `sunrice:sync-permissions` | Creates missing permissions and removes stale ones. Run after adding collections, taxonomies, forms or resources. |
 | `sunrice:seed-roles` | Creates the default roles (Administrator, Editor, Author, Translator), or adds new permissions to them. |
+| `sunrice:two-factor {on\|off}` | Turns two-factor (emailed code) login on or off; no argument shows the current state. The way back in if mail breaks while it's on. See [Mail](mail.md#two-factor-login). |
 | `sunrice:upgrade-translations` | One-time conversion of entry translations to the shared-layout format. `--dry-run` reports only. |
 
 After upgrading the package:

@@ -7,9 +7,10 @@ All options live in `config/sunrice.php` (publish with
 
 **Manage → Settings** (permission `sunrice.settings.edit`) edits the site
 name, description, timezone, homepage, languages, search-engine options,
-default share image and code snippets. Saved values override the config
-below at boot (`app.name`, `app.timezone`, `sunrice.locales.*`,
-`sunrice.seo.*`, `sunrice.code.*`), so config/`.env` act as defaults. They
+default share image, code snippets and two-factor login, and sends a test
+email. Saved values override the config below at boot (`app.name`,
+`app.timezone`, `sunrice.locales.*`, `sunrice.seo.*`, `sunrice.code.*`,
+`sunrice.auth.two_factor`), so config/`.env` act as defaults. They
 are stored in `sunrice_settings` (`site` key) and cached until saved again.
 The main language can only be changed before any content exists.
 
@@ -20,6 +21,7 @@ The main language can only be changed before any content exists.
 | `sunrice.admin.middleware` | `['web']` | Middleware stack for admin routes. |
 | `sunrice.auth.guard` | `web` | Guard used for admin login and permissions. |
 | `sunrice.auth.user_model` | `App\Models\User` (`SUNRICE_USER_MODEL`) | Eloquent user model (must use `HasRoles`). |
+| `sunrice.auth.two_factor` | `env('SUNRICE_TWO_FACTOR', false)` | Two-factor login: a code is emailed after the password (Settings → Security). See [Mail](mail.md#two-factor-login). |
 | `sunrice.locales.main` | `id` | Main locale; unprefixed URLs resolve in it. |
 | `sunrice.locales.available` | `['id']` | All locales. |
 | `sunrice.locales.names` | `[]` | Display names keyed by locale. |

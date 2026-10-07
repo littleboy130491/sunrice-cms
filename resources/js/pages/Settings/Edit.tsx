@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useForm } from '@inertiajs/react';
-import { Image as ImageIcon, LoaderCircle, Plus, X } from 'lucide-react';
+import { Image as ImageIcon, LoaderCircle, Mail, Plus, TriangleAlert, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,17 @@ interface Settings {
     seo: { noindex: boolean; twitter_site: string | null; image: number | null };
     code: { head: string | null; body_start: string | null; body_end: string | null };
     branding?: { name: string | null; tagline: string | null; logo: number | null; font: string | null; color: string | null };
+    security?: { two_factor: boolean };
+}
+
+interface MailInfo {
+    mailer: string;
+    transport: string;
+    host: string | null;
+    port: number | string | null;
+    from: string | null;
+    from_name: string | null;
+    delivers: boolean;
 }
 
 interface Props {
@@ -34,9 +45,10 @@ interface Props {
     mainLocked: boolean;
     brandLogo?: { id: number; url: string; filename: string } | null;
     fonts?: { value: string; label: string }[];
+    mail?: MailInfo;
 }
 
-export default function SettingsEdit({ settings, homepage, shareImage, timezones, mainLocked, brandLogo = null, fonts = [] }: Props) {
+export default function SettingsEdit({ settings, homepage, shareImage, timezones, mainLocked, brandLogo = null, fonts = [], mail }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const [home, setHome] = React.useState<PickedEntry[]>(homepage ? [homepage] : []);
     const [image, setImage] = React.useState(shareImage);
@@ -70,7 +82,12 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
             body_start: settings.code.body_start ?? '',
             body_end: settings.code.body_end ?? '',
         },
+        security: {
+            two_factor: !!settings.security?.two_factor,
+        },
     });
+    const testMail = useForm({ test_email: '' });
+    const sendTestMail = () => testMail.post(adminUrl('settings/test-mail', adminPath), { preserveScroll: true });
     const errors = form.errors as Record<string, string>;
     const locales = form.data.locales;
     const savedBranding = React.useRef(JSON.stringify(form.data.branding));
@@ -364,6 +381,79 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                         <InputError message={errors[`code.${key}`]} />
                     </div>
                 ))}
+            </CollapsibleCard>
+
+            <CollapsibleCard
+                title="Email"
+                description="Login codes, password resets and form notifications are sent with these settings, from your .env (MAIL_*)."
+                storageKey="settings:email"
+                hasErrors={!!testMail.errors.test_email}
+                contentClassName="flex flex-col gap-4"
+            >
+                {mail && (
+                    <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1.5 text-sm">
+                        <dt className="text-muted-foreground">Mailer</dt>
+                        <dd className="font-mono text-xs leading-5">{mail.mailer}{mail.transport !== mail.mailer && ` (${mail.transport})`}</dd>
+                        {mail.host && (<><dt className="text-muted-foreground">Server</dt><dd className="font-mono text-xs leading-5">{mail.host}{mail.port ? `:${mail.port}` : ''}</dd></>)}
+                        <dt className="text-muted-foreground">From</dt>
+                        <dd className="font-mono text-xs leading-5">{mail.from || '—'}{mail.from_name ? ` (${mail.from_name})` : ''}</dd>
+                    </dl>
+                )}
+                {mail && !mail.delivers && (
+                    <p className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[13px] text-amber-800 dark:text-amber-300">
+                        <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                        <span>The "{mail.transport}" mailer doesn't deliver email: messages only go to the log. Set MAIL_MAILER=smtp and the MAIL_* settings in .env to send real email.</span>
+                    </p>
+                )}
+                <div className="grid gap-2">
+                    <Label htmlFor="test-email">Send a test email</Label>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                        <Input
+                            id="test-email"
+                            type="email"
+                            placeholder="you@example.com"
+                            value={testMail.data.test_email}
+                            onChange={(e) => testMail.setData('test_email', e.target.value)}
+                            // Enter sends the test, not the settings form around it.
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    sendTestMail();
+                                }
+                            }}
+                        />
+                        <Button type="button" variant="outline" className="shrink-0" disabled={testMail.processing || testMail.data.test_email.trim() === ''} onClick={sendTestMail}>
+                            {testMail.processing ? <LoaderCircle className="animate-spin" /> : <Mail />} Send test
+                        </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Sent right away with the settings above. If it fails, the error from the mail server is shown here.</p>
+                    <InputError message={testMail.errors.test_email} />
+                </div>
+            </CollapsibleCard>
+
+            <CollapsibleCard title="Security" storageKey="settings:security" contentClassName="flex flex-col gap-4">
+                <label className="flex items-start gap-3">
+                    <Switch checked={form.data.security.two_factor} onCheckedChange={(v) => form.setData('security', { ...form.data.security, two_factor: v })} />
+                    <span className="grid gap-0.5 text-sm">
+                        <span className="font-medium">Two-factor login with an emailed code</span>
+                        <span className="text-xs text-muted-foreground">
+                            After their password, everyone logging in to the admin must enter a 6-digit code sent to their email address.
+                        </span>
+                    </span>
+                </label>
+                {form.data.security.two_factor && (
+                    <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[13px] text-amber-800 dark:text-amber-300">
+                        <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+                        <div className="grid gap-1">
+                            <p className="font-medium">Make sure email (SMTP) is set up before turning this on.</p>
+                            <p>
+                                If login codes can't be delivered, nobody can log in, including you. Send yourself a test email above first
+                                {mail && !mail.delivers && <> (right now mail only goes to the log)</>}. Locked out? Turn it off on the server with{' '}
+                                <code className="font-mono text-xs">php artisan sunrice:two-factor off</code>.
+                            </p>
+                        </div>
+                    </div>
+                )}
             </CollapsibleCard>
 
             <div>

@@ -20,6 +20,7 @@ use Throwable;
  *   locales.main/available/names → sunrice.locales.*
  *   seo.noindex/twitter_site/image → sunrice.seo.*
  *   code.head/body_start/body_end  → sunrice.code.*
+ *   security.two_factor        → sunrice.auth.two_factor
  */
 class SiteSettings
 {
@@ -44,6 +45,7 @@ class SiteSettings
         'branding.logo' => 'sunrice.branding.logo',
         'branding.font' => 'sunrice.branding.font',
         'branding.color' => 'sunrice.branding.color',
+        'security.two_factor' => 'sunrice.auth.two_factor',
     ];
 
     /**

@@ -282,6 +282,7 @@ class SunriceServiceProvider extends PackageServiceProvider
             Console\TranslateCommand::class,
             Console\UpgradeTranslationsCommand::class,
             Console\SeedRolesCommand::class,
+            Console\TwoFactorCommand::class,
         ]);
     }
 

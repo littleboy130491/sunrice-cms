@@ -17,6 +17,10 @@ use Sunrice\Http\Middleware;
 Route::middleware('guest:'.config('sunrice.auth.guard', 'web'))->group(function (): void {
     Route::get('login', [Admin\Auth\LoginController::class, 'create'])->name('login');
     Route::post('login', [Admin\Auth\LoginController::class, 'store'])->name('login.store');
+    // Two-factor: the emailed code, after a correct password.
+    Route::get('login/code', [Admin\Auth\TwoFactorController::class, 'create'])->name('login.code');
+    Route::post('login/code', [Admin\Auth\TwoFactorController::class, 'store'])->name('login.code.verify');
+    Route::post('login/code/resend', [Admin\Auth\TwoFactorController::class, 'resend'])->name('login.code.resend');
     Route::get('forgot-password', [Admin\Auth\PasswordResetController::class, 'create'])->name('password.request');
     Route::post('forgot-password', [Admin\Auth\PasswordResetController::class, 'store'])->name('password.email');
     Route::get('reset-password/{token}', [Admin\Auth\PasswordResetController::class, 'edit'])->name('password.reset');
@@ -121,6 +125,7 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     // Site settings
     Route::get('settings', [Admin\SettingsController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [Admin\SettingsController::class, 'update'])->name('settings.update');
+    Route::post('settings/test-mail', [Admin\SettingsController::class, 'testMail'])->name('settings.test-mail');
 
     // Developer docs (the package's docs/*.md)
     Route::get('docs/{page?}', [Admin\DocsController::class, 'show'])->where('page', '[a-z0-9-]+')->name('docs.show');
