@@ -80,9 +80,30 @@ it('shows what each item links to in the editor', function () {
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Menus/Edit')
-            ->where('items.0.target_title', 'Topics: Laravel')
+            ->where('items.0.target_title', 'Topics: Laravel'));
+});
+
+it('edits items on their own page', function () {
+    addItem(['type' => 'term', 'target_id' => $this->term->id, 'labels' => []]);
+    $item = MenuItem::query()->latest('id')->firstOrFail();
+
+    get("/cms/menus/{$this->menu->id}/items/create?parent={$item->id}")
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Menus/ItemEdit')
+            ->where('item', null)
+            ->where('parent.id', $item->id)
             ->has('collections', 1)
             ->has('taxonomies', 1));
+
+    get("/cms/menu-items/{$item->id}/edit")
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Menus/ItemEdit')
+            ->where('item.target_title', 'Topics: Laravel')
+            ->where('item.target_taxonomy', 'topics'));
+
+    put("/cms/menu-items/{$item->id}", ['labels' => ['id' => 'Topik']])->assertRedirect("/cms/menus/{$this->menu->id}");
 });
 
 it('lets menu editors search terms without term permissions', function () {

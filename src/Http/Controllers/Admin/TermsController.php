@@ -126,19 +126,6 @@ class TermsController extends Controller
 
         return Inertia::render('Taxonomies/Terms', [
             'taxonomy' => $taxonomy->only('id', 'handle', 'title', 'hierarchical', 'blueprint_id') + ['template' => $taxonomy->setting('template')],
-            // Every term: the editor's parent picker and the term being edited.
-            'terms' => $all->map(fn (Term $t) => [
-                'id' => $t->id,
-                'parent_id' => $t->parent_id,
-                'template' => $t->template,
-                'translations' => $t->translations->keyBy('locale')->map(fn (TermTranslation $tr) => [
-                    'title' => $tr->name,
-                    'slug' => $tr->slug,
-                    'data' => $tr->data,
-                    'seo' => (object) ($tr->seo ?? []),
-                ]),
-                'count' => $t->entries_count,
-            ]),
             'columns' => $columns,
             'rows' => $paginator,
             'meta' => ['search' => $search, 'filters' => $filters, 'sort' => $sort],
@@ -196,13 +183,75 @@ class TermsController extends Controller
         return back()->with('success', $terms->count() === 1 ? 'Term deleted.' : "{$terms->count()} terms deleted.");
     }
 
+    public function create(Taxonomy $taxonomy): Response
+    {
+        $this->authorize('create', [Term::class, $taxonomy->id]);
+
+        return $this->editor($taxonomy, null);
+    }
+
+    public function edit(Term $term): Response
+    {
+        $this->authorize('update', $term);
+
+        return $this->editor($term->taxonomy, $term);
+    }
+
+    /** The term editor page (create and edit). */
+    protected function editor(Taxonomy $taxonomy, ?Term $term): Response
+    {
+        $main = Locales::main();
+        $term?->load('translations');
+        $all = Term::query()->where('taxonomy_id', $taxonomy->id)->with('translations')->orderBy('sort_order')->orderBy('id')->get();
+        // A term can't sit under itself or one of its children.
+        $excluded = $term === null ? [] : $term->descendantIds();
+        $titleOf = fn (Term $t) => $t->translations->firstWhere('locale', $main)->name ?? $t->translations->first()->name ?? '#'.$t->id;
+        $hasPages = (bool) $taxonomy->setting('has_archive');
+        $user = request()->user();
+
+        return Inertia::render('Taxonomies/TermEdit', [
+            'taxonomy' => $taxonomy->only('id', 'handle', 'title', 'hierarchical') + [
+                'template' => $taxonomy->setting('template'),
+                'has_pages' => $hasPages,
+            ],
+            'term' => $term === null ? null : [
+                'id' => $term->id,
+                'parent_id' => $term->parent_id,
+                'template' => $term->template,
+                'translations' => $term->translations->keyBy('locale')->map(fn (TermTranslation $tr) => [
+                    'title' => $tr->name,
+                    'slug' => $tr->slug,
+                    'data' => (object) ($tr->data ?? []),
+                    'seo' => (object) ($tr->seo ?? []),
+                ]),
+                'urls' => $hasPages
+                    ? collect(Locales::available())->mapWithKeys(fn (string $l) => [$l => app(UrlGenerator::class)->term($term->setRelation('taxonomy', $taxonomy), $l)])
+                    : null,
+                'entries' => $term->entries()->count(),
+            ],
+            'parents' => $taxonomy->hierarchical
+                ? $this->treeOrder($all)
+                    ->reject(fn (array $i) => in_array($i['term']->id, $excluded, true))
+                    ->map(fn (array $i) => ['value' => (string) $i['term']->id, 'label' => str_repeat('— ', $i['depth']).$titleOf($i['term'])])
+                    ->values()
+                : [],
+            'locales' => Locales::available(),
+            'mainLocale' => $main,
+            'blueprint' => $taxonomy->blueprint?->schema()->toAdminTabs(),
+            'can' => [
+                'edit' => $term === null || $user->can('update', $term),
+                'delete' => $term !== null && $user->can('delete', $term),
+            ],
+        ]);
+    }
+
     public function store(Request $request, Taxonomy $taxonomy, SaveTerm $save): RedirectResponse
     {
         $this->authorize('create', [Term::class, $taxonomy->id]);
 
-        $save->handle($taxonomy, $request->all());
+        $term = $save->handle($taxonomy, $request->all());
 
-        return back()->with('success', 'Term created.');
+        return redirect()->route('sunrice.admin.terms.edit', $term)->with('success', 'Term created.');
     }
 
     public function update(Request $request, Term $term, SaveTerm $save): RedirectResponse
@@ -220,7 +269,8 @@ class TermsController extends Controller
 
         app(TrashTerm::class)->handle($term);
 
-        return back()->with('success', 'Term deleted.');
+        // The editor can't show a deleted term: back to the list.
+        return redirect()->route('sunrice.admin.terms.index', $term->taxonomy)->with('success', 'Term deleted.');
     }
 
     public function reorder(Request $request, Taxonomy $taxonomy, Reorder $reorder): RedirectResponse

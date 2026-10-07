@@ -1,18 +1,15 @@
-import { router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import * as React from 'react';
-import { ChevronLeft, ChevronRight, FileText, Folder, Grid3X3, Image as ImageIcon, List, Pencil, Plus, Search, Trash2, Undo2, Upload, Video } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Folder, Grid3X3, Image as ImageIcon, List, Pencil, Plus, Search, Trash2, Upload, Video } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
 import type { SharedProps } from '@/types';
-import { fetchJson, xsrfToken } from '@/lib/fetch-json';
+import { xsrfToken } from '@/lib/fetch-json';
 
 interface AssetRow {
     id: number;
@@ -63,10 +60,6 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
     const { adminPath } = usePage<SharedProps>().props;
     const [search, setSearch] = React.useState(filters.search ?? '');
     const [view, setView] = React.useState<'grid' | 'list'>('grid');
-    const [detail, setDetail] = React.useState<AssetRow | null>(null);
-    const [usages, setUsages] = React.useState<{ source_type: string; source_id: number }[]>([]);
-    const [folderDialog, setFolderDialog] = React.useState(false);
-    const [newFolder, setNewFolder] = React.useState('');
     const [checked, setChecked] = React.useState<Set<number>>(new Set());
     // A new page, folder or filter: drop selections the user can no longer see.
     React.useEffect(() => setChecked(new Set()), [assets.data]);
@@ -146,52 +139,12 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
         }
     };
 
-    const openDetail = async (asset: AssetRow) => {
-        setDetail(asset);
-        setUsages([]);
-        // Trashed assets have no live usages to look up.
-        if (asset.trashed) return;
-        try {
-            const json = await fetchJson<{ usages?: typeof usages }>(adminUrl(`assets/${asset.id}`, adminPath));
-            setUsages(json.usages ?? []);
-        } catch (e) {
-            toast.error(e instanceof Error ? e.message : 'Could not load where this asset is used.');
-        }
-    };
-
-    const saveMeta = () => {
-        if (!detail) return;
-        router.put(adminUrl(`assets/${detail.id}`, adminPath), {
-            title: detail.title, alt: detail.alt, caption: detail.caption,
-        }, { preserveScroll: true, onSuccess: () => setDetail(null) });
-    };
-
     const bulkTrash = () => {
         if (!window.confirm(`Move ${checked.size} ${checked.size === 1 ? 'asset' : 'assets'} to the trash?`)) return;
         router.post(adminUrl('assets/bulk-trash', adminPath), { ids: Array.from(checked) }, {
             preserveScroll: true,
             onSuccess: () => setChecked(new Set()),
         });
-    };
-
-    const replaceFile = (file: File) => {
-        if (!detail) return;
-        const data = new FormData();
-        data.append('file', file);
-        router.post(adminUrl(`assets/${detail.id}/replace`, adminPath), data, {
-            forceFormData: true,
-            preserveScroll: true,
-            // Show the new file: reload the asset's details.
-            onSuccess: async () => {
-                const res = await fetch(adminUrl(`assets/${detail.id}`, adminPath), { headers: { Accept: 'application/json' } });
-                if (res.ok) setDetail(await res.json());
-            },
-        });
-    };
-
-    const renameFolder = (f: FolderRow) => {
-        const name = window.prompt('Rename folder', f.name);
-        if (name && name !== f.name) router.put(adminUrl(`asset-folders/${f.id}`, adminPath), { name }, { preserveScroll: true });
     };
 
     const deleteFolder = (f: FolderRow) => {
@@ -209,20 +162,11 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
             <aside className="space-y-1 md:w-48 md:shrink-0">
                 <div className="mb-2 flex items-center justify-between">
                     <span className="text-sm font-medium">Folders</span>
-                    {canUpload && <Dialog open={folderDialog} onOpenChange={setFolderDialog}>
-                        <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="New folder"><Plus className="h-4 w-4" /></Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader><DialogTitle>New folder</DialogTitle></DialogHeader>
-                            <div className="flex flex-col gap-3">
-                                <Input value={newFolder} onChange={(e) => setNewFolder(e.target.value)} placeholder="Folder name" aria-label="Folder name" autoFocus />
-                                <Button onClick={() => {
-                                    router.post(adminUrl('asset-folders', adminPath), { name: newFolder, parent_id: filters.folder ? Number(filters.folder) : null }, { onSuccess: () => { setFolderDialog(false); setNewFolder(''); } });
-                                }}>Create</Button>
-                            </div>
-                        </DialogContent>
-                    </Dialog>}
+                    {canUpload && (
+                        <Button variant="ghost" size="icon" className="h-6 w-6" aria-label="New folder" asChild>
+                            <Link href={adminUrl(`asset-folders/create${filters.folder ? `?parent=${filters.folder}` : ''}`, adminPath)}><Plus className="h-4 w-4" /></Link>
+                        </Button>
+                    )}
                 </div>
                 <button
                     className={`flex w-full items-center gap-2 rounded px-2 py-1 text-sm ${!filters.folder ? 'bg-accent' : 'hover:bg-accent/50'}`}
@@ -240,9 +184,9 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
                             <Folder className="h-4 w-4 shrink-0" /> <span className="truncate">{f.name}</span>
                         </button>
                         {/* Always shown on touch screens, which have no hover. */}
-                        {canEditAssets && <button className="px-1 text-muted-foreground hover:text-foreground md:hidden md:group-hover:block" aria-label="Rename folder" onClick={() => renameFolder(f)}>
+                        {canEditAssets && <Link className="px-1 text-muted-foreground hover:text-foreground md:hidden md:group-hover:block" aria-label="Rename folder" href={adminUrl(`asset-folders/${f.id}/edit`, adminPath)}>
                             <Pencil className="h-3 w-3" />
-                        </button>}
+                        </Link>}
                         {canDeleteAssets && <button className="px-1 text-muted-foreground hover:text-destructive md:hidden md:group-hover:block" aria-label="Delete folder" onClick={() => deleteFolder(f)}>
                             <Trash2 className="h-3 w-3" />
                         </button>}
@@ -313,7 +257,7 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
                         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-6">
                             {assets.data.map((asset) => (
                                 <div key={asset.id} className="group relative cursor-pointer rounded-md border p-2 hover:bg-accent/40"
-                                    onClick={() => openDetail(asset)}>
+                                    onClick={() => router.visit(adminUrl(`assets/${asset.id}/edit`, adminPath))}>
                                     <input type="checkbox" className="absolute left-2 top-2 z-10"
                                         aria-label={`Select ${asset.filename}`}
                                         checked={checked.has(asset.id)}
@@ -338,7 +282,7 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
                             <thead><tr className="border-b text-left"><th className="py-2">Name</th><th>Type</th><th>Size</th><th /></tr></thead>
                             <tbody>
                                 {assets.data.map((asset) => (
-                                    <tr key={asset.id} className="cursor-pointer border-b hover:bg-accent/40" onClick={() => openDetail(asset)}>
+                                    <tr key={asset.id} className="cursor-pointer border-b hover:bg-accent/40" onClick={() => router.visit(adminUrl(`assets/${asset.id}/edit`, adminPath))}>
                                         <td className="py-2">{asset.title ?? asset.filename}</td>
                                         <td>{asset.mime_type}</td>
                                         <td>{Math.round(asset.size / 1024)} KB</td>
@@ -366,79 +310,6 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
                 </div>
             </div>
 
-            <Sheet open={detail !== null} onOpenChange={(o) => !o && setDetail(null)}>
-                <SheetContent className="w-96">
-                    {detail && (
-                        <>
-                            <SheetHeader><SheetTitle>{detail.filename}</SheetTitle></SheetHeader>
-                            <div className="mt-4 flex flex-col gap-4">
-                                <div className="flex h-48 items-center justify-center overflow-hidden rounded bg-muted">
-                                    {detail.mime_type?.startsWith('image/') && !detail.mime_type.includes('svg')
-                                        ? <img src={detail.url} alt={detail.alt ?? ''} className="h-full w-full object-contain" />
-                                        : iconFor(detail)}
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="asset-title">Title</Label>
-                                    <Input id="asset-title" value={detail.title ?? ''} disabled={!(canEditAssets && !detail.trashed)} onChange={(e) => setDetail({ ...detail, title: e.target.value })} />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="asset-alt">Alt text</Label>
-                                    <Input id="asset-alt" value={detail.alt ?? ''} disabled={!(canEditAssets && !detail.trashed)} onChange={(e) => setDetail({ ...detail, alt: e.target.value })} />
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="asset-caption">Caption</Label>
-                                    <Input id="asset-caption" value={detail.caption ?? ''} disabled={!(canEditAssets && !detail.trashed)} onChange={(e) => setDetail({ ...detail, caption: e.target.value })} />
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                    {detail.width && detail.height ? `${detail.width}×${detail.height} · ` : ''}{Math.round(detail.size / 1024)} KB
-                                </div>
-                                <div className="text-xs">
-                                    <a href={detail.url} target="_blank" className="underline" rel="noreferrer">Copy / open URL</a>
-                                </div>
-                                {usages.length > 0 && (
-                                    <div>
-                                        <Label>Used by</Label>
-                                        <ul className="mt-1 space-y-1 text-xs">
-                                            {usages.map((u, i) => <li key={i}>{u.source_type} #{u.source_id}</li>)}
-                                        </ul>
-                                    </div>
-                                )}
-                                <div className="flex gap-2">
-                                    {canEditAssets && !detail.trashed && (
-                                        <>
-                                            <Button size="sm" onClick={saveMeta}>Save</Button>
-                                            <label className="cursor-pointer">
-                                                <Button size="sm" variant="outline" asChild><span>Replace file</span></Button>
-                                                <input type="file" className="hidden" onChange={(e) => {
-                                                    const file = e.target.files?.[0];
-                                                    e.target.value = '';
-                                                    if (file) replaceFile(file);
-                                                }} />
-                                            </label>
-                                        </>
-                                    )}
-                                    {!canDeleteAssets ? null : !detail.trashed ? (
-                                        <Button size="sm" variant="destructive" onClick={() => {
-                                            if (!window.confirm(`Move ${detail.filename} to the trash?`)) return;
-                                            router.delete(adminUrl(`assets/${detail.id}`, adminPath), { preserveScroll: true, onSuccess: () => setDetail(null) });
-                                        }}>Trash</Button>
-                                    ) : (
-                                        <>
-                                            <Button size="sm" variant="outline" onClick={() => {
-                                                router.post(adminUrl(`assets/${detail.id}/restore`, adminPath), {}, { preserveScroll: true, onSuccess: () => setDetail(null) });
-                                            }}><Undo2 className="h-4 w-4" /> Restore</Button>
-                                            <Button size="sm" variant="destructive" onClick={() => {
-                                                if (!window.confirm('Delete this file permanently?')) return;
-                                                router.delete(adminUrl(`assets/${detail.id}/force`, adminPath), { preserveScroll: true, onSuccess: () => setDetail(null) });
-                                            }}>Delete forever</Button>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </SheetContent>
-            </Sheet>
         </div>
     );
 }

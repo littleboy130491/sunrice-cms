@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Menu;
 use Sunrice\Models\MenuItem;
@@ -64,6 +66,34 @@ class MenuItemsController extends Controller
         return $validated;
     }
 
+    public function create(Request $request, Menu $menu): Response
+    {
+        $this->authorize('update', $menu);
+        $parent = $request->integer('parent') ?: null;
+        $parentItem = $parent === null ? null : $menu->items()->whereKey($parent)->first();
+
+        return $this->editor($menu, null, $parentItem);
+    }
+
+    public function edit(MenuItem $item): Response
+    {
+        $this->authorize('update', $item->menu);
+
+        return $this->editor($item->menu, $item, $item->parent_id === null ? null : MenuItem::query()->find($item->parent_id));
+    }
+
+    /** The menu item editor page (add and edit). */
+    protected function editor(Menu $menu, ?MenuItem $item, ?MenuItem $parent): Response
+    {
+        $present = fn (MenuItem $i) => MenusController::presentItems(collect([$i]))[0];
+
+        return Inertia::render('Menus/ItemEdit', [
+            'menu' => $menu->only('id', 'handle', 'title'),
+            'item' => $item === null ? null : $present($item),
+            'parent' => $parent === null ? null : $present($parent),
+        ] + MenusController::itemOptions());
+    }
+
     public function store(Request $request, Menu $menu): RedirectResponse
     {
         $this->authorize('update', $menu);
@@ -84,7 +114,7 @@ class MenuItemsController extends Controller
 
         ContentChanged::dispatch('menu_saved');
 
-        return back()->with('success', 'Item added.');
+        return redirect()->route('sunrice.admin.menus.edit', $menu)->with('success', 'Item added.');
     }
 
     public function update(Request $request, MenuItem $item): RedirectResponse
@@ -108,7 +138,7 @@ class MenuItemsController extends Controller
         $item->update($validated);
         ContentChanged::dispatch('menu_saved');
 
-        return back()->with('success', 'Item saved.');
+        return redirect()->route('sunrice.admin.menus.edit', $item->menu_id)->with('success', 'Item saved.');
     }
 
     public function destroy(MenuItem $item): RedirectResponse
@@ -119,7 +149,7 @@ class MenuItemsController extends Controller
         $item->delete();
         ContentChanged::dispatch('menu_saved');
 
-        return back()->with('success', 'Item removed.');
+        return redirect()->route('sunrice.admin.menus.edit', $item->menu_id)->with('success', 'Item removed.');
     }
 
     public function reorder(Request $request, Menu $menu): RedirectResponse

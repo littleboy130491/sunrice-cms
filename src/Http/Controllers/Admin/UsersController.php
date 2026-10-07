@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Http\Controllers\Admin;
 
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -50,6 +51,42 @@ class UsersController extends Controller
         ]);
     }
 
+    public function create(): Response
+    {
+        $this->authorize('create', config('sunrice.auth.user_model'));
+
+        return $this->editor(null);
+    }
+
+    public function edit(int|string $user): Response
+    {
+        $model = config('sunrice.auth.user_model');
+        $user = $model::findOrFail($user);
+        $this->authorize('update', $user);
+
+        return $this->editor($user);
+    }
+
+    /** The user editor page (create and edit). */
+    protected function editor(?Model $user): Response
+    {
+        return Inertia::render('Users/Edit', [
+            'user' => $user === null ? null : [
+                'id' => $user->getKey(),
+                'name' => $user->getAttribute('name'),
+                'email' => $user->getAttribute('email'),
+                'roles' => $user->getAttribute('roles')->pluck('name'),
+                'content' => DeleteUser::counts($user),
+                'is_self' => (string) $user->getKey() === (string) request()->user()->getAuthIdentifier(),
+            ],
+            'roles' => Role::query()->orderBy('name')->get(['id', 'name']),
+            // Who could receive this user's content when deleting them.
+            'others' => $user === null ? [] : config('sunrice.auth.user_model')::query()
+                ->whereKeyNot($user->getKey())->orderBy('name')->get()
+                ->map(fn (Model $u) => ['id' => $u->getKey(), 'name' => $u->getAttribute('name'), 'email' => $u->getAttribute('email')]),
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', config('sunrice.auth.user_model'));
@@ -69,7 +106,7 @@ class UsersController extends Controller
         $user = $model::create(Arr::except($validated, 'roles'));
         $user->syncRoles($validated['roles'] ?? []);
 
-        return back()->with('success', "User {$user->email} created.");
+        return redirect()->route('sunrice.admin.users.index')->with('success', "User {$user->email} created.");
     }
 
     public function update(Request $request, int|string $user): RedirectResponse
@@ -126,7 +163,7 @@ class UsersController extends Controller
 
         $delete->handle($user, $validated['content'] ?? 'keep', $reassignTo);
 
-        return back()->with('success', match ($validated['content'] ?? 'keep') {
+        return redirect()->route('sunrice.admin.users.index')->with('success', match ($validated['content'] ?? 'keep') {
             'reassign' => "User deleted. Their content now belongs to {$reassignTo?->getAttribute('name')}.",
             'delete' => 'User deleted and their entries moved to the trash.',
             default => 'User deleted. Their content was kept without an author.',

@@ -2,13 +2,9 @@ import * as React from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
-import { InputError } from '@/components/app/input-error';
 import type { SharedProps } from '@/types';
 
 interface Row { id: number; name: string; permissions_count: number; deletable?: boolean }
@@ -16,40 +12,12 @@ interface Row { id: number; name: string; permissions_count: number; deletable?:
 export default function RolesIndex({ roles }: { roles: Row[] }) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
-    const [open, setOpen] = React.useState(false);
-    const [name, setName] = React.useState('');
-    const [error, setError] = React.useState<string>();
-    const [processing, setProcessing] = React.useState(false);
-
-    const submit = (e: React.FormEvent) => {
-        e.preventDefault();
-        router.post(adminUrl('roles', adminPath), { name }, {
-            onStart: () => setProcessing(true),
-            onFinish: () => setProcessing(false),
-            onSuccess: () => { setOpen(false); setName(''); setError(undefined); },
-            onError: (errors) => setError(errors.name),
-        });
-    };
-
     return (
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <h1 className="sunrice-page-title">Roles</h1>
                 {can('sunrice.roles.create') && (
-                    <Dialog open={open} onOpenChange={(o) => { setOpen(o); setError(undefined); }}>
-                        <DialogTrigger asChild><Button><Plus className="mr-1 h-4 w-4" /> New role</Button></DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader><DialogTitle>New role</DialogTitle></DialogHeader>
-                            <form onSubmit={submit} className="flex flex-col gap-3">
-                                <div className="grid gap-2">
-                                    <Label htmlFor="role-name">Name</Label>
-                                    <Input id="role-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="editor" autoFocus />
-                                    <InputError message={error} />
-                                </div>
-                                <Button type="submit" disabled={processing}>Create</Button>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
+                    <Button asChild><Link href={adminUrl('roles/create', adminPath)}><Plus className="mr-1 h-4 w-4" /> New role</Link></Button>
                 )}
             </div>
             <Table>

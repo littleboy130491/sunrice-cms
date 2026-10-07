@@ -34,17 +34,35 @@ class RolesController extends Controller
         ]);
     }
 
+    public function create(): Response
+    {
+        $this->authorize('create', Role::class);
+
+        return Inertia::render('Roles/Edit', [
+            'role' => null,
+            'permissionGroups' => app(PermissionRegistry::class)->grouped(),
+        ]);
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $this->authorize('create', Role::class);
 
+        $guard = config('sunrice.auth.guard', 'web');
+        $known = app(PermissionRegistry::class)->names();
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('roles', 'name')],
-        ]);
+            'permissions' => ['sometimes', 'array'],
+            'permissions.*' => ['string', Rule::in($known)],
+        ], [], ['permissions.*' => 'permission']);
 
-        Role::create(['name' => $validated['name'], 'guard_name' => config('sunrice.auth.guard', 'web')]);
+        $role = Role::create(['name' => $validated['name'], 'guard_name' => $guard]);
+        foreach ($validated['permissions'] ?? [] as $name) {
+            Permission::findOrCreate($name, $guard);
+        }
+        $role->syncPermissions($validated['permissions'] ?? []);
 
-        return back()->with('success', "Role \"{$validated['name']}\" created.");
+        return redirect()->route('sunrice.admin.roles.edit', $role)->with('success', "Role \"{$role->name}\" created.");
     }
 
     public function edit(Role $role): Response

@@ -1,4 +1,8 @@
-import { usePage } from '@inertiajs/react';
+import * as React from 'react';
+import { Link, usePage } from '@inertiajs/react';
+import { ArrowLeft } from 'lucide-react';
+import { useBreadcrumbs } from '@/components/app/breadcrumbs';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,10 +14,15 @@ import type { SharedProps } from '@/types';
 
 interface Group { group: string; permissions: { name: string; label: string }[] }
 
-export default function RoleEdit({ role, permissionGroups }: { role: { id: number; name: string; permissions: string[]; editable?: boolean }; permissionGroups: Group[] }) {
+export default function RoleEdit({ role, permissionGroups }: { role: { id: number; name: string; permissions: string[]; editable?: boolean } | null; permissionGroups: Group[] }) {
     const { adminPath } = usePage<SharedProps>().props;
-    const form = useForm({ name: role.name, permissions: role.permissions });
-    const editable = role.editable !== false;
+    const isNew = role === null;
+    const form = useForm({ name: role?.name ?? '', permissions: role?.permissions ?? ([] as string[]) });
+    const editable = role?.editable !== false;
+    const formRef = React.useRef<HTMLFormElement>(null);
+    useUnsavedChanges(editable && form.isDirty && !form.processing, () => formRef.current?.requestSubmit());
+    const listUrl = adminUrl('roles', adminPath);
+    useBreadcrumbs([{ label: 'Manage' }, { label: 'Roles', href: listUrl }, { label: isNew ? 'New role' : role.name }]);
 
     const toggle = (name: string) =>
         form.setData('permissions', form.data.permissions.includes(name)
@@ -31,19 +40,31 @@ export default function RoleEdit({ role, permissionGroups }: { role: { id: numbe
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!editable) return;
-        form.put(adminUrl(`roles/${role.id}`, adminPath), { preserveScroll: true });
+        if (isNew) {
+            form.post(adminUrl('roles', adminPath));
+        } else {
+            form.put(adminUrl(`roles/${role.id}`, adminPath), { preserveScroll: true, onSuccess: () => form.setDefaults() });
+        }
     };
     const permissionErrors = Object.entries(form.errors as Record<string, string>)
         .filter(([key]) => key === 'permissions' || key.startsWith('permissions.'))
         .map(([, message]) => message);
 
     return (
-        <form onSubmit={submit} className="flex max-w-3xl flex-col gap-4">
-            <h1 className="sunrice-page-title">{editable ? 'Edit role' : role.name}</h1>
+        <form ref={formRef} onSubmit={submit} className="flex max-w-3xl flex-col gap-4">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                    <Button variant="outline" size="icon" className="size-8 shrink-0" asChild>
+                        <Link href={listUrl} aria-label="Back to roles"><ArrowLeft /></Link>
+                    </Button>
+                    <h1 className="truncate sunrice-page-title">{isNew ? 'New role' : editable ? `Edit ${role.name}` : role.name}</h1>
+                </div>
+                {editable && <Button type="submit" disabled={form.processing}>{form.processing ? 'Saving…' : isNew ? 'Create role' : 'Save role'}</Button>}
+            </div>
             {!editable && <p className="text-sm text-muted-foreground">This role can't be edited. Super admins always have every permission.</p>}
             <div className="grid max-w-sm gap-2">
-                <Label>Name</Label>
-                <Input value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} required disabled={!editable} />
+                <Label htmlFor="role-name">Name</Label>
+                <Input id="role-name" autoFocus={isNew} placeholder="e.g. editor" value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} required disabled={!editable} />
                 {form.errors.name && <p className="text-sm text-destructive">{form.errors.name}</p>}
             </div>
             {permissionErrors.length > 0 && (
@@ -69,7 +90,7 @@ export default function RoleEdit({ role, permissionGroups }: { role: { id: numbe
                     </CollapsibleCard>
                 ))}
             </div>
-            {editable && <div><Button type="submit" disabled={form.processing}>{form.processing ? 'Saving…' : 'Save role'}</Button></div>}
+            {editable && <p className="text-xs text-muted-foreground">{form.isDirty ? 'Unsaved changes' : isNew ? 'Not saved yet' : 'All changes saved'} · Ctrl/⌘ S</p>}
         </form>
     );
 }
