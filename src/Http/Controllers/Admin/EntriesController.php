@@ -14,18 +14,19 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Actions\Entries\ChangeBlueprint;
 use Sunrice\Actions\Entries\CreateEntry;
 use Sunrice\Actions\Entries\DuplicateEntry;
+use Sunrice\Actions\Entries\EnsureTranslation;
 use Sunrice\Actions\Entries\ForceDeleteEntry;
 use Sunrice\Actions\Entries\PublishTranslation;
 use Sunrice\Actions\Entries\RestoreEntry;
 use Sunrice\Actions\Entries\RestoreRevision;
 use Sunrice\Actions\Entries\ReturnTranslationToDraft;
 use Sunrice\Actions\Entries\SaveDraft;
+use Sunrice\Actions\Entries\SetEntryParent;
 use Sunrice\Actions\Entries\SyncEntryTerms;
 use Sunrice\Actions\Entries\TrashEntry;
 use Sunrice\Actions\Entries\UnpublishEntry;
@@ -43,7 +44,6 @@ use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\Revision;
 use Sunrice\Rules\ValidSlug;
 use Sunrice\Support\Locales;
-use Sunrice\Support\SlugValidator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EntriesController extends Controller
@@ -247,13 +247,13 @@ class EntriesController extends Controller
             'blueprint_id' => ['nullable', 'integer', 'exists:sunrice_blueprints,id'],
             'term_ids' => ['sometimes', 'array'],
             'term_ids.*' => ['integer'],
-            'parent_id' => ['sometimes', 'nullable', 'integer', $this->parentRule($collection, null)],
+            'parent_id' => ['sometimes', 'nullable', 'integer', SetEntryParent::rule($collection, null)],
         ]);
 
         $entry = DB::transaction(function () use ($collection, $validated, $request, $create): Entry {
             $entry = $create->handle($collection, $validated, $request->user()->getAuthIdentifier(), $validated['blueprint_id'] ?? null);
-            if ($collection->isHierarchical() && ($validated['parent_id'] ?? null) !== null) {
-                $entry->update(['parent_id' => (int) $validated['parent_id']]);
+            if (($validated['parent_id'] ?? null) !== null) {
+                app(SetEntryParent::class)->handle($entry, (int) $validated['parent_id']);
             }
             if (array_key_exists('term_ids', $validated)) {
                 app(SyncEntryTerms::class)->handle($entry, $validated['term_ids']);
@@ -298,7 +298,7 @@ class EntriesController extends Controller
             'template' => ['sometimes', 'nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'term_ids' => ['sometimes', 'array'],
             'term_ids.*' => ['integer'],
-            'parent_id' => ['sometimes', 'nullable', 'integer', $this->parentRule($entry->collection, $entry)],
+            'parent_id' => ['sometimes', 'nullable', 'integer', SetEntryParent::rule($entry->collection, $entry)],
         ]);
 
         // The template belongs to the entry too (editors only, saved now).
@@ -308,12 +308,8 @@ class EntriesController extends Controller
 
         // So does the parent page. The URL changes at once (also for its
         // children); the old one redirects.
-        if (array_key_exists('parent_id', $validated) && $entry->collection->isHierarchical() && $request->user()->can('update', $entry)) {
-            $parentId = $validated['parent_id'] === null ? null : (int) $validated['parent_id'];
-            if ($parentId !== $entry->parent_id) {
-                $entry->update(['parent_id' => $parentId]);
-                ContentChanged::dispatch('entry_parent');
-            }
+        if (array_key_exists('parent_id', $validated) && $request->user()->can('update', $entry)) {
+            app(SetEntryParent::class)->handle($entry, $validated['parent_id'] === null ? null : (int) $validated['parent_id']);
         }
 
         // Terms belong to the entry, not a language: editors only (not
@@ -581,43 +577,7 @@ class EntriesController extends Controller
 
     protected function translationFor(Entry $entry, string $locale): EntryTranslation
     {
-        if (! Locales::isAvailable($locale)) {
-            throw ValidationException::withMessages(['locale' => 'Unknown language. Reload the page and try again.']);
-        }
-
-        $main = $entry->mainTranslation();
-
-        return $entry->translations()->firstOrCreate(
-            ['locale' => $locale],
-            [
-                'collection_id' => $entry->collection_id,
-                'title' => $main === null ? '' : $main->title,
-                'slug' => SlugValidator::unique($main === null ? 'entry' : $main->slug, $entry->collection_id, $locale),
-                // Secondary languages store only translated values; until
-                // the editor translates something, the main text shows.
-                'data' => [],
-                'seo' => $main === null ? [] : $main->seo,
-            ],
-        );
-    }
-
-    /**
-     * A parent must be another entry of the same collection, not one of
-     * the entry's own children (that would make a loop), within the
-     * nesting limit.
-     */
-    protected function parentRule(Collection $collection, ?Entry $entry): \Closure
-    {
-        return function (string $attribute, mixed $value, \Closure $fail) use ($collection, $entry): void {
-            $parent = Entry::query()->where('collection_id', $collection->id)->find((int) $value);
-            if ($parent === null) {
-                $fail('Choose an entry of this collection as the parent.');
-            } elseif ($entry !== null && ($parent->id === $entry->id || in_array($parent->id, $entry->descendantIds(), true))) {
-                $fail('An entry can\'t be placed under itself or one of its children.');
-            } elseif (count($parent->ancestors()) >= Entry::MAX_DEPTH - 1) {
-                $fail('Entries can be nested at most '.Entry::MAX_DEPTH.' levels deep.');
-            }
-        };
+        return EnsureTranslation::for($entry, $locale);
     }
 
     /**

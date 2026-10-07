@@ -159,6 +159,7 @@ class SunriceServiceProvider extends PackageServiceProvider
         $this->registerBladeComponents();
         $this->registerContentCache();
         $this->registerRateLimiters();
+        $this->registerMcpServer();
 
         // Site settings saved in the admin override the config defaults.
         $this->app->booted(fn () => SiteSettings::apply());
@@ -193,6 +194,24 @@ class SunriceServiceProvider extends PackageServiceProvider
 
             return Limit::perMinutes((int) ($conf['per_minutes'] ?? 1), (int) ($conf['attempts'] ?? 5))->by($key);
         });
+    }
+
+    /**
+     * The MCP server for AI agents: POST {sunrice.mcp.path} with an access
+     * token, or `php artisan mcp:start sunrice` on the server itself.
+     */
+    protected function registerMcpServer(): void
+    {
+        if (! config('sunrice.mcp.enabled', true) || ! class_exists(\Laravel\Mcp\Facades\Mcp::class)) {
+            return;
+        }
+
+        RateLimiter::for('sunrice-mcp', fn (Request $request) => Limit::perMinute(300)->by((string) $request->bearerToken() ?: $request->ip()));
+
+        \Laravel\Mcp\Facades\Mcp::web('/'.trim((string) config('sunrice.mcp.path', 'mcp'), '/'), Mcp\SunriceServer::class)
+            ->middleware(['throttle:sunrice-mcp', Mcp\AuthenticateToken::class])
+            ->name('sunrice.mcp');
+        \Laravel\Mcp\Facades\Mcp::local('sunrice', Mcp\SunriceServer::class);
     }
 
     protected function registerBladeComponents(): void
@@ -286,6 +305,7 @@ class SunriceServiceProvider extends PackageServiceProvider
             Console\SeedRolesCommand::class,
             Console\TwoFactorCommand::class,
             Console\OrphansCommand::class,
+            Console\McpTokenCommand::class,
         ]);
     }
 

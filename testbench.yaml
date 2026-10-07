@@ -5,6 +5,7 @@ providers:
   - Inertia\ServiceProvider
   - Spatie\Permission\PermissionServiceProvider
   - Spatie\Honeypot\HoneypotServiceProvider
+  - Laravel\Mcp\Server\McpServiceProvider
 
 migrations:
   - workbench/database/migrations

@@ -72,7 +72,8 @@ class ContentTranslator
             });
     }
 
-    protected function entry(Entry $entry): void
+    /** Translate one entry (entries() calls this for each). */
+    public function entry(Entry $entry): void
     {
         $source = $entry->translation($this->from);
         if ($source === null) {

@@ -6,6 +6,7 @@ namespace Sunrice\Tests;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\ServiceProvider;
+use Laravel\Mcp\Server\McpServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 use Spatie\Honeypot\HoneypotServiceProvider;
 use Spatie\Permission\PermissionServiceProvider;
@@ -25,6 +26,7 @@ class TestCase extends Orchestra
             PermissionServiceProvider::class,
             HoneypotServiceProvider::class,
             SitemapServiceProvider::class,
+            McpServiceProvider::class,
         ];
     }
 

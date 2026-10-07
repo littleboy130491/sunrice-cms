@@ -266,4 +266,44 @@ return [
     |
     */
     'super_admin_role' => 'Super Admin',
+
+    /*
+    |--------------------------------------------------------------------------
+    | AI agents (MCP)
+    |--------------------------------------------------------------------------
+    |
+    | An MCP (Model Context Protocol) server so AI agents (Claude, Cursor,
+    | ChatGPT…) can manage the site. Agents connect to POST {path} with an
+    | access token created in the admin (AI access) or with
+    | `php artisan sunrice:mcp-token`, and act with that user's permissions.
+    |
+    | path:         Endpoint path (outside the admin path).
+    | local_user:   Email of the user `php artisan mcp:start sunrice` (stdio,
+    |               for agents running on the server) acts as.
+    | templates:    Let super admins' agents create and edit templates.
+    | commands:     Artisan commands agents may run (with the "Run commands"
+    |               permission). Anything else is refused.
+    |
+    */
+    'mcp' => [
+        'enabled' => env('SUNRICE_MCP_ENABLED', true),
+        'path' => 'mcp',
+        'local_user' => env('SUNRICE_MCP_USER'),
+        // Super admins' agents may write Blade templates and theme files
+        // (Blade runs PHP: turn off where that isn't wanted).
+        'templates' => env('SUNRICE_MCP_TEMPLATES', true),
+        'commands' => [
+            'sunrice:publish-scheduled',
+            'sunrice:sync-permissions',
+            'sunrice:regenerate-images',
+            'sunrice:optimize-images',
+            'sunrice:translate',
+            'sunrice:orphans',
+            'cache:clear',
+            'view:clear',
+            'config:clear',
+            'route:clear',
+            'optimize:clear',
+        ],
+    ],
 ];

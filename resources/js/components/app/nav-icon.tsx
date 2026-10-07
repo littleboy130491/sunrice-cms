@@ -1,5 +1,5 @@
 import {
-    Blocks, BookOpen, Briefcase, Calendar, Circle, Database, FileText, Folder, Globe, Home, Image, Inbox,
+    Blocks, BookOpen, Bot, Briefcase, Calendar, Circle, Database, FileText, Folder, Globe, Home, Image, Inbox,
     LayoutGrid, LayoutTemplate, Library, ListTree, Megaphone, Newspaper, Settings, ShoppingBag, Shield, Star, Tags, Users,
     type LucideIcon,
 } from 'lucide-react';
@@ -12,6 +12,7 @@ import {
 const icons: Record<string, LucideIcon> = {
     blocks: Blocks,
     'book-open': BookOpen,
+    bot: Bot,
     briefcase: Briefcase,
     calendar: Calendar,
     database: Database,
