@@ -19,6 +19,8 @@ interface Props {
     collections?: string[];
     multiple?: boolean;
     value: PickedEntry[];
+    /** Entry ids to leave out of the options (already chosen elsewhere). */
+    exclude?: number[];
     onChange: (entries: PickedEntry[]) => void;
     placeholder?: string;
     /** Only entries that have a page of their own (for links and menus). */
@@ -49,7 +51,7 @@ export function useEntryTitles(ids: number[]): Record<number, string> {
     return titles;
 }
 
-export default function EntryPicker({ collections = [], multiple = false, value, onChange, placeholder = 'Pick entry…', linkable = false }: Props) {
+export default function EntryPicker({ collections = [], multiple = false, value, onChange, placeholder = 'Pick entry…', linkable = false, exclude = [] }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState('');
@@ -73,6 +75,10 @@ export default function EntryPicker({ collections = [], multiple = false, value,
         // Compare collections by value: callers often pass a new array each render.
     }, [open, query, collections.join(','), adminPath, linkable]);
 
+    // Already chosen: not offered again (remove it from the chosen list instead).
+    const hidden = new Set([...exclude, ...(multiple ? value.map((v) => v.id) : [])]);
+    const options = results.filter((entry) => !hidden.has(entry.id));
+
     const toggle = (entry: PickedEntry) => {
         if (multiple) {
             onChange(value.some((v) => v.id === entry.id) ? value.filter((v) => v.id !== entry.id) : [...value, entry]);
@@ -94,9 +100,9 @@ export default function EntryPicker({ collections = [], multiple = false, value,
                 <Command shouldFilter={false}>
                     <CommandInput placeholder="Search entries…" value={query} onValueChange={setQuery} />
                     <CommandList>
-                        <CommandEmpty>No entries found.</CommandEmpty>
+                        <CommandEmpty>{results.length > 0 ? 'All matching entries are already chosen.' : 'No entries found.'}</CommandEmpty>
                         <CommandGroup>
-                            {results.map((entry) => (
+                            {options.map((entry) => (
                                 <CommandItem key={entry.id} value={String(entry.id)} onSelect={() => toggle(entry)}>
                                     <Check className={`h-4 w-4 ${value.some((v) => v.id === entry.id) ? 'opacity-100' : 'opacity-0'}`} />
                                     <span className="flex-1 truncate">{entry.title}</span>

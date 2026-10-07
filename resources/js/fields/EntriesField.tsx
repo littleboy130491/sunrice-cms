@@ -28,6 +28,7 @@ export default function EntriesField({ field, value, onChange }: FieldProps) {
                 collections={collections}
                 multiple
                 value={[]}
+                exclude={ids}
                 onChange={(entries: PickedEntry[]) => {
                     const next = [...ids];
                     entries.forEach((e) => {

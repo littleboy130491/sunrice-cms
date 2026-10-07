@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { usePage } from '@inertiajs/react';
-import { Check, ChevronsUpDown, X } from 'lucide-react';
+import { ChevronsUpDown, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -74,23 +74,23 @@ export default function TermsField({ field, value, onChange }: FieldProps) {
                     <Command shouldFilter={false}>
                         <CommandInput placeholder="Search terms…" value={query} onValueChange={setQuery} />
                         <CommandList>
-                            <CommandEmpty>No terms.</CommandEmpty>
+                            <CommandEmpty>{options.length > 0 ? 'All matching terms are already chosen.' : 'No terms.'}</CommandEmpty>
                             <CommandGroup>
-                                {options.map((o) => (
+                                {/* Already chosen terms show above as chips; they aren't offered again. */}
+                                {options.filter((o) => !ids.includes(o.id)).map((o) => (
                                     <CommandItem
                                         key={o.id}
                                         value={String(o.id)}
                                         onSelect={() => {
                                             if (single) {
                                                 // One term only: picking replaces it.
-                                                onChange(ids.includes(o.id) ? [] : [o.id]);
+                                                onChange([o.id]);
                                                 setOpen(false);
                                                 return;
                                             }
-                                            onChange(ids.includes(o.id) ? ids.filter((v) => v !== o.id) : [...ids, o.id]);
+                                            onChange([...ids, o.id]);
                                         }}
                                     >
-                                        <Check className={`h-4 w-4 ${ids.includes(o.id) ? 'opacity-100' : 'opacity-0'}`} />
                                         {o.title}
                                     </CommandItem>
                                 ))}

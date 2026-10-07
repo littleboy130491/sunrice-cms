@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Entry, term and asset pickers no longer offer items that are already
+  chosen in the field (remove a chip to pick it again).
 - **Reverse relationships** in `EntryQuery`: `whereEntry('related_articles',
   $entry)` finds entries whose entries field links to an entry, and
   `whereFieldTerm('industries', $term)` (model, id or slug; optional
