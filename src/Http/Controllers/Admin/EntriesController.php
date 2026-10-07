@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -25,6 +26,7 @@ use Sunrice\Actions\Entries\RestoreEntry;
 use Sunrice\Actions\Entries\RestoreRevision;
 use Sunrice\Actions\Entries\ReturnTranslationToDraft;
 use Sunrice\Actions\Entries\SaveDraft;
+use Sunrice\Actions\Entries\SyncEntryTerms;
 use Sunrice\Actions\Entries\TrashEntry;
 use Sunrice\Actions\Entries\UnpublishEntry;
 use Sunrice\Actions\Support\Reorder;
@@ -32,6 +34,7 @@ use Sunrice\Admin\Export\CsvExporter;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Admin\Table\TableQuery;
 use Sunrice\Events\ContentChanged;
+use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
@@ -51,7 +54,7 @@ class EntriesController extends Controller
 
         $query = Entry::query()
             ->where('collection_id', $collection->id)
-            ->with(['translations' => fn ($q) => $q->where('locale', Locales::main())]);
+            ->with(['translations' => fn ($q) => $q->where('locale', Locales::main()), 'author']);
         $table = $this->entriesTable($request, $collection, $query);
         $meta = $table->meta();
         [$defaultColumn] = $collection->defaultSort();
@@ -67,11 +70,20 @@ class EntriesController extends Controller
 
         $userId = $request->user()->getAuthIdentifier();
         $columns = [
-            new Column('id', 'ID', sortable: true, type: 'number'),
             new Column('title', 'Title', sortable: true),
             new Column('status', 'Status', type: 'badge'),
+            new Column('author', 'Created by'),
+            new Column('created_at', 'Created', sortable: true, type: 'date'),
             new Column('updated_at', 'Updated', sortable: true, type: 'date'),
         ];
+
+        // People who wrote entries here, for the "Created by" filter.
+        $authorIds = Entry::withTrashed()->where('collection_id', $collection->id)->whereNotNull('author_id')->distinct()->pluck('author_id');
+        /** @var class-string<Model> $userModel */
+        $userModel = config('sunrice.auth.user_model');
+        $authors = $authorIds->isEmpty() ? collect() : $userModel::query()->whereKey($authorIds)->get()
+            ->map(fn (Model $u) => ['value' => (string) $u->getKey(), 'label' => (string) $u->getAttribute('name')])
+            ->sortBy('label')->values();
 
         return Inertia::render('Entries/Index', [
             'collection' => $collection->only('id', 'handle', 'title', 'settings'),
@@ -88,13 +100,16 @@ class EntriesController extends Controller
                         $e->status === 'published' && $e->published_at?->isFuture() => 'scheduled',
                         default => $e->status,
                     },
+                    'author' => $e->author?->getAttribute('name') ?? '—',
+                    'created_at' => $e->created_at?->format('j M Y'),
                     'updated_at' => $e->updated_at?->diffForHumans(),
                 ];
             }),
+            'authors' => $authors,
             'meta' => $meta,
             // Ordered by hand, but a search, filter or column sort hides that order.
             'reorderPaused' => $mayReorder && ! $canReorder,
-            'visibleColumns' => TablePreferencesController::columnsFor($userId, 'entries', ['id', 'title', 'status', 'updated_at']),
+            'visibleColumns' => $this->visibleEntryColumns((int) $userId),
             'can' => [
                 'create' => $request->user()->can('create', [Entry::class, $collection->id]),
                 'reorder' => $canReorder,
@@ -103,6 +118,21 @@ class EntriesController extends Controller
                     && ($request->user()->can("sunrice.entries.{$collection->id}.edit") || $request->user()->can("sunrice.entries.{$collection->id}.translate")),
             ],
         ]);
+    }
+
+    /**
+     * Columns this user shows. A choice saved before the list gained
+     * "Created" and "Created by" (it had an ID column) starts over.
+     *
+     * @return array<int, string>
+     */
+    protected function visibleEntryColumns(int $userId): array
+    {
+        $default = ['title', 'status', 'author', 'created_at', 'updated_at'];
+        $saved = TablePreferencesController::columnsFor($userId, 'entries', $default);
+        $known = array_values(array_intersect($saved, ['title', 'status', 'author', 'created_at', 'updated_at']));
+
+        return in_array('id', $saved, true) || $known === [] ? $default : $known;
     }
 
     /**
@@ -136,6 +166,9 @@ class EntriesController extends Controller
                 'scheduled' => $q->where('status', 'published')->where('published_at', '>', now()),
                 default => $q->where('status', $value),
             })
+            ->filter('author', fn (Builder $q, mixed $value) => $value === 'none'
+                ? $q->whereNull('author_id')
+                : $q->where('author_id', $value))
             ->sortUsing('title', fn (Builder $q, string $direction) => $q->orderBy($mainTitle, $direction))
             ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at'])
             ->apply($request);
@@ -189,9 +222,18 @@ class EntriesController extends Controller
             'data' => ['array'],
             'seo' => ['array'],
             'blueprint_id' => ['nullable', 'integer', 'exists:sunrice_blueprints,id'],
+            'term_ids' => ['sometimes', 'array'],
+            'term_ids.*' => ['integer'],
         ]);
 
-        $entry = $create->handle($collection, $validated, $request->user()->getAuthIdentifier(), $validated['blueprint_id'] ?? null);
+        $entry = DB::transaction(function () use ($collection, $validated, $request, $create): Entry {
+            $entry = $create->handle($collection, $validated, $request->user()->getAuthIdentifier(), $validated['blueprint_id'] ?? null);
+            if (array_key_exists('term_ids', $validated)) {
+                app(SyncEntryTerms::class)->handle($entry, $validated['term_ids']);
+            }
+
+            return $entry;
+        });
 
         return redirect()->route('sunrice.admin.entries.edit', $entry)
             ->with('success', 'Entry created.');
@@ -224,7 +266,15 @@ class EntriesController extends Controller
             'data' => ['array'],
             'seo' => ['array'],
             'is_ready' => ['nullable', 'boolean'],
+            'term_ids' => ['sometimes', 'array'],
+            'term_ids.*' => ['integer'],
         ]);
+
+        // Terms belong to the entry, not a language: editors only (not
+        // translate-only users), saved right away rather than as a draft.
+        if (array_key_exists('term_ids', $validated) && $request->user()->can('update', $entry)) {
+            app(SyncEntryTerms::class)->handle($entry, $validated['term_ids']);
+        }
 
         // Marking a translation Ready puts it live, which translate-only
         // users can't do.
@@ -533,6 +583,11 @@ class EntriesController extends Controller
                     'has_draft' => $t->draft !== null,
                     'draft_title' => $t->draft['title'] ?? $t->title,
                     'draft_slug' => $t->draft['slug'] ?? $t->slug,
+                    // Public address (null without single pages); live only when
+                    // published and Ready, otherwise a signed-in draft view.
+                    'url' => app(UrlGenerator::class)->translationUrl($entry, $t),
+                    'is_live' => $entry->status === 'published' && $entry->published_at?->isPast() === true
+                        && (Locales::isMain($t->locale) || $t->is_ready),
                     'can_undo_restore' => session()->has(static::undoKey($t)),
                     'revisions' => $t->revisions->map(fn (Revision $r) => [
                         'id' => $r->id,
@@ -553,6 +608,8 @@ class EntriesController extends Controller
                 'blueprint_id' => $entry->blueprint_id,
                 'author_id' => $entry->author_id,
                 'term_ids' => $entry->terms->pluck('id'),
+                // {taxonomy id: [term ids]} for the Taxonomies card.
+                'terms_by_taxonomy' => (object) $entry->terms->groupBy('taxonomy_id')->map(fn ($terms) => $terms->pluck('id')->values())->all(),
                 'translations' => $translations,
             ],
             'blueprint' => $blueprint === null ? null : array_merge(
@@ -560,7 +617,9 @@ class EntriesController extends Controller
                 [['handle' => 'seo', 'label' => 'SEO', 'fields' => static::seoFields()]],
             ),
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
-            'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title')),
+            'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title') + [
+                'single' => in_array($t->id, array_map('intval', (array) $collection->setting('single_term_taxonomies', [])), true),
+            ]),
             'locales' => Locales::available(),
             'mainLocale' => Locales::main(),
             'can' => $entry === null ? null : [
@@ -569,6 +628,7 @@ class EntriesController extends Controller
                 'publish' => $user->can('publish', $entry),
                 'delete' => $user->can('delete', $entry),
                 'create' => $user->can('create', [Entry::class, $entry->collection_id]),
+                'view_drafts' => $user->can('sunrice.view-drafts'),
             ],
         ];
     }

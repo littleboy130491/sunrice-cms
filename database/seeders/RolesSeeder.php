@@ -38,6 +38,7 @@ class RolesSeeder extends Seeder
             // users or roles.
             'Editor' => [
                 'sunrice.access-admin',
+                'sunrice.view-drafts',
                 'sunrice.entries.*',
                 'sunrice.terms.*',
                 'sunrice.menus.*',
@@ -51,6 +52,7 @@ class RolesSeeder extends Seeder
             // Writes and manages their own entries; an editor publishes.
             'Author' => [
                 'sunrice.access-admin',
+                'sunrice.view-drafts',
                 'sunrice.entries.*.view',
                 'sunrice.entries.*.create',
                 'sunrice.entries.*.edit-own',
@@ -63,6 +65,7 @@ class RolesSeeder extends Seeder
             // Edits other-language versions only; an editor publishes.
             'Translator' => [
                 'sunrice.access-admin',
+                'sunrice.view-drafts',
                 'sunrice.entries.*.view',
                 'sunrice.entries.*.translate',
                 'sunrice.assets.view',

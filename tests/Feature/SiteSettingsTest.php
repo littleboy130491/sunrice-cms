@@ -7,6 +7,7 @@ use Inertia\Testing\AssertableInertia as Assert;
 use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Setting;
 use Sunrice\Permissions\SyncPermissions;
+use Sunrice\Support\Branding;
 use Sunrice\Support\Locales;
 use Sunrice\Support\SiteSettings;
 use Workbench\App\Models\User;
@@ -114,4 +115,37 @@ it('needs the settings permission', function () {
 
     get('/cms/settings')->assertForbidden();
     put('/cms/settings', siteSettings())->assertForbidden();
+});
+
+it('white-labels the admin with the branding settings', function () {
+    put('/cms/settings', siteSettings(['branding' => ['name' => 'Acme Studio', 'tagline' => 'Newsroom', 'font' => 'inter', 'color' => '#1D4ED8']]))
+        ->assertSessionHasNoErrors();
+
+    get('/cms')->assertOk()
+        ->assertSee('<title inertia>Acme Studio</title>', false)
+        ->assertSee('family=inter:', false)
+        ->assertSee('--sunrice-font:"Inter"', false)
+        ->assertSee('--primary:#1d4ed8;--primary-foreground:#ffffff', false)
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('branding.name', 'Acme Studio')
+            ->where('branding.tagline', 'Newsroom')
+            ->where('branding.color', '#1d4ed8')
+            ->where('branding.is_default', false));
+});
+
+it('picks dark text on a light accent color and rejects bad branding values', function () {
+    expect(Branding::readableOn('#fde047'))->toBe('#111111')
+        ->and(Branding::readableOn('#1d4ed8'))->toBe('#ffffff');
+
+    put('/cms/settings', siteSettings(['branding' => ['font' => 'comic-sans', 'color' => 'blue']]))
+        ->assertSessionHasErrors(['branding.font', 'branding.color']);
+});
+
+it('keeps the Sunrice defaults when branding is left empty', function () {
+    put('/cms/settings', siteSettings(['branding' => ['name' => '', 'color' => null]]))->assertSessionHasNoErrors();
+
+    get('/cms')->assertInertia(fn (Assert $page) => $page
+        ->where('branding.name', 'Sunrice')
+        ->where('branding.is_default', true)
+        ->where('branding.color', null));
 });

@@ -39,6 +39,11 @@ class SiteSettings
         'code.head' => 'sunrice.code.head',
         'code.body_start' => 'sunrice.code.body_start',
         'code.body_end' => 'sunrice.code.body_end',
+        'branding.name' => 'sunrice.branding.name',
+        'branding.tagline' => 'sunrice.branding.tagline',
+        'branding.logo' => 'sunrice.branding.logo',
+        'branding.font' => 'sunrice.branding.font',
+        'branding.color' => 'sunrice.branding.color',
     ];
 
     /**

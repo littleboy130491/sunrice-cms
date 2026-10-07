@@ -91,6 +91,7 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::put('terms/{term}', [Admin\TermsController::class, 'update'])->name('terms.update');
     Route::delete('terms/{term}', [Admin\TermsController::class, 'destroy'])->name('terms.destroy');
     Route::post('taxonomies/{taxonomy:handle}/terms/reorder', [Admin\TermsController::class, 'reorder'])->name('terms.reorder');
+    Route::post('taxonomies/{taxonomy:handle}/terms/bulk', [Admin\TermsController::class, 'bulk'])->name('terms.bulk');
 
     // Menus (T8.5)
     Route::get('menus', [Admin\MenusController::class, 'index'])->name('menus.index');

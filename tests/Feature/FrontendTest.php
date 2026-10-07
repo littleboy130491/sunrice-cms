@@ -63,6 +63,8 @@ it('does not route draft translation slugs and falls back to the main entry', fu
         'is_ready' => false,
     ]);
 
+    // As the public: signed-in editors with sunrice.view-drafts see drafts.
+    auth()->logout();
     get('/en/pages/about-draft')->assertNotFound();
     get('/en/pages/tentang')->assertOk()->assertSee('Tentang')->assertDontSee('About draft');
 });
@@ -126,6 +128,8 @@ it('404s for scheduled (future-dated) entries', function () {
         'content_published_at' => now()->addDay(),
     ]);
 
+    // As the public: signed-in editors with sunrice.view-drafts see drafts.
+    auth()->logout();
     get('/pages/later')->assertNotFound();
 });
 

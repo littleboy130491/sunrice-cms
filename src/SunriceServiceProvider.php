@@ -273,6 +273,7 @@ class SunriceServiceProvider extends PackageServiceProvider
         $this->commands([
             Console\PublishScheduledCommand::class,
             Console\RenameFieldCommand::class,
+            Console\SwitchMainLanguageCommand::class,
             Console\SyncPermissionsCommand::class,
             Console\InstallCommand::class,
             Console\PublishAssetsCommand::class,

@@ -18,6 +18,7 @@ interface TermOption {
 export default function TermsField({ field, value, onChange }: FieldProps) {
     const { adminPath } = usePage<SharedProps>().props;
     const taxonomy = field.config?.taxonomy as string | undefined;
+    const single = field.config?.max === 1;
     const [open, setOpen] = React.useState(false);
     const [query, setQuery] = React.useState('');
     const [options, setOptions] = React.useState<TermOption[]>([]);
@@ -66,7 +67,7 @@ export default function TermsField({ field, value, onChange }: FieldProps) {
             <Popover open={open} onOpenChange={setOpen}>
                 <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-between font-normal">
-                        Add term… <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                        {single && ids.length > 0 ? 'Change term…' : 'Add term…'} <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0">
@@ -79,7 +80,15 @@ export default function TermsField({ field, value, onChange }: FieldProps) {
                                     <CommandItem
                                         key={o.id}
                                         value={String(o.id)}
-                                        onSelect={() => onChange(ids.includes(o.id) ? ids.filter((v) => v !== o.id) : [...ids, o.id])}
+                                        onSelect={() => {
+                                            if (single) {
+                                                // One term only: picking replaces it.
+                                                onChange(ids.includes(o.id) ? [] : [o.id]);
+                                                setOpen(false);
+                                                return;
+                                            }
+                                            onChange(ids.includes(o.id) ? ids.filter((v) => v !== o.id) : [...ids, o.id]);
+                                        }}
                                     >
                                         <Check className={`h-4 w-4 ${ids.includes(o.id) ? 'opacity-100' : 'opacity-0'}`} />
                                         {o.title}

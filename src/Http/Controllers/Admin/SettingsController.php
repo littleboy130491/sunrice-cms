@@ -15,6 +15,7 @@ use Sunrice\Models\Asset;
 use Sunrice\Models\Entry;
 use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\Setting;
+use Sunrice\Support\Branding;
 use Sunrice\Support\SiteSettings;
 
 class SettingsController extends Controller
@@ -37,6 +38,10 @@ class SettingsController extends Controller
             'shareImage' => $asset === null ? null : ['id' => $asset->id, 'url' => $asset->url('thumbnail'), 'filename' => $asset->filename],
             'timezones' => timezone_identifiers_list(),
             'mainLocked' => EntryTranslation::query()->exists(),
+            'brandLogo' => ($logo = is_numeric(config('sunrice.branding.logo')) ? Asset::query()->find((int) config('sunrice.branding.logo')) : null) === null
+                ? null
+                : ['id' => $logo->id, 'url' => $logo->url(), 'filename' => $logo->filename],
+            'fonts' => collect(Branding::FONTS)->map(fn (array $font, string $key) => ['value' => $key, 'label' => $font[0]])->values(),
         ]);
     }
 

@@ -94,7 +94,12 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
                 <Tabs value={locale} onValueChange={switchLocale} activationMode="manual">
                     <TabsList>
                         {locales.available.map((lc) => (
-                            <TabsTrigger key={lc} value={lc}>{locales.names[lc] ?? lc.toUpperCase()}</TabsTrigger>
+                            <TabsTrigger key={lc} value={lc} title={locales.names[lc] ?? lc} className="gap-1.5 uppercase">
+                                {lc}
+                                {lc !== mainLocale && (values[lc]?.title || values[lc]?.intro) && (
+                                    <span className="size-1.5 rounded-full bg-emerald-500" aria-label="translated" />
+                                )}
+                            </TabsTrigger>
                         ))}
                     </TabsList>
                 </Tabs>

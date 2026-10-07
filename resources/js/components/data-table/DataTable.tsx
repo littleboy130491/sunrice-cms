@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { CollapsibleCard } from '@/components/app/collapsible-card';
+import { Card } from '@/components/ui/card';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     ColumnDef as TanColumnDef,
@@ -59,6 +59,8 @@ interface Props<T extends { id: number | string }> {
     searchPlaceholder?: string;
     /** Where a row links to; null for rows that can't be opened. */
     rowHref?: (row: T) => string | null;
+    /** Opens a row in place (e.g. an edit dialog) when it has no page of its own. */
+    onRowClick?: (row: T) => void;
     renderCell?: (row: T, column: ColumnDef) => React.ReactNode;
 }
 
@@ -104,6 +106,7 @@ export function DataTable<T extends { id: number | string }>({
     reorderUrl,
     searchPlaceholder = 'Search…',
     rowHref,
+    onRowClick,
     renderCell,
 }: Props<T>) {
     const { adminPath } = usePage<SharedProps>().props;
@@ -273,7 +276,7 @@ export function DataTable<T extends { id: number | string }>({
                 </div>
             </div>
 
-            <CollapsibleCard title="Results" storageKey={`table:${tableKey}`} contentClassName="p-0">
+            <Card className="gap-0 overflow-hidden py-0">
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                     <div className="overflow-hidden">
                     <Table>
@@ -337,6 +340,10 @@ export function DataTable<T extends { id: number | string }>({
                                                         <Link href={rowHref(row) as string} className="font-medium underline-offset-4 hover:underline">
                                                             {cellValue(row, c)}
                                                         </Link>
+                                                    ) : onRowClick ? (
+                                                        <button type="button" className="text-left font-medium underline-offset-4 hover:underline" onClick={() => onRowClick(row)}>
+                                                            {cellValue(row, c)}
+                                                        </button>
                                                     ) : (
                                                         cellValue(row, c)
                                                     )}
@@ -384,7 +391,7 @@ export function DataTable<T extends { id: number | string }>({
                         </div>
                     )}
                 </div>
-            </CollapsibleCard>
+            </Card>
         </div>
     );
 }

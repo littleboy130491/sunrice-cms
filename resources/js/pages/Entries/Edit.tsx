@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useForm, usePage, router, Link } from '@inertiajs/react';
-import { ArrowLeft, CheckCircle2, Copy, EyeOff, History, Languages, LoaderCircle, MoreHorizontal, Send, Trash2, Undo2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Copy, ExternalLink, EyeOff, History, Languages, LoaderCircle, MoreHorizontal, Send, Trash2, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 import { useBreadcrumbs } from '@/components/app/breadcrumbs';
 import FieldRenderer from '@/fields/FieldRenderer';
+import TermsField from '@/fields/TermsField';
 import { TranslationModeProvider } from '@/fields/translation-mode';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
@@ -35,6 +36,10 @@ interface TranslationState {
     can_undo_restore?: boolean;
     draft_title: string;
     draft_slug: string;
+    /** Public address of this translation; null when the collection has no single pages. */
+    url?: string | null;
+    /** Whether the public can see it (published and, for other languages, Ready). */
+    is_live?: boolean;
     revisions: RevisionRow[];
 }
 
@@ -42,15 +47,15 @@ interface Props {
     collection: { id: number; handle: string; title: string };
     entry: {
         id: number; status: string; published_at: string | null; blueprint_id: number | null;
-        author_id: number | null; term_ids: number[]; translations: Record<string, TranslationState>;
+        author_id: number | null; term_ids: number[]; terms_by_taxonomy?: Record<number, number[]>; translations: Record<string, TranslationState>;
     } | null;
     blueprint: AdminTab[] | null;
     blueprints: { id: number; title: string }[];
-    taxonomies: { id: number; handle: string; title: string }[];
+    taxonomies: { id: number; handle: string; title: string; single?: boolean }[];
     locales: string[];
     mainLocale?: string;
     /** What the current user may do with this entry (null for a new entry). */
-    can?: { update: boolean; translate: boolean; publish: boolean; delete: boolean; create: boolean } | null;
+    can?: { update: boolean; translate: boolean; publish: boolean; delete: boolean; create: boolean; view_drafts?: boolean } | null;
 }
 
 /** A readable local date and time, e.g. "6 Oct 2026, 16:49". */
@@ -115,6 +120,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         seo: any;
         is_ready?: boolean;
         blueprint_id?: number | string;
+        term_ids: number[];
     }>({
         blueprint_id: '',
         locale: mainLocale,
@@ -122,7 +128,17 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         slug: initial(mainLocale).slug,
         data: initial(mainLocale).data,
         seo: initial(mainLocale).seo,
+        term_ids: entry?.term_ids ?? [],
     });
+
+    // Picked terms per taxonomy. The picker only knows ids, so each
+    // taxonomy keeps the ids it picked; the form posts them all together.
+    const [termIdsByTaxonomy, setTermIdsByTaxonomy] = React.useState<Record<number, number[]>>(() => entry?.terms_by_taxonomy ?? {});
+    const setTaxonomyTerms = (taxonomyId: number, ids: number[]) => {
+        const next = { ...termIdsByTaxonomy, [taxonomyId]: ids };
+        setTermIdsByTaxonomy(next);
+        form.setData('term_ids', Object.values(next).flat());
+    };
 
     const formRef = React.useRef<HTMLFormElement>(null);
     useUnsavedChanges(canEdit && form.isDirty && !form.processing, () => formRef.current?.requestSubmit());
@@ -259,6 +275,18 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                 </div>
                 {!isNew && (
                     <div className="flex items-center gap-2">
+                        {current.url && (current.is_live || allowed?.view_drafts) && (
+                            <Button type="button" variant="outline" asChild>
+                                <a
+                                    href={current.url}
+                                    target="_blank"
+                                    rel="noopener"
+                                    title={current.is_live ? 'Open the public page' : 'Only you and other editors can see this draft while signed in'}
+                                >
+                                    <ExternalLink /> {current.is_live ? 'View page' : 'View draft'}
+                                </a>
+                            </Button>
+                        )}
                         {perms.publish && (
                             <Button type="button" onClick={() => publish()}>
                                 <Send /> Publish
@@ -477,6 +505,25 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                 </div>
                             )}
                     </CollapsibleCard>
+
+                    {taxonomies.length > 0 && (
+                        <CollapsibleCard title="Taxonomies" titleClassName="text-sm" storageKey="entry:taxonomies" contentClassName="flex flex-col gap-4">
+                            <fieldset disabled={!perms.update} className="flex flex-col gap-4 disabled:opacity-60">
+                                {taxonomies.map((tax) => (
+                                    <div key={tax.id} className="grid gap-2">
+                                        <Label>{tax.title}{tax.single && <span className="ml-1 font-normal text-muted-foreground">(one)</span>}</Label>
+                                        <TermsField
+                                            field={{ handle: `taxonomy_${tax.handle}`, type: 'terms', label: tax.title, config: { taxonomy: tax.handle, ...(tax.single ? { max: 1 } : {}) } }}
+                                            value={termIdsByTaxonomy[tax.id] ?? []}
+                                            onChange={(value) => setTaxonomyTerms(tax.id, (value as number[]) ?? [])}
+                                        />
+                                    </div>
+                                ))}
+                                <InputError message={(form.errors as Record<string, string>).term_ids} />
+                                {!perms.update && <p className="text-xs text-muted-foreground">Only editors can change terms.</p>}
+                            </fieldset>
+                        </CollapsibleCard>
+                    )}
 
                     {!isNew && canEdit && (current.revisions.length > 0 || current.can_undo_restore) && (
                         <CollapsibleCard

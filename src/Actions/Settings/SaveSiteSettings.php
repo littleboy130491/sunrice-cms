@@ -8,6 +8,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\Setting;
+use Sunrice\Support\Branding;
 use Sunrice\Support\Locales;
 use Sunrice\Support\SiteSettings;
 
@@ -38,6 +39,12 @@ class SaveSiteSettings
             'locales.names' => ['array'],
             'locales.names.*' => ['nullable', 'string', 'max:100'],
             'seo' => ['array'],
+            'branding' => ['array'],
+            'branding.name' => ['nullable', 'string', 'max:60'],
+            'branding.tagline' => ['nullable', 'string', 'max:80'],
+            'branding.logo' => ['nullable', 'integer', Rule::exists('sunrice_assets', 'id')],
+            'branding.font' => ['nullable', Rule::in(array_keys(Branding::FONTS))],
+            'branding.color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'seo.noindex' => ['boolean'],
             'seo.twitter_site' => ['nullable', 'string', 'max:50', 'regex:/^@?\w+$/'],
             'seo.image' => ['nullable', 'integer', Rule::exists('sunrice_assets', 'id')],
@@ -74,6 +81,13 @@ class SaveSiteSettings
                 'noindex' => (bool) ($validated['seo']['noindex'] ?? false),
                 'twitter_site' => $validated['seo']['twitter_site'] ?? null,
                 'image' => $validated['seo']['image'] ?? null,
+            ],
+            'branding' => [
+                'name' => trim((string) ($validated['branding']['name'] ?? '')) ?: Branding::DEFAULT_NAME,
+                'tagline' => trim((string) ($validated['branding']['tagline'] ?? '')),
+                'logo' => $validated['branding']['logo'] ?? null,
+                'font' => $validated['branding']['font'] ?? 'instrument-sans',
+                'color' => isset($validated['branding']['color']) ? strtolower($validated['branding']['color']) : null,
             ],
             'code' => [
                 'head' => $validated['code']['head'] ?? null,

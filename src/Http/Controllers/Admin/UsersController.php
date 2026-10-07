@@ -15,6 +15,9 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
+use Sunrice\Actions\Users\DeleteUser;
+use Sunrice\Models\Asset;
+use Sunrice\Models\Entry;
 
 class UsersController extends Controller
 {
@@ -25,6 +28,10 @@ class UsersController extends Controller
         $model = config('sunrice.auth.user_model');
         $this->authorize('viewAny', $model);
 
+        // What each user created, for the delete dialog.
+        $entries = Entry::query()->whereNotNull('author_id')->groupBy('author_id')->selectRaw('author_id, count(*) as total')->pluck('total', 'author_id');
+        $assets = Asset::query()->whereNotNull('uploaded_by')->groupBy('uploaded_by')->selectRaw('uploaded_by, count(*) as total')->pluck('total', 'uploaded_by');
+
         return Inertia::render('Users/Index', [
             'users' => $model::query()->with('roles:id,name')->orderBy('name')->get()
                 ->map(fn ($u) => [
@@ -32,6 +39,7 @@ class UsersController extends Controller
                     'name' => $u->name,
                     'email' => $u->email,
                     'roles' => $u->roles->pluck('name'),
+                    'content' => ['entries' => (int) ($entries[$u->getKey()] ?? 0), 'assets' => (int) ($assets[$u->getKey()] ?? 0)],
                     // What this user may do to that account (super admins are protected).
                     'can' => [
                         'update' => request()->user()->can('update', $u),
@@ -96,7 +104,7 @@ class UsersController extends Controller
         return back()->with('success', 'User saved.');
     }
 
-    public function destroy(Request $request, int|string $user): RedirectResponse
+    public function destroy(Request $request, int|string $user, DeleteUser $delete): RedirectResponse
     {
         $model = config('sunrice.auth.user_model');
         $user = $model::findOrFail($user);
@@ -105,9 +113,24 @@ class UsersController extends Controller
         }
         $this->authorize('delete', $user);
 
-        $user->delete();
+        $validated = $request->validate([
+            'content' => ['nullable', Rule::in(DeleteUser::MODES)],
+            'reassign_to' => ['nullable', 'required_if:content,reassign'],
+        ]);
+        $reassignTo = ($validated['content'] ?? null) === 'reassign'
+            ? $model::query()->find($validated['reassign_to'])
+            : null;
+        if (($validated['content'] ?? null) === 'reassign' && $reassignTo === null) {
+            return back()->withErrors(['reassign_to' => 'Choose another user to receive the content.']);
+        }
 
-        return back()->with('success', 'User deleted.');
+        $delete->handle($user, $validated['content'] ?? 'keep', $reassignTo);
+
+        return back()->with('success', match ($validated['content'] ?? 'keep') {
+            'reassign' => "User deleted. Their content now belongs to {$reassignTo?->getAttribute('name')}.",
+            'delete' => 'User deleted and their entries moved to the trash.',
+            default => 'User deleted. Their content was kept without an author.',
+        });
     }
 
     /**

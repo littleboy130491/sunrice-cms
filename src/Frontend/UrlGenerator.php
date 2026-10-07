@@ -6,6 +6,7 @@ namespace Sunrice\Frontend;
 
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
+use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\Setting;
 use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
@@ -47,6 +48,24 @@ class UrlGenerator
         }
 
         return $this->entry($entry, $locale);
+    }
+
+    /**
+     * The page address of one translation, with its own slug even when
+     * it isn't Ready yet (a signed-in editor can open it as a draft).
+     * Null when the collection's entries have no page of their own.
+     */
+    public function translationUrl(Entry $entry, EntryTranslation $translation): ?string
+    {
+        $isHomepage = (int) Setting::get('homepage_entry_id') === (int) $entry->id;
+        if ($isHomepage) {
+            return Locales::prefix($translation->locale) ?: '/';
+        }
+        if ($entry->collection === null || ! $entry->collection->hasSinglePages()) {
+            return null;
+        }
+
+        return Locales::prefix($translation->locale).str_replace('{slug}', $translation->slug, $entry->collection->entryRoute());
     }
 
     public function entrySlug(Entry $entry, string $locale): string

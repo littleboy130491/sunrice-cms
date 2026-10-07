@@ -4,7 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title inertia>{{ config('app.name') }} — Sunrice</title>
+    <title inertia>{{ \Sunrice\Support\Branding::name() }}</title>
+    @if ($sunriceLogo = \Sunrice\Support\Branding::logoUrl())
+        <link rel="icon" href="{{ $sunriceLogo }}">
+    @endif
     {{-- Apply the saved appearance before paint to avoid a light/dark flash. --}}
     <script>
         (function () {
@@ -15,8 +18,13 @@
             } catch (e) {}
         })();
     </script>
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet">
+    @if ($sunriceFont = \Sunrice\Support\Branding::fontHref())
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="{{ $sunriceFont }}" rel="stylesheet">
+    @endif
+    {{-- Branding (Settings → Branding): font and global color. --}}
+    <style>{!! \Sunrice\Support\Branding::css() !!}</style>
+    <script>window.sunriceBrand = @json(\Sunrice\Support\Branding::name());</script>
     @php
         $dist = file_exists(public_path('vendor/sunrice/manifest.json'))
             ? 'vendor/sunrice'

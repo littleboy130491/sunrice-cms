@@ -31,6 +31,7 @@ The main language can only be changed before any content exists.
 | `sunrice.cache.full_page` | `false` | Full-page HTTP cache (requires `spatie/laravel-responsecache`, PHP 8.4+). |
 | `sunrice.assets.optimize.*` | see [assets](assets.md#optimizing-images) | Defaults for `sunrice:optimize-images`. |
 | `sunrice.translation.*` | see [translation](translation.md) | Driver, model and API keys for `sunrice:translate` (`SUNRICE_TRANSLATE_DRIVER`, `SUNRICE_TRANSLATE_MODEL`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`). |
+| `sunrice.branding.*` | name `Sunrice`, tagline, logo (asset id), font `instrument-sans`, color `null` | White-label the admin panel (Settings → Branding): its name, tagline, logo/favicon, font (a key of `Branding::FONTS`) and accent color (`#rrggbb`). `SUNRICE_BRAND_NAME`, `SUNRICE_BRAND_COLOR`. |
 | `sunrice.seo.noindex` | `env('SUNRICE_NOINDEX', false)` | Add `noindex, follow` to every page (e.g. staging). |
 | `sunrice.seo.twitter_site` | `env('SUNRICE_TWITTER_SITE')` | X/Twitter handle for `twitter:site`. |
 | `sunrice.seo.description` | `null` | Default meta description. |

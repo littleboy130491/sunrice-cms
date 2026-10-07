@@ -135,6 +135,24 @@ return [
     | the values here.
     |
     */
+    /*
+    |--------------------------------------------------------------------------
+    | Branding (white label)
+    |--------------------------------------------------------------------------
+    |
+    | The admin panel's name, tagline, logo (asset id), font (a key of
+    | Sunrice\Support\Branding::FONTS) and global color (#rrggbb, null
+    | for the neutral default). Editable under Settings → Branding.
+    |
+    */
+    'branding' => [
+        'name' => env('SUNRICE_BRAND_NAME', 'Sunrice'),
+        'tagline' => 'Content workspace',
+        'logo' => null,
+        'font' => 'instrument-sans',
+        'color' => env('SUNRICE_BRAND_COLOR'),
+    ],
+
     'seo' => [
         'noindex' => (bool) env('SUNRICE_NOINDEX', false),
         'twitter_site' => env('SUNRICE_TWITTER_SITE'),

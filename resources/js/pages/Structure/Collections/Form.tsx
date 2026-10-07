@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { adminUrl } from '@/lib/route';
 import { navIcon, navIconNames } from '@/components/app/nav-icon';
+import { TemplateHelp } from '@/components/app/template-help';
 import { InputError } from '@/components/app/input-error';
 import TranslatedTitles from '@/components/TranslatedTitles';
 import type { Json, SharedProps } from '@/types';
@@ -46,6 +47,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             sort_direction: (collection?.settings?.sort_direction as string) ?? '',
             archive_blueprint_id: (collection?.settings?.archive_blueprint_id as number | undefined) ?? ('' as number | ''),
             titles: ((collection?.settings?.titles ?? {}) as Record<string, string>),
+            single_term_taxonomies: ((collection?.settings?.single_term_taxonomies ?? []) as number[]),
         },
         taxonomy_ids: collection?.taxonomy_ids ?? [],
     });
@@ -119,17 +121,38 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                 </div>
                 <div className="grid gap-2">
                     <Label>Taxonomies</Label>
-                    {taxonomies.map((t) => (
-                        <label key={t.id} className="flex items-center gap-2 text-sm">
-                            <Checkbox
-                                checked={form.data.taxonomy_ids.includes(t.id)}
-                                onCheckedChange={(c) =>
-                                    form.setData('taxonomy_ids', c ? [...form.data.taxonomy_ids, t.id] : form.data.taxonomy_ids.filter((id) => id !== t.id))
-                                }
-                            />
-                            {t.title}
-                        </label>
-                    ))}
+                    <p className="text-xs text-muted-foreground">Entries pick terms of these taxonomies in the editor's Taxonomies card.</p>
+                    {taxonomies.map((t) => {
+                        const attached = form.data.taxonomy_ids.includes(t.id);
+                        const single = settings.single_term_taxonomies.includes(t.id);
+                        return (
+                            <div key={t.id} className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+                                <label className="flex items-center gap-2 text-sm">
+                                    <Checkbox
+                                        checked={attached}
+                                        onCheckedChange={(c) =>
+                                            form.setData('taxonomy_ids', c ? [...form.data.taxonomy_ids, t.id] : form.data.taxonomy_ids.filter((id) => id !== t.id))
+                                        }
+                                    />
+                                    {t.title}
+                                </label>
+                                {attached && (
+                                    <Select
+                                        value={single ? 'one' : 'many'}
+                                        onValueChange={(v) => setSetting('single_term_taxonomies', v === 'one'
+                                            ? [...settings.single_term_taxonomies.filter((id) => id !== t.id), t.id]
+                                            : settings.single_term_taxonomies.filter((id) => id !== t.id))}
+                                    >
+                                        <SelectTrigger size="sm" className="w-36" aria-label={`${t.title}: terms per entry`}><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="many">Many terms</SelectItem>
+                                            <SelectItem value="one">One term</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                            </div>
+                        );
+                    })}
                     <InputError message={errors.taxonomy_ids ?? Object.entries(errors).find(([k]) => k.startsWith('taxonomy_ids.'))?.[1]} />
                 </div>
             </CollapsibleCard>
@@ -194,7 +217,8 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                         </p>
                         <InputError message={errors['settings.route']} />
                         <Label htmlFor="template">Entry template</Label>
-                        <Input id="template" className="font-mono text-sm" value={settings.template} placeholder="Automatic" onChange={(e) => setSetting('template', e.target.value)} />
+                        <Input id="template" className="font-mono text-sm" value={settings.template} placeholder={`e.g. ${handle}.article`} onChange={(e) => setSetting('template', e.target.value)} />
+                        <TemplateHelp example={`${handle}.article`} defaults={[`sunrice.${handle}.show`, 'sunrice.show']} />
                         <InputError message={errors['settings.template']} />
                     </div>
                 )}
@@ -221,20 +245,15 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                         <Label htmlFor="archive_route">Listing URL</Label>
                         <Input id="archive_route" className="font-mono text-sm" value={settings.archive_route} placeholder={`/${handle}`} onChange={(e) => setSetting('archive_route', e.target.value)} />
                         <InputError message={errors['settings.archive_route']} />
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="per_page">Entries per page</Label>
-                                <Input id="per_page" type="number" min={1} max={100} value={settings.per_page} placeholder="12"
-                                    onChange={(e) => setSetting('per_page', e.target.value === '' ? '' : Number(e.target.value))} />
-                                <InputError message={errors['settings.per_page']} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="archive_template">Listing template</Label>
-                                <Input id="archive_template" className="font-mono text-sm" value={settings.archive_template} placeholder="Automatic"
-                                    onChange={(e) => setSetting('archive_template', e.target.value)} />
-                                <InputError message={errors['settings.archive_template']} />
-                            </div>
-                        </div>
+                        <Label htmlFor="per_page">Entries per page</Label>
+                        <Input id="per_page" type="number" min={1} max={100} className="w-32" value={settings.per_page} placeholder="12"
+                            onChange={(e) => setSetting('per_page', e.target.value === '' ? '' : Number(e.target.value))} />
+                        <InputError message={errors['settings.per_page']} />
+                        <Label htmlFor="archive_template">Listing template</Label>
+                        <Input id="archive_template" className="font-mono text-sm" value={settings.archive_template} placeholder={`e.g. ${handle}.listing`}
+                            onChange={(e) => setSetting('archive_template', e.target.value)} />
+                        <TemplateHelp example={`${handle}.listing`} defaults={[`sunrice.${handle}.index`, 'sunrice.index']} />
+                        <InputError message={errors['settings.archive_template']} />
                     </div>
                 )}
             </CollapsibleCard>

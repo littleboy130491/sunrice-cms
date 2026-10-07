@@ -114,6 +114,7 @@ class PermissionRegistry
         $defs = [
             ['sunrice.access-admin', 'Access the admin panel', 'Admin'],
             ['sunrice.settings.edit', 'Edit settings', 'Admin'],
+            ['sunrice.view-drafts', 'See unpublished entries on the site while signed in', 'Admin'],
         ];
 
         foreach (static::CRUD_AREAS as $area => [$label, $group]) {
