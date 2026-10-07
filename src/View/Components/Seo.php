@@ -12,6 +12,7 @@ use Sunrice\Models\Collection as ContentCollection;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
+use Sunrice\Support\SeoFields;
 
 /**
  * `<x-sunrice::seo />` — title, description, robots,
@@ -85,6 +86,15 @@ class Seo extends Component
         // then the site settings.
         $seo = $this->pageSeo();
         $defaults = $this->defaultSeo();
+        // Empty SEO fields filled from the page's own content (Settings → SEO).
+        $fromFields = $this->fieldSeo($defaults);
+        foreach (['title', 'description', 'image'] as $key) {
+            if (($seo[$key] ?? '') === '' || ($seo[$key] ?? null) === null) {
+                if (($fromFields[$key] ?? null) !== null) {
+                    $seo[$key] = $fromFields[$key];
+                }
+            }
+        }
 
         // An explicit title (passed by the template) wins, as before.
         $this->title = $title
@@ -138,6 +148,45 @@ class Seo extends Component
         }
 
         return [];
+    }
+
+    /**
+     * Meta title, description and image taken from the fields chosen for
+     * the page's collection or taxonomy (or picked automatically).
+     *
+     * @param  array<string, mixed>  $defaults  the collection's or taxonomy's settings.seo
+     * @return array{title?: string, description?: string, image?: int}
+     */
+    protected function fieldSeo(array $defaults): array
+    {
+        if ($this->entry !== null) {
+            $blueprint = $this->entry->activeBlueprint();
+            $data = $this->entry->data;
+        } elseif ($this->term !== null) {
+            $blueprint = $this->term->taxonomy?->blueprint;
+            $translation = $this->term->resolved ?? $this->term->translation($this->locale) ?? $this->term->mainTranslation();
+            $data = $translation === null ? [] : (array) ($translation->data ?? []);
+        } else {
+            return [];
+        }
+
+        $fields = SeoFields::resolve($blueprint, $defaults);
+        $out = [];
+        if ($fields['title'] !== null && ($title = SeoFields::plainText($data[$fields['title']] ?? null, 70)) !== null) {
+            $out['title'] = $title;
+        }
+        if ($fields['description'] !== null && ($description = SeoFields::plainText($data[$fields['description']] ?? null)) !== null) {
+            $out['description'] = $description;
+        }
+        if ($fields['image'] !== null) {
+            $image = $data[$fields['image']] ?? null;
+            $image = is_array($image) ? ($image[0] ?? null) : $image;
+            if (is_numeric($image)) {
+                $out['image'] = (int) $image;
+            }
+        }
+
+        return $out;
     }
 
     /**

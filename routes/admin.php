@@ -125,6 +125,8 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     // Site settings
     Route::get('settings', [Admin\SettingsController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [Admin\SettingsController::class, 'update'])->name('settings.update');
+    Route::get('settings/seo', [Admin\SettingsController::class, 'seo'])->name('settings.seo');
+    Route::put('settings/seo', [Admin\SettingsController::class, 'updateSeo'])->name('settings.seo.update');
     Route::post('settings/test-mail', [Admin\SettingsController::class, 'testMail'])->name('settings.test-mail');
 
     // AI agents (MCP) access tokens

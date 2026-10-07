@@ -122,12 +122,23 @@ template → `sunrice.{collection}.index` → `sunrice.index` →
 
 ## SEO
 
-`<x-sunrice::seo>` reads the page's own SEO fields — an entry's, a
-term's (per language, in the term editor) or a listing page's (per
-language, in the listing page editor) — then the defaults of its
-collection (entries and listing page) or taxonomy (term pages): default
-description, share image and noindex, set in Structure. Site settings
-come last. A `title` passed to the component wins over everything;
+`<x-sunrice::seo>` fills each tag from the first of:
+
+1. the page's own SEO fields: an entry's, a term's (per language, in the
+   term editor) or a listing page's (per language, in the listing page
+   editor);
+2. for entries and terms, a field of the page itself chosen under
+   **Settings → SEO** for each collection and taxonomy: meta title,
+   description (tags stripped, cut to 160 characters) and share image.
+   Left on *Automatic*, Sunrice picks a fitting field: one named
+   `excerpt`, `summary`, `description`… or the first long-text field for
+   the description, one named `image`, `featured_image`, `cover`… or the
+   first image field for the share image. Titles fall back to the entry's
+   or term's own title;
+3. the defaults of its collection (entries and listing page) or taxonomy
+   (term pages): default description, share image and noindex, set in
+   Structure;
+4. the site settings. A `title` passed to the component wins over everything;
 `defaultTitle` (the starter layout's `seoTitle`) is used only when the
 page has no meta title of its own.
 
