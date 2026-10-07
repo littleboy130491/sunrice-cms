@@ -97,7 +97,8 @@ class RouteMatcher
         Collection::query()->get()->each(function (Collection $collection) use (&$routes): void {
             if ($collection->setting('has_single', true)) {
                 $route = $collection->entryRoute();
-                $routes[] = $this->route($route, new RouteMatch('entry', collection: $collection));
+                // Hierarchical: the slug is a path of parent slugs ('about/team').
+                $routes[] = $this->route($route, new RouteMatch('entry', collection: $collection), nested: $collection->isHierarchical());
             }
             if ($collection->setting('has_archive')) {
                 $route = (string) $collection->setting('archive_route', '/'.$collection->handle);
@@ -122,11 +123,11 @@ class RouteMatcher
     }
 
     /** @return array{regex: string, match: RouteMatch, dynamic: bool, literal: int} */
-    protected function route(string $pattern, RouteMatch $match): array
+    protected function route(string $pattern, RouteMatch $match, bool $nested = false): array
     {
         $pattern = '/'.trim($pattern, '/');
         $regex = '#^'.preg_quote($pattern, '#').'$#';
-        $regex = str_replace(preg_quote('{slug}', '#'), '(?<slug>[^/]+)', $regex);
+        $regex = str_replace(preg_quote('{slug}', '#'), $nested ? '(?<slug>[^/]+(?:/[^/]+)*)' : '(?<slug>[^/]+)', $regex);
 
         return [
             'regex' => $regex,

@@ -56,7 +56,8 @@ class EntriesController extends Controller
 
         $query = Entry::query()
             ->where('collection_id', $collection->id)
-            ->with(['translations' => fn ($q) => $q->where('locale', Locales::main()), 'author']);
+            ->with(['translations' => fn ($q) => $q->where('locale', Locales::main()), 'author'])
+            ->when($collection->isHierarchical(), fn ($q) => $q->with(['parent.translations' => fn ($q) => $q->where('locale', Locales::main())]));
         $fieldColumns = new EntryFieldColumns($collection);
         $table = $this->entriesTable($request, $collection, $query, $fieldColumns);
         $meta = $table->meta();
@@ -78,6 +79,7 @@ class EntriesController extends Controller
             new Column('author', 'Created by'),
             new Column('created_at', 'Created', sortable: true, type: 'date'),
             new Column('updated_at', 'Updated', sortable: true, type: 'date'),
+            ...($collection->isHierarchical() ? [new Column('parent', 'Parent')] : []),
             // The blueprint's fields, hidden until picked under Columns.
             ...$fieldColumns->columns(),
         ];
@@ -96,7 +98,7 @@ class EntriesController extends Controller
         return Inertia::render('Entries/Index', [
             'collection' => $collection->only('id', 'handle', 'title', 'settings'),
             'columns' => $columns,
-            'rows' => $rows->through(function (Model $e) use ($fieldColumns, $visible): array {
+            'rows' => $rows->through(function (Model $e) use ($fieldColumns, $visible, $collection): array {
                 /** @var Entry $e */
                 $t = $e->translations->first();
 
@@ -111,6 +113,7 @@ class EntriesController extends Controller
                     'author' => $e->author?->getAttribute('name') ?? '—',
                     'created_at' => $e->created_at?->format('j M Y'),
                     'updated_at' => $e->updated_at?->diffForHumans(),
+                    ...($collection->isHierarchical() ? ['parent' => $e->parent === null ? null : $e->parent->translations->first()?->title] : []),
                     ...$fieldColumns->values($e, $visible),
                 ];
             }),
@@ -140,7 +143,7 @@ class EntriesController extends Controller
      */
     protected function visibleEntryColumns(int $userId, Collection $collection, EntryFieldColumns $fieldColumns): array
     {
-        $default = ['title', 'status', 'author', 'created_at', 'updated_at'];
+        $default = ['title', 'status', 'author', 'created_at', 'updated_at', ...($collection->isHierarchical() ? ['parent'] : [])];
         $saved = TablePreferencesController::columnsFor($userId, self::columnsKey($collection), [])
             ?: TablePreferencesController::columnsFor($userId, 'entries', $default);
         $known = array_values(array_intersect($saved, [...$default, ...$fieldColumns->keys()]));
@@ -244,10 +247,14 @@ class EntriesController extends Controller
             'blueprint_id' => ['nullable', 'integer', 'exists:sunrice_blueprints,id'],
             'term_ids' => ['sometimes', 'array'],
             'term_ids.*' => ['integer'],
+            'parent_id' => ['sometimes', 'nullable', 'integer', $this->parentRule($collection, null)],
         ]);
 
         $entry = DB::transaction(function () use ($collection, $validated, $request, $create): Entry {
             $entry = $create->handle($collection, $validated, $request->user()->getAuthIdentifier(), $validated['blueprint_id'] ?? null);
+            if ($collection->isHierarchical() && ($validated['parent_id'] ?? null) !== null) {
+                $entry->update(['parent_id' => (int) $validated['parent_id']]);
+            }
             if (array_key_exists('term_ids', $validated)) {
                 app(SyncEntryTerms::class)->handle($entry, $validated['term_ids']);
             }
@@ -291,11 +298,22 @@ class EntriesController extends Controller
             'template' => ['sometimes', 'nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'term_ids' => ['sometimes', 'array'],
             'term_ids.*' => ['integer'],
+            'parent_id' => ['sometimes', 'nullable', 'integer', $this->parentRule($entry->collection, $entry)],
         ]);
 
         // The template belongs to the entry too (editors only, saved now).
         if (array_key_exists('template', $validated) && $request->user()->can('update', $entry)) {
             $entry->update(['template' => $validated['template'] ?: null]);
+        }
+
+        // So does the parent page. The URL changes at once (also for its
+        // children); the old one redirects.
+        if (array_key_exists('parent_id', $validated) && $entry->collection->isHierarchical() && $request->user()->can('update', $entry)) {
+            $parentId = $validated['parent_id'] === null ? null : (int) $validated['parent_id'];
+            if ($parentId !== $entry->parent_id) {
+                $entry->update(['parent_id' => $parentId]);
+                ContentChanged::dispatch('entry_parent');
+            }
         }
 
         // Terms belong to the entry, not a language: editors only (not
@@ -584,6 +602,57 @@ class EntriesController extends Controller
     }
 
     /**
+     * A parent must be another entry of the same collection, not one of
+     * the entry's own children (that would make a loop), within the
+     * nesting limit.
+     */
+    protected function parentRule(Collection $collection, ?Entry $entry): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail) use ($collection, $entry): void {
+            $parent = Entry::query()->where('collection_id', $collection->id)->find((int) $value);
+            if ($parent === null) {
+                $fail('Choose an entry of this collection as the parent.');
+            } elseif ($entry !== null && ($parent->id === $entry->id || in_array($parent->id, $entry->descendantIds(), true))) {
+                $fail('An entry can\'t be placed under itself or one of its children.');
+            } elseif (count($parent->ancestors()) >= Entry::MAX_DEPTH - 1) {
+                $fail('Entries can be nested at most '.Entry::MAX_DEPTH.' levels deep.');
+            }
+        };
+    }
+
+    /**
+     * Entries that can be this entry's parent, as a tree (parents before
+     * their children, with their depth for indenting).
+     *
+     * @return array<int, array{id: int, title: string, depth: int}>
+     */
+    protected function parentOptions(Collection $collection, ?Entry $entry): array
+    {
+        $excluded = $entry === null ? [] : [$entry->id, ...$entry->descendantIds()];
+        $entries = Entry::query()->where('collection_id', $collection->id)
+            ->whereNotIn('id', $excluded)
+            ->with(['translations' => fn ($q) => $q->where('locale', Locales::main())])
+            ->limit(2000)
+            ->get(['id', 'parent_id']);
+        $titles = $entries->mapWithKeys(fn (Entry $e) => [$e->id => (string) ($e->translations->first()->title ?? '#'.$e->id)]);
+        $byParent = $entries->groupBy(fn (Entry $e) => $e->parent_id !== null && $titles->has($e->parent_id) ? $e->parent_id : 0);
+
+        $out = [];
+        $walk = function (int $parentId, int $depth) use (&$walk, &$out, $byParent, $titles): void {
+            if ($depth >= Entry::MAX_DEPTH) {
+                return;
+            }
+            foreach ($byParent->get($parentId, collect())->sortBy(fn (Entry $e) => mb_strtolower($titles[$e->id])) as $e) {
+                $out[] = ['id' => $e->id, 'title' => $titles[$e->id], 'depth' => $depth];
+                $walk($e->id, $depth + 1);
+            }
+        };
+        $walk(0, 0);
+
+        return $out;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     protected function editorProps(Collection $collection, ?Entry $entry): array
@@ -637,6 +706,7 @@ class EntriesController extends Controller
                 'author_id' => $entry->author_id,
                 'term_ids' => $entry->terms->pluck('id'),
                 'template' => $entry->template,
+                'parent_id' => $entry->parent_id,
                 // {taxonomy id: [term ids]} for the Taxonomies card.
                 'terms_by_taxonomy' => (object) $entry->terms->groupBy('taxonomy_id')->map(fn ($terms) => $terms->pluck('id')->values())->all(),
                 'translations' => $translations,
@@ -646,6 +716,8 @@ class EntriesController extends Controller
                 [['handle' => 'seo', 'label' => 'SEO', 'fields' => static::seoFields()]],
             ),
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
+            // Hierarchical collections: entries this one can be placed under.
+            'parentOptions' => $collection->isHierarchical() ? $this->parentOptions($collection, $entry) : null,
             'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title') + [
                 'single' => in_array($t->id, array_map('intval', (array) $collection->setting('single_term_taxonomies', [])), true),
             ]),

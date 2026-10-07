@@ -172,6 +172,23 @@ class EntryQuery
     }
 
     /**
+     * Direct children of an entry in a hierarchical collection; null for
+     * the top-level entries.
+     *
+     *     sunrice_entries('pages')->childrenOf($entry)->orderBy('sort_order')->get();
+     */
+    public function childrenOf(Entry|int|null $parent): static
+    {
+        $id = $parent instanceof Entry ? (int) $parent->id : $parent;
+        $this->filters['parent'] = $id;
+        $id === null
+            ? $this->query->whereNull('sunrice_entries.parent_id')
+            : $this->query->where('sunrice_entries.parent_id', $id);
+
+        return $this;
+    }
+
+    /**
      * Entries whose `terms` field $field holds the given term(s): Term
      * models, ids or slugs (looked up in the field's taxonomy). Unlike
      * whereTerm(), which uses the taxonomies attached to the collection,

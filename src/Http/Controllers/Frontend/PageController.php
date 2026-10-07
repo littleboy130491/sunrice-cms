@@ -74,6 +74,14 @@ class PageController extends Controller
     {
         abort_if($match->collection === null || $match->slug === null, 404);
 
+        // Hierarchical collections: 'about/team' is found by its last slug,
+        // then sent to its current address if the parents differ.
+        $nested = $match->collection->isHierarchical();
+        if ($nested && str_contains($match->slug, '/')) {
+            $segments = explode('/', $match->slug);
+            $match = new RouteMatch($match->type, $match->collection, $match->taxonomy, end($segments));
+        }
+
         // The URL slug may be the locale's Ready translation slug or the
         // main-language slug (fallback pages keep the main-language address).
         // Draft translation slugs are never routable.
@@ -107,6 +115,14 @@ class PageController extends Controller
         }
 
         $entry = $translation->entry;
+        if ($nested && (int) Setting::get('homepage_entry_id') !== (int) $entry->id) {
+            $canonical = app(UrlGenerator::class)->entryUrl($entry, $locale);
+            if ($canonical !== null && $canonical !== Locales::prefix($locale).'/'.$path) {
+                $query = request()->getQueryString();
+
+                return redirect($canonical.($query ? '?'.$query : ''), 301);
+            }
+        }
         $entry->resolveFor($locale);
 
         return $this->render(new TemplateContext(

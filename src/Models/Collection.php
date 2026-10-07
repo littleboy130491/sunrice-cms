@@ -140,6 +140,12 @@ class Collection extends Model
      * default). Off: the collection is a list of information shown by
      * templates; its entries have no URL.
      */
+    /** Entries can have a parent entry; their URLs nest under it. */
+    public function isHierarchical(): bool
+    {
+        return (bool) $this->setting('hierarchical', false) && $this->hasSinglePages();
+    }
+
     public function hasSinglePages(): bool
     {
         return $this->setting('has_single', true) !== false;

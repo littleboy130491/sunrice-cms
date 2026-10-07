@@ -39,6 +39,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
         settings: {
             translatable: collection?.settings?.translatable !== false,
             has_single: collection?.settings?.has_single !== false,
+            hierarchical: !!collection?.settings?.hierarchical,
             route: (collection?.settings?.route as string) ?? '',
             has_archive: !!collection?.settings?.has_archive,
             archive_route: (collection?.settings?.archive_route as string) ?? '',
@@ -221,6 +222,16 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                             <code>blog</code>, a full pattern such as <code>/news/&#123;slug&#125;</code>, or <code>/</code> for the site root. Each collection needs its own.
                         </p>
                         <InputError message={errors['settings.route']} />
+                        <label className="flex items-center gap-3 text-sm">
+                            <Checkbox checked={settings.hierarchical} onCheckedChange={(c) => setSetting('hierarchical', !!c)} />
+                            Hierarchical (entries can have a parent entry)
+                        </label>
+                        {settings.hierarchical && (
+                            <p className="pl-7 text-xs text-muted-foreground">
+                                A child entry's URL starts with its parent's: <code>/about</code> → <code>/about/team</code>. Pick the parent in the
+                                entry editor. Moving an entry to another parent redirects its old URL.
+                            </p>
+                        )}
                         <Label htmlFor="template">Entry template</Label>
                         <Input id="template" className="font-mono text-sm" value={settings.template} placeholder={`e.g. ${handle}.article`} onChange={(e) => setSetting('template', e.target.value)} />
                         <TemplateHelp example={`${handle}.article`} defaults={[`sunrice.${handle}.show`, 'sunrice.show']} />

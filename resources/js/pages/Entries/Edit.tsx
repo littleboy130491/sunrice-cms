@@ -48,10 +48,12 @@ interface Props {
     collection: { id: number; handle: string; title: string; settings?: Record<string, unknown> };
     entry: {
         id: number; status: string; published_at: string | null; blueprint_id: number | null;
-        author_id: number | null; term_ids: number[]; template?: string | null; terms_by_taxonomy?: Record<number, number[]>; translations: Record<string, TranslationState>;
+        author_id: number | null; term_ids: number[]; template?: string | null; parent_id?: number | null; terms_by_taxonomy?: Record<number, number[]>; translations: Record<string, TranslationState>;
     } | null;
     blueprint: AdminTab[] | null;
     blueprints: { id: number; title: string }[];
+    /** Hierarchical collections: entries this one can go under (tree order). */
+    parentOptions?: { id: number; title: string; depth: number }[] | null;
     taxonomies: { id: number; handle: string; title: string; single?: boolean }[];
     locales: string[];
     mainLocale?: string;
@@ -79,7 +81,7 @@ function flatFields(tabs: AdminTab[] | null): AdminField[] {
     return (tabs ?? []).flatMap((t) => t.fields ?? []);
 }
 
-export default function EntryEdit({ collection, entry, blueprint, blueprints, taxonomies, locales, mainLocale = locales[0], can: allowed }: Props) {
+export default function EntryEdit({ collection, entry, blueprint, blueprints, parentOptions, taxonomies, locales, mainLocale = locales[0], can: allowed }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
     const isNew = entry === null;
@@ -123,6 +125,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         blueprint_id?: number | string;
         term_ids: number[];
         template: string;
+        parent_id: number | null;
     }>({
         blueprint_id: '',
         locale: mainLocale,
@@ -132,6 +135,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
         seo: initial(mainLocale).seo,
         term_ids: entry?.term_ids ?? [],
         template: entry?.template ?? '',
+        parent_id: entry?.parent_id ?? null,
     });
 
     // Picked terms per taxonomy. The picker only knows ids, so each
@@ -524,6 +528,29 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, ta
                                 ))}
                                 <InputError message={(form.errors as Record<string, string>).term_ids} />
                                 {!perms.update && <p className="text-xs text-muted-foreground">Only editors can change terms.</p>}
+                            </fieldset>
+                        </CollapsibleCard>
+                    )}
+
+                    {parentOptions && (
+                        <CollapsibleCard title="Parent" titleClassName="text-sm" storageKey="entry:parent" contentClassName="flex flex-col gap-2">
+                            <fieldset disabled={!perms.update} className="grid gap-2 disabled:opacity-60">
+                                <Label htmlFor="entry-parent" className="sr-only">Parent</Label>
+                                <Select value={form.data.parent_id ? String(form.data.parent_id) : 'none'} onValueChange={(v) => form.setData('parent_id', v === 'none' ? null : Number(v))}>
+                                    <SelectTrigger id="entry-parent" className="w-full"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="max-h-80">
+                                        <SelectItem value="none">None (top level)</SelectItem>
+                                        {parentOptions.map((p) => (
+                                            <SelectItem key={p.id} value={String(p.id)}>
+                                                <span style={{ paddingLeft: `${p.depth * 0.75}rem` }}>{p.depth > 0 && '— '}{p.title}</span>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <InputError message={(form.errors as Record<string, string>).parent_id} />
+                                <p className="text-xs text-muted-foreground">
+                                    The URL starts with the parent's, e.g. <code>/about/team</code>. Saved with the draft and applied right away; the old URL redirects.
+                                </p>
                             </fieldset>
                         </CollapsibleCard>
                     )}
