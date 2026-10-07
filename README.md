@@ -30,12 +30,15 @@ After upgrades: `php artisan sunrice:publish-assets && php artisan migrate && ph
 
 | Topic | Doc |
 | --- | --- |
-| Install & configure | [docs/installation.md](docs/installation.md), [docs/configuration.md](docs/configuration.md) |
+| Install & configure | [docs/installation.md](docs/installation.md), [docs/configuration.md](docs/configuration.md), [docs/commands.md](docs/commands.md) |
 | Modeling content | [docs/content-modeling.md](docs/content-modeling.md), [docs/custom-fields.md](docs/custom-fields.md) |
 | Frontend | [docs/templates.md](docs/templates.md), [docs/blade-components.md](docs/blade-components.md), [docs/helpers.md](docs/helpers.md) |
 | Locales | [docs/multilingual.md](docs/multilingual.md), [docs/translation.md](docs/translation.md) |
 | Admin extras | [docs/resources.md](docs/resources.md), [docs/permissions.md](docs/permissions.md), [docs/forms.md](docs/forms.md), [docs/assets.md](docs/assets.md) |
-| Ops | [docs/caching.md](docs/caching.md), [docs/upgrading.md](docs/upgrading.md) |
+| Ops | [docs/mail.md](docs/mail.md), [docs/caching.md](docs/caching.md), [docs/upgrading.md](docs/upgrading.md) |
+
+The same guides are readable inside the admin under **Manage → Docs**
+(permission `sunrice.docs.view`).
 
 The full product contract lives in [`SPEC.md`](SPEC.md); the build plan
 in [`EXECUTION_PLAN.md`](EXECUTION_PLAN.md); contributor/agent rules in

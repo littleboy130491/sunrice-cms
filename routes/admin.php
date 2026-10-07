@@ -122,6 +122,9 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::get('settings', [Admin\SettingsController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [Admin\SettingsController::class, 'update'])->name('settings.update');
 
+    // Developer docs (the package's docs/*.md)
+    Route::get('docs/{page?}', [Admin\DocsController::class, 'show'])->where('page', '[a-z0-9-]+')->name('docs.show');
+
     // Users & roles (T8.7)
     Route::get('users', [Admin\UsersController::class, 'index'])->name('users.index');
     Route::get('users/create', [Admin\UsersController::class, 'create'])->name('users.create');

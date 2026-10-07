@@ -2,7 +2,6 @@ tests/ export-ignore
 workbench/ export-ignore
 .github/ export-ignore
 resources/js/ export-ignore
-docs/ export-ignore
 AGENTS.md export-ignore
 CLAUDE.md export-ignore
 SPEC.md export-ignore

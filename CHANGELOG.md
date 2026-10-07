@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Docs in the admin** — Manage → Docs shows the developer guides
+  (templates, artisan commands, languages, mail/SMTP and more) to users
+  with the new `sunrice.docs.view` permission. New guides: artisan commands
+  and mail (SMTP). Run `php artisan sunrice:sync-permissions` to create the
+  permission.
 - **Site settings** — Manage → Settings edits the site name, description,
   timezone, homepage, languages (main, available, names), site-wide
   noindex (also empties the sitemap), X/Twitter handle and default share
