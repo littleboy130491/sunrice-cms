@@ -106,6 +106,22 @@ it('accepts public POST submissions, rejects bad data and rate limits', function
     post("/sunrice/forms/{$form->handle}", $payload)->assertStatus(429);
 });
 
+it('answers AJAX submissions with JSON', function () {
+    config()->set('honeypot.enabled', false);
+    $form = makeForm();
+
+    $payload = ['data' => ['name' => 'Ada', 'email' => 'a@b.com']];
+
+    post("/sunrice/forms/{$form->handle}", $payload, ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJson(['success' => true]);
+    expect(FormSubmission::query()->count())->toBe(1);
+
+    post("/sunrice/forms/{$form->handle}", ['data' => ['name' => 'x']], ['Accept' => 'application/json'])
+        ->assertStatus(422)
+        ->assertJsonStructure(['errors']);
+});
+
 it('rejects filled honeypot fields', function () {
     $form = makeForm();
 
