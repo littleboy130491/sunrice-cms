@@ -23,6 +23,7 @@ use Sunrice\Models\Concerns\HasTranslatedTitle;
  * @property array<string,mixed> $settings
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property Carbon|null $deleted_at
  *
  * @use HasFactory<TaxonomyFactory>
  */

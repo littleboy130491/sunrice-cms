@@ -15,6 +15,8 @@ use Illuminate\Database\Eloquent\Scope;
  * or purged with `sunrice:orphans --purge`.
  *
  * Remove with ->withoutGlobalScope(HiddenWithParent::class).
+ *
+ * @implements Scope<Model>
  */
 class HiddenWithParent implements Scope
 {
