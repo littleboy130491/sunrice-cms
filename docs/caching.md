@@ -13,6 +13,11 @@ unreachable at once. Works on every cache driver; no tags needed.
 
 Draft saves never bump the version; previews bypass the cache entirely.
 
+Only plain values are cached (ids, arrays, strings), never models or
+other objects, so the cache works with Laravel 13's default
+`cache.serializable_classes = false`. Entry queries cache the matching
+ids and load those entries by key.
+
 ## Config
 
 - `sunrice.cache.enabled` — master switch.

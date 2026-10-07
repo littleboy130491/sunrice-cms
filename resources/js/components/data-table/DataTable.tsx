@@ -255,7 +255,7 @@ export function DataTable<T extends { id: number | string }>({
                                 <Settings2 /> Columns
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="max-h-80 overflow-y-auto">
                             {allColumns.map((c) => (
                                 <DropdownMenuCheckboxItem
                                     key={c.key}

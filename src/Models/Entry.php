@@ -25,6 +25,7 @@ use Sunrice\Support\Locales;
  * @property int $collection_id
  * @property int|null $blueprint_id
  * @property int|null $author_id
+ * @property int|null $parent_id
  * @property string $status
  * @property string|null $template
  * @property Carbon|null $published_at
@@ -48,6 +49,9 @@ class Entry extends Model
         'published_at' => 'datetime',
         'sort_order' => 'integer',
     ];
+
+    /** Deepest nesting of entries in a hierarchical collection. */
+    public const MAX_DEPTH = 10;
 
     /** The translation resolved for rendering (set by resolveFor). */
     public ?EntryTranslation $resolved = null;
@@ -98,6 +102,65 @@ class Entry extends Model
     public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);
+    }
+
+    /**
+     * The parent entry, in a hierarchical collection (Structure →
+     * Collections → Hierarchical).
+     *
+     * @return BelongsTo<Entry, $this>
+     */
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Entry::class, 'parent_id');
+    }
+
+    /** @return HasMany<Entry, $this> */
+    public function children(): HasMany
+    {
+        return $this->hasMany(Entry::class, 'parent_id');
+    }
+
+    /**
+     * Parents from the top down (root first), not including this entry.
+     * Stops at a missing (trashed) parent or a loop.
+     *
+     * @return array<int, Entry>
+     */
+    public function ancestors(): array
+    {
+        $chain = [];
+        $seen = [$this->id => true];
+        $current = $this;
+        while ($current->parent_id !== null && count($chain) < self::MAX_DEPTH) {
+            $parent = $current->parent;
+            if ($parent === null || isset($seen[$parent->id])) {
+                break;
+            }
+            $seen[$parent->id] = true;
+            array_unshift($chain, $parent);
+            $current = $parent;
+        }
+
+        return $chain;
+    }
+
+    /**
+     * Ids of this entry's children, their children and so on.
+     *
+     * @return array<int, int>
+     */
+    public function descendantIds(): array
+    {
+        $ids = [];
+        $level = [$this->id];
+        for ($depth = 0; $level !== [] && $depth < self::MAX_DEPTH; $depth++) {
+            $level = static::query()->withTrashed()->whereIn('parent_id', $level)->pluck('id')
+                ->map(fn ($id) => (int) $id)->diff($ids)->values()->all();
+            $ids = [...$ids, ...$level];
+        }
+
+        return $ids;
     }
 
     /** @return BelongsTo<Blueprint, $this> */

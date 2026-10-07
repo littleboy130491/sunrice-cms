@@ -29,10 +29,23 @@ class UrlGenerator
             return Locales::prefix($locale) ?: '/';
         }
 
-        $route = $collection->entryRoute();
-        $slug = $this->entrySlug($entry, $locale);
+        return Locales::prefix($locale).str_replace('{slug}', $this->slugPath($entry, $locale), $collection->entryRoute());
+    }
 
-        return Locales::prefix($locale).str_replace('{slug}', $slug, $route);
+    /**
+     * The entry's slug, after its parents' in a hierarchical collection:
+     * 'about/team'.
+     */
+    public function slugPath(Entry $entry, string $locale, ?string $ownSlug = null): string
+    {
+        $slug = $ownSlug ?? $this->entrySlug($entry, $locale);
+        if ($entry->parent_id === null || ! $entry->collection?->isHierarchical()) {
+            return $slug;
+        }
+
+        $parents = array_map(fn (Entry $parent) => $this->entrySlug($parent, $locale), $entry->ancestors());
+
+        return implode('/', [...$parents, $slug]);
     }
 
     /**
@@ -65,7 +78,7 @@ class UrlGenerator
             return null;
         }
 
-        return Locales::prefix($translation->locale).str_replace('{slug}', $translation->slug, $entry->collection->entryRoute());
+        return Locales::prefix($translation->locale).str_replace('{slug}', $this->slugPath($entry, $translation->locale, $translation->slug), $entry->collection->entryRoute());
     }
 
     public function entrySlug(Entry $entry, string $locale): string

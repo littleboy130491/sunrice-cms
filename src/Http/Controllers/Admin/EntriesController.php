@@ -14,24 +14,26 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Actions\Entries\ChangeBlueprint;
 use Sunrice\Actions\Entries\CreateEntry;
 use Sunrice\Actions\Entries\DuplicateEntry;
+use Sunrice\Actions\Entries\EnsureTranslation;
 use Sunrice\Actions\Entries\ForceDeleteEntry;
 use Sunrice\Actions\Entries\PublishTranslation;
 use Sunrice\Actions\Entries\RestoreEntry;
 use Sunrice\Actions\Entries\RestoreRevision;
 use Sunrice\Actions\Entries\ReturnTranslationToDraft;
 use Sunrice\Actions\Entries\SaveDraft;
+use Sunrice\Actions\Entries\SetEntryParent;
 use Sunrice\Actions\Entries\SyncEntryTerms;
 use Sunrice\Actions\Entries\TrashEntry;
 use Sunrice\Actions\Entries\UnpublishEntry;
 use Sunrice\Actions\Support\Reorder;
 use Sunrice\Admin\Export\CsvExporter;
 use Sunrice\Admin\Table\Column;
+use Sunrice\Admin\Table\EntryFieldColumns;
 use Sunrice\Admin\Table\TableQuery;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Frontend\UrlGenerator;
@@ -42,7 +44,6 @@ use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\Revision;
 use Sunrice\Rules\ValidSlug;
 use Sunrice\Support\Locales;
-use Sunrice\Support\SlugValidator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class EntriesController extends Controller
@@ -55,8 +56,10 @@ class EntriesController extends Controller
 
         $query = Entry::query()
             ->where('collection_id', $collection->id)
-            ->with(['translations' => fn ($q) => $q->where('locale', Locales::main()), 'author']);
-        $table = $this->entriesTable($request, $collection, $query);
+            ->with(['translations' => fn ($q) => $q->where('locale', Locales::main()), 'author'])
+            ->when($collection->isHierarchical(), fn ($q) => $q->with(['parent.translations' => fn ($q) => $q->where('locale', Locales::main())]));
+        $fieldColumns = new EntryFieldColumns($collection);
+        $table = $this->entriesTable($request, $collection, $query, $fieldColumns);
         $meta = $table->meta();
         [$defaultColumn] = $collection->defaultSort();
 
@@ -76,7 +79,13 @@ class EntriesController extends Controller
             new Column('author', 'Created by'),
             new Column('created_at', 'Created', sortable: true, type: 'date'),
             new Column('updated_at', 'Updated', sortable: true, type: 'date'),
+            ...($collection->isHierarchical() ? [new Column('parent', 'Parent')] : []),
+            // The blueprint's fields, hidden until picked under Columns.
+            ...$fieldColumns->columns(),
         ];
+        $visible = $this->visibleEntryColumns((int) $userId, $collection, $fieldColumns);
+        $rows = $table->paginate($request);
+        $fieldColumns->preload($rows->getCollection(), $visible);
 
         // People who wrote entries here, for the "Created by" filter.
         $authorIds = Entry::withTrashed()->where('collection_id', $collection->id)->whereNotNull('author_id')->distinct()->pluck('author_id');
@@ -89,7 +98,7 @@ class EntriesController extends Controller
         return Inertia::render('Entries/Index', [
             'collection' => $collection->only('id', 'handle', 'title', 'settings'),
             'columns' => $columns,
-            'rows' => $table->paginate($request)->through(function (Model $e): array {
+            'rows' => $rows->through(function (Model $e) use ($fieldColumns, $visible, $collection): array {
                 /** @var Entry $e */
                 $t = $e->translations->first();
 
@@ -104,13 +113,16 @@ class EntriesController extends Controller
                     'author' => $e->author?->getAttribute('name') ?? '—',
                     'created_at' => $e->created_at?->format('j M Y'),
                     'updated_at' => $e->updated_at?->diffForHumans(),
+                    ...($collection->isHierarchical() ? ['parent' => $e->parent === null ? null : $e->parent->translations->first()?->title] : []),
+                    ...$fieldColumns->values($e, $visible),
                 ];
             }),
             'authors' => $authors,
             'meta' => $meta,
             // Ordered by hand, but a search, filter or column sort hides that order.
             'reorderPaused' => $mayReorder && ! $canReorder,
-            'visibleColumns' => $this->visibleEntryColumns((int) $userId),
+            'visibleColumns' => $visible,
+            'columnsKey' => self::columnsKey($collection),
             'can' => [
                 'create' => $request->user()->can('create', [Entry::class, $collection->id]),
                 'reorder' => $canReorder,
@@ -122,18 +134,27 @@ class EntriesController extends Controller
     }
 
     /**
-     * Columns this user shows. A choice saved before the list gained
-     * "Created" and "Created by" (it had an ID column) starts over.
+     * Columns this user shows in this collection. A choice saved before
+     * the list gained "Created" and "Created by" (it had an ID column)
+     * starts over; one saved before columns were per collection is the
+     * starting point.
      *
      * @return array<int, string>
      */
-    protected function visibleEntryColumns(int $userId): array
+    protected function visibleEntryColumns(int $userId, Collection $collection, EntryFieldColumns $fieldColumns): array
     {
-        $default = ['title', 'status', 'author', 'created_at', 'updated_at'];
-        $saved = TablePreferencesController::columnsFor($userId, 'entries', $default);
-        $known = array_values(array_intersect($saved, ['title', 'status', 'author', 'created_at', 'updated_at']));
+        $default = ['title', 'status', 'author', 'created_at', 'updated_at', ...($collection->isHierarchical() ? ['parent'] : [])];
+        $saved = TablePreferencesController::columnsFor($userId, self::columnsKey($collection), [])
+            ?: TablePreferencesController::columnsFor($userId, 'entries', $default);
+        $known = array_values(array_intersect($saved, [...$default, ...$fieldColumns->keys()]));
 
         return in_array('id', $saved, true) || $known === [] ? $default : $known;
+    }
+
+    /** The saved column choice is per collection: each has its own fields. */
+    protected static function columnsKey(Collection $collection): string
+    {
+        return "entries-{$collection->handle}";
     }
 
     /**
@@ -143,7 +164,7 @@ class EntriesController extends Controller
      *
      * @param  Builder<Entry>  $query
      */
-    protected function entriesTable(Request $request, Collection $collection, Builder $query): TableQuery
+    protected function entriesTable(Request $request, Collection $collection, Builder $query, ?EntryFieldColumns $fieldColumns = null): TableQuery
     {
         $main = Locales::main();
         $mainTitle = EntryTranslation::query()
@@ -171,8 +192,9 @@ class EntriesController extends Controller
                 ? $q->whereNull('author_id')
                 : $q->where('author_id', $value))
             ->sortUsing('title', fn (Builder $q, string $direction) => $q->orderBy($mainTitle, $direction))
-            ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at'])
-            ->apply($request);
+            ->sortable(['id', 'published_at', 'sort_order', 'created_at', 'updated_at']);
+        $fieldColumns?->applySorts($table);
+        $table->apply($request);
 
         // No column clicked: the collection's own order (Structure →
         // Collections → Order).
@@ -192,7 +214,7 @@ class EntriesController extends Controller
     {
         $this->authorize('viewAny', [Entry::class, $collection->id]);
 
-        $table = $this->entriesTable($request, $collection, Entry::query()->where('collection_id', $collection->id)->with('translations'));
+        $table = $this->entriesTable($request, $collection, Entry::query()->where('collection_id', $collection->id)->with('translations'), new EntryFieldColumns($collection));
 
         return $csv->download($table, [
             new Column('id', 'ID'),
@@ -225,10 +247,14 @@ class EntriesController extends Controller
             'blueprint_id' => ['nullable', 'integer', 'exists:sunrice_blueprints,id'],
             'term_ids' => ['sometimes', 'array'],
             'term_ids.*' => ['integer'],
+            'parent_id' => ['sometimes', 'nullable', 'integer', SetEntryParent::rule($collection, null)],
         ]);
 
         $entry = DB::transaction(function () use ($collection, $validated, $request, $create): Entry {
             $entry = $create->handle($collection, $validated, $request->user()->getAuthIdentifier(), $validated['blueprint_id'] ?? null);
+            if (($validated['parent_id'] ?? null) !== null) {
+                app(SetEntryParent::class)->handle($entry, (int) $validated['parent_id']);
+            }
             if (array_key_exists('term_ids', $validated)) {
                 app(SyncEntryTerms::class)->handle($entry, $validated['term_ids']);
             }
@@ -272,11 +298,18 @@ class EntriesController extends Controller
             'template' => ['sometimes', 'nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'term_ids' => ['sometimes', 'array'],
             'term_ids.*' => ['integer'],
+            'parent_id' => ['sometimes', 'nullable', 'integer', SetEntryParent::rule($entry->collection, $entry)],
         ]);
 
         // The template belongs to the entry too (editors only, saved now).
         if (array_key_exists('template', $validated) && $request->user()->can('update', $entry)) {
             $entry->update(['template' => $validated['template'] ?: null]);
+        }
+
+        // So does the parent page. The URL changes at once (also for its
+        // children); the old one redirects.
+        if (array_key_exists('parent_id', $validated) && $request->user()->can('update', $entry)) {
+            app(SetEntryParent::class)->handle($entry, $validated['parent_id'] === null ? null : (int) $validated['parent_id']);
         }
 
         // Terms belong to the entry, not a language: editors only (not
@@ -544,24 +577,39 @@ class EntriesController extends Controller
 
     protected function translationFor(Entry $entry, string $locale): EntryTranslation
     {
-        if (! Locales::isAvailable($locale)) {
-            throw ValidationException::withMessages(['locale' => 'Unknown language. Reload the page and try again.']);
-        }
+        return EnsureTranslation::for($entry, $locale);
+    }
 
-        $main = $entry->mainTranslation();
+    /**
+     * Entries that can be this entry's parent, as a tree (parents before
+     * their children, with their depth for indenting).
+     *
+     * @return array<int, array{id: int, title: string, depth: int}>
+     */
+    protected function parentOptions(Collection $collection, ?Entry $entry): array
+    {
+        $excluded = $entry === null ? [] : [$entry->id, ...$entry->descendantIds()];
+        $entries = Entry::query()->where('collection_id', $collection->id)
+            ->whereNotIn('id', $excluded)
+            ->with(['translations' => fn ($q) => $q->where('locale', Locales::main())])
+            ->limit(2000)
+            ->get(['id', 'parent_id']);
+        $titles = $entries->mapWithKeys(fn (Entry $e) => [$e->id => (string) ($e->translations->first()->title ?? '#'.$e->id)]);
+        $byParent = $entries->groupBy(fn (Entry $e) => $e->parent_id !== null && $titles->has($e->parent_id) ? $e->parent_id : 0);
 
-        return $entry->translations()->firstOrCreate(
-            ['locale' => $locale],
-            [
-                'collection_id' => $entry->collection_id,
-                'title' => $main === null ? '' : $main->title,
-                'slug' => SlugValidator::unique($main === null ? 'entry' : $main->slug, $entry->collection_id, $locale),
-                // Secondary languages store only translated values; until
-                // the editor translates something, the main text shows.
-                'data' => [],
-                'seo' => $main === null ? [] : $main->seo,
-            ],
-        );
+        $out = [];
+        $walk = function (int $parentId, int $depth) use (&$walk, &$out, $byParent, $titles): void {
+            if ($depth >= Entry::MAX_DEPTH) {
+                return;
+            }
+            foreach ($byParent->get($parentId, collect())->sortBy(fn (Entry $e) => mb_strtolower($titles[$e->id])) as $e) {
+                $out[] = ['id' => $e->id, 'title' => $titles[$e->id], 'depth' => $depth];
+                $walk($e->id, $depth + 1);
+            }
+        };
+        $walk(0, 0);
+
+        return $out;
     }
 
     /**
@@ -618,6 +666,7 @@ class EntriesController extends Controller
                 'author_id' => $entry->author_id,
                 'term_ids' => $entry->terms->pluck('id'),
                 'template' => $entry->template,
+                'parent_id' => $entry->parent_id,
                 // {taxonomy id: [term ids]} for the Taxonomies card.
                 'terms_by_taxonomy' => (object) $entry->terms->groupBy('taxonomy_id')->map(fn ($terms) => $terms->pluck('id')->values())->all(),
                 'translations' => $translations,
@@ -627,6 +676,8 @@ class EntriesController extends Controller
                 [['handle' => 'seo', 'label' => 'SEO', 'fields' => static::seoFields()]],
             ),
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
+            // Hierarchical collections: entries this one can be placed under.
+            'parentOptions' => $collection->isHierarchical() ? $this->parentOptions($collection, $entry) : null,
             'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title') + [
                 'single' => in_array($t->id, array_map('intval', (array) $collection->setting('single_term_taxonomies', [])), true),
             ]),

@@ -1,0 +1,93 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Sunrice\Mcp;
+
+use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
+use Laravel\Mcp\Server;
+use Laravel\Mcp\Server\Attributes\Instructions;
+use Laravel\Mcp\Server\Attributes\Name;
+use Laravel\Mcp\Server\Attributes\Version;
+
+#[Name('Sunrice CMS')]
+#[Version('1.0.0')]
+#[Instructions(<<<'MD'
+Manage a website built with Sunrice CMS (Laravel). You act as the user who owns the access token, with their permissions.
+
+How the site is organised:
+- Collections are content types (pages, articles…); each has a blueprint (its fields) and entries.
+- Entries have one translation per language (title, slug, field data, SEO). Edits are drafts until published.
+- Taxonomies hold terms (categories, tags) attached to collections. Globals are site-wide values; menus are navigation.
+- Templates are Blade views that render pages.
+
+Start with get_site_info: handles, languages, field types and your permissions.
+- To change content: get_entry, then update_entry (only the keys you send change) with publish: true to put it live.
+- To change structure: get_blueprint, then save_blueprint, then save_collection.
+- Before touching templates, call get_template_guide, then read_template / write_template / render_page.
+- For SEO: seo_audit, then fix the issues with update_entry (seo) and save_asset (alt text).
+- For other languages: translate_entry, or write the translation yourself with update_entry locale.
+
+Ask the user before deleting anything or publishing large changes. Use read_docs for details.
+MD)]
+class SunriceServer extends Server
+{
+    /** All tools in one list: clients see everything on the first page. */
+    public int $defaultPaginationLength = 50;
+
+    protected array $tools = [
+        Tools\GetSiteInfo::class,
+        Tools\ReadDocs::class,
+        Tools\ListEntries::class,
+        Tools\GetEntry::class,
+        Tools\CreateEntry::class,
+        Tools\UpdateEntry::class,
+        Tools\ManageEntry::class,
+        Tools\TranslateEntry::class,
+        Tools\SaveCollection::class,
+        Tools\GetBlueprint::class,
+        Tools\SaveBlueprint::class,
+        Tools\SaveTaxonomy::class,
+        Tools\ListTerms::class,
+        Tools\SaveTerm::class,
+        Tools\GetGlobal::class,
+        Tools\SaveGlobal::class,
+        Tools\GetMenu::class,
+        Tools\SaveMenu::class,
+        Tools\ListAssets::class,
+        Tools\SaveAsset::class,
+        Tools\GetForm::class,
+        Tools\SaveForm::class,
+        Tools\DeleteStructure::class,
+        Tools\UpdateSiteSettings::class,
+        Tools\SeoAudit::class,
+        Tools\GetTemplateGuide::class,
+        Tools\ReadTemplate::class,
+        Tools\WriteTemplate::class,
+        Tools\RenderPage::class,
+        Tools\RunCommand::class,
+    ];
+
+    /**
+     * Over stdio (`php artisan mcp:start sunrice`, an agent on the server
+     * itself) there is no token: act as sunrice.mcp.local_user.
+     */
+    protected function boot(): void
+    {
+        $guard = Auth::guard(config('sunrice.auth.guard', 'web'));
+        $email = config('sunrice.mcp.local_user');
+        if ($guard->user() !== null || ! app()->runningInConsole() || ! is_string($email) || $email === '') {
+            return;
+        }
+
+        /** @var class-string<Model> $model */
+        $model = config('sunrice.auth.user_model');
+        $user = $model::query()->where('email', $email)->first();
+        if ($user instanceof Authenticatable) {
+            $guard->setUser($user);
+            Auth::shouldUse(config('sunrice.auth.guard', 'web'));
+        }
+    }
+}

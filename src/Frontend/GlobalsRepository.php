@@ -6,6 +6,7 @@ namespace Sunrice\Frontend;
 
 use Sunrice\Cache\ContentCache;
 use Sunrice\Fields\HydrationContext;
+use Sunrice\Models\Blueprint;
 use Sunrice\Models\GlobalSet;
 use Sunrice\Support\Locales;
 
@@ -16,32 +17,58 @@ use Sunrice\Support\Locales;
  */
 class GlobalsRepository
 {
+    /** @var array<string, GlobalData> hydrated sets for this request */
+    protected array $resolved = [];
+
     public function get(string $handle, ?string $locale = null): GlobalData
     {
-        return ContentCache::remember('global:'.$handle, fn () => $this->resolve($handle, $locale), $locale);
+        $locale ??= Locales::current();
+        $stored = ContentCache::remember('global:'.$handle, fn () => $this->stored($handle, $locale), $locale);
+        // Hydrating can query (entries, assets…): once per request for the same values.
+        $key = $handle.':'.md5((string) json_encode($stored));
+
+        return $this->resolved[$key] ??= $this->hydrate($handle, $stored);
     }
 
-    protected function resolve(string $handle, ?string $locale): GlobalData
+    /**
+     * The stored values (plain arrays, so the cache never holds objects:
+     * sites may refuse to unserialize them).
+     *
+     * @return array{locale: string, values: array<string, mixed>, blueprint: int|null}|null
+     */
+    protected function stored(string $handle, string $locale): ?array
     {
-        $locale ??= Locales::current();
         $set = GlobalSet::query()
             ->where('handle', $handle)
-            ->with(['blueprint', 'values'])
+            ->with('values')
             ->first();
 
         if ($set === null) {
-            return new GlobalData($handle, $locale);
+            return null;
         }
 
         $resolvedLocale = $set->translatable ? $locale : Locales::main();
-        $values = $set->translatable
-            ? $set->valuesFor($locale)
-            : ($set->valuesFor(Locales::main()));
 
-        if ($set->blueprint !== null) {
-            $values = $set->blueprint->schema()->hydrate($values, new HydrationContext($resolvedLocale));
+        return [
+            'locale' => $resolvedLocale,
+            'values' => $set->valuesFor($resolvedLocale),
+            'blueprint' => $set->blueprint_id,
+        ];
+    }
+
+    /** @param array{locale: string, values: array<string, mixed>, blueprint: int|null}|null $stored */
+    protected function hydrate(string $handle, ?array $stored): GlobalData
+    {
+        if ($stored === null) {
+            return new GlobalData($handle, Locales::current());
         }
 
-        return new GlobalData($handle, $resolvedLocale, $values);
+        $values = $stored['values'];
+        $blueprint = $stored['blueprint'] === null ? null : Blueprint::query()->find($stored['blueprint']);
+        if ($blueprint !== null) {
+            $values = $blueprint->schema()->hydrate($values, new HydrationContext($stored['locale']));
+        }
+
+        return new GlobalData($handle, $stored['locale'], $values);
     }
 }

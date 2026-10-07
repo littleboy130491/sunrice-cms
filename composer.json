@@ -19,7 +19,8 @@
         "spatie/simple-excel": "^3.10",
         "spatie/laravel-honeypot": "^4.7",
         "spatie/laravel-sitemap": "^8.0",
-        "symfony/html-sanitizer": "^7.4"
+        "symfony/html-sanitizer": "^7.4",
+        "laravel/mcp": "^1.0"
     },
     "require-dev": {
         "orchestra/testbench": "^11.0",

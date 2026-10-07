@@ -26,6 +26,10 @@ class ForceDeleteEntry
 
         Redirect::query()->where('entry_id', $entry->id)->delete();
 
+        // Its child entries move up to the top level.
+        Entry::query()->withTrashed()->withoutGlobalScope(HiddenWithParent::class)
+            ->where('parent_id', $entry->id)->update(['parent_id' => null]);
+
         $entry->forceDelete();
 
         EntryDeleted::dispatch($entry);

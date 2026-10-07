@@ -127,6 +127,11 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::put('settings', [Admin\SettingsController::class, 'update'])->name('settings.update');
     Route::post('settings/test-mail', [Admin\SettingsController::class, 'testMail'])->name('settings.test-mail');
 
+    // AI agents (MCP) access tokens
+    Route::get('ai-access', [Admin\AiAccessController::class, 'index'])->name('ai-access.index');
+    Route::post('ai-access', [Admin\AiAccessController::class, 'store'])->name('ai-access.store');
+    Route::delete('ai-access/{token}', [Admin\AiAccessController::class, 'destroy'])->name('ai-access.destroy');
+
     // Developer docs (the package's docs/*.md)
     Route::get('docs/{page?}', [Admin\DocsController::class, 'show'])->where('page', '[a-z0-9-]+')->name('docs.show');
 

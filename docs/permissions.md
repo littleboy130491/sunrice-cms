@@ -30,6 +30,8 @@ so nobody loses access.
 | `sunrice.settings.edit` | Settings. |
 | `sunrice.view-drafts` | While signed in, open unpublished and scheduled entries (and translations not yet Ready) on the site, under a "Draft" banner. Given to Editor, Author and Translator. |
 | `sunrice.docs.view` | Read these developer docs in the admin (Manage → Docs). Only Administrator has it by default. |
+| `sunrice.ai-access` | Connect AI agents through MCP with an access token (Manage → AI access). The agent can do what the user can. See [AI agents](ai-agents.md). |
+| `sunrice.run-commands` | Let AI agents run the maintenance commands listed in `sunrice.mcp.commands`. |
 
 Super admins are protected: only another super admin can edit or delete a
 super-admin user, give or remove the super-admin role, or change that role.

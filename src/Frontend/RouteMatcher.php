@@ -42,9 +42,12 @@ class RouteMatcher
     }
 
     /** Forget the per-request memoization (mainly for tests/long runs). */
-    public static function flush(): void
+    public static function flush(bool $keepCache = false): void
     {
         static::$compiled = null;
+        if ($keepCache) {
+            return;
+        }
         Cache::store(config('sunrice.cache.store'))->forget(
             'sunrice:'.ContentVersion::current().':shared:routematcher'
         );
@@ -56,10 +59,34 @@ class RouteMatcher
         return static::$compiled ??= $this->compile();
     }
 
-    /** @return array<int, array{regex: string, match: RouteMatch}> */
+    /**
+     * The cache holds plain arrays (ids, not models): sites may refuse to
+     * unserialize objects from the cache (cache.serializable_classes).
+     *
+     * @return array<int, array{regex: string, match: RouteMatch}>
+     */
     protected function compile(): array
     {
-        return ContentCache::remember('routematcher', fn () => $this->buildRoutes(), 'shared');
+        $routes = ContentCache::remember('routematcher', fn () => array_map(fn (array $r) => [
+            'regex' => $r['regex'],
+            'type' => $r['match']->type,
+            'collection' => $r['match']->collection?->id,
+            'taxonomy' => $r['match']->taxonomy?->id,
+            'slug' => $r['match']->slug,
+        ], $this->buildRoutes()), 'shared');
+
+        $collections = Collection::query()->whereKey(array_filter(array_column($routes, 'collection')))->get()->keyBy('id');
+        $taxonomies = Taxonomy::query()->whereKey(array_filter(array_column($routes, 'taxonomy')))->get()->keyBy('id');
+
+        return array_map(fn (array $r) => [
+            'regex' => $r['regex'],
+            'match' => new RouteMatch(
+                type: $r['type'],
+                collection: $r['collection'] === null ? null : $collections->get($r['collection']),
+                taxonomy: $r['taxonomy'] === null ? null : $taxonomies->get($r['taxonomy']),
+                slug: $r['slug'],
+            ),
+        ], $routes);
     }
 
     /** @return array<int, array{regex: string, match: RouteMatch}> */
@@ -70,7 +97,8 @@ class RouteMatcher
         Collection::query()->get()->each(function (Collection $collection) use (&$routes): void {
             if ($collection->setting('has_single', true)) {
                 $route = $collection->entryRoute();
-                $routes[] = $this->route($route, new RouteMatch('entry', collection: $collection));
+                // Hierarchical: the slug is a path of parent slugs ('about/team').
+                $routes[] = $this->route($route, new RouteMatch('entry', collection: $collection), nested: $collection->isHierarchical());
             }
             if ($collection->setting('has_archive')) {
                 $route = (string) $collection->setting('archive_route', '/'.$collection->handle);
@@ -95,11 +123,11 @@ class RouteMatcher
     }
 
     /** @return array{regex: string, match: RouteMatch, dynamic: bool, literal: int} */
-    protected function route(string $pattern, RouteMatch $match): array
+    protected function route(string $pattern, RouteMatch $match, bool $nested = false): array
     {
         $pattern = '/'.trim($pattern, '/');
         $regex = '#^'.preg_quote($pattern, '#').'$#';
-        $regex = str_replace(preg_quote('{slug}', '#'), '(?<slug>[^/]+)', $regex);
+        $regex = str_replace(preg_quote('{slug}', '#'), $nested ? '(?<slug>[^/]+(?:/[^/]+)*)' : '(?<slug>[^/]+)', $regex);
 
         return [
             'regex' => $regex,

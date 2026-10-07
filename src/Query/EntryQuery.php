@@ -6,6 +6,7 @@ namespace Sunrice\Query;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Sunrice\Cache\ContentCache;
 use Sunrice\Fields\FieldRegistry;
 use Sunrice\Fields\HydrationContext;
@@ -171,6 +172,23 @@ class EntryQuery
     }
 
     /**
+     * Direct children of an entry in a hierarchical collection; null for
+     * the top-level entries.
+     *
+     *     sunrice_entries('pages')->childrenOf($entry)->orderBy('sort_order')->get();
+     */
+    public function childrenOf(Entry|int|null $parent): static
+    {
+        $id = $parent instanceof Entry ? (int) $parent->id : $parent;
+        $this->filters['parent'] = $id;
+        $id === null
+            ? $this->query->whereNull('sunrice_entries.parent_id')
+            : $this->query->where('sunrice_entries.parent_id', $id);
+
+        return $this;
+    }
+
+    /**
      * Entries whose `terms` field $field holds the given term(s): Term
      * models, ids or slugs (looked up in the field's taxonomy). Unlike
      * whereTerm(), which uses the taxonomies attached to the collection,
@@ -323,22 +341,37 @@ class EntryQuery
     {
         $this->applyDefaultOrder();
 
-        $results = $this->runQuery(
-            fn () => ($this->limit ? $this->query->limit($this->limit) : $this->query)->get(),
-        );
+        $fresh = null;
+        $cached = $this->runQuery(function () use (&$fresh): array {
+            $fresh = ($this->limit ? $this->query->limit($this->limit) : $this->query)->get();
 
-        return $this->resolve($results);
+            return ['ids' => $fresh->modelKeys()];
+        });
+
+        return $this->resolve($fresh ?? $this->entriesByIds($cached['ids']));
     }
 
     /** @return LengthAwarePaginator<int, Entry> */
     public function paginate(int $perPage = 12, string $pageName = 'page'): LengthAwarePaginator
     {
         $this->applyDefaultOrder();
-        $this->filters['paginate'] = [$perPage, $pageName, (int) request($pageName, 1)];
+        $page = max(1, (int) request($pageName, 1));
+        $this->filters['paginate'] = [$perPage, $pageName, $page];
 
-        $paginator = $this->runQuery(
-            fn () => $this->query->paginate($perPage, ['sunrice_entries.*'], $pageName)->withQueryString(),
-        );
+        $fresh = null;
+        $cached = $this->runQuery(function () use (&$fresh, $perPage, $pageName): array {
+            $fresh = $this->query->paginate($perPage, ['sunrice_entries.*'], $pageName)->withQueryString();
+
+            return ['ids' => $fresh->getCollection()->modelKeys(), 'total' => $fresh->total()];
+        });
+
+        $paginator = $fresh ?? (new LengthAwarePaginator(
+            $this->entriesByIds($cached['ids']),
+            (int) $cached['total'],
+            $perPage,
+            $page,
+            ['path' => Paginator::resolveCurrentPath(), 'pageName' => $pageName],
+        ))->withQueryString();
 
         $this->resolve($paginator->getCollection());
 
@@ -407,7 +440,11 @@ class EntryQuery
             ->sortCast();
     }
 
-    protected function runQuery(\Closure $callback): mixed
+    /**
+     * @param  \Closure(): array<string, mixed>  $callback
+     * @return array<string, mixed>
+     */
+    protected function runQuery(\Closure $callback): array
     {
         if ($this->preview || ! ContentCache::enabled()) {
             return $callback();
@@ -421,8 +458,25 @@ class EntryQuery
             'eager' => $this->eager,
         ]));
 
-        // Cache stores serialized models; acceptable and portable.
+        // Only ids are cached, never models: sites may refuse to
+        // unserialize objects from the cache (cache.serializable_classes).
         return ContentCache::remember($key, $callback, $this->locale);
+    }
+
+    /**
+     * Entries by id, in that order (for a cached result).
+     *
+     * @param  array<int, int|string>  $ids
+     * @return \Illuminate\Database\Eloquent\Collection<int, Entry>
+     */
+    protected function entriesByIds(array $ids): \Illuminate\Database\Eloquent\Collection
+    {
+        if ($ids === []) {
+            return new \Illuminate\Database\Eloquent\Collection;
+        }
+        $entries = Entry::query()->whereKey($ids)->get()->keyBy('id');
+
+        return new \Illuminate\Database\Eloquent\Collection(array_values(array_filter(array_map(fn ($id) => $entries->get($id), $ids))));
     }
 
     /**

@@ -11,6 +11,8 @@ Settings:
 - `icon` — sidebar icon in the admin.
 - `archive_route` — archive URL when `has_archive` is on.
 - `has_single`, `has_archive` — toggle detail/archive pages.
+- `hierarchical` — entries can have a parent entry (see
+  [Parent pages](#parent-pages)).
 - `translatable`, `sluggable`, `dated`, `archivable`.
 - `per_page` — archive pagination size.
 - `template` — default Blade view for singles.
@@ -49,6 +51,26 @@ switch in the editor; templates read keyed items with `->byKey('key')`.
   requested publicly.
 - Slugs are unique per `(collection, locale)` including trashed rows;
   rename + publish leaves a `301` redirect on the old slug.
+
+## Parent pages
+
+Turn on **Hierarchical** for a collection (Structure → Collections →
+Pages & URLs) and each entry gets a **Parent** picker in the editor. A
+child's URL starts with its parents' slugs: with the route `/{slug}`,
+*Team* under *About* lives at `/about/team`, and *Leaders* under *Team* at
+`/about/team/leaders` (up to 10 levels).
+
+- Each language uses its own slugs for the whole path (falling back to the
+  main language's, as for single slugs).
+- Moving an entry to another parent, or renaming a parent's slug, changes
+  the URLs below it; the old addresses redirect (`301`) to the new ones.
+- Slugs stay unique per collection and language, so a page is always
+  found by its own slug.
+- Deleting an entry for good moves its children to the top level.
+
+In templates, `$entry->parent`, `$entry->ancestors()` (top-down, for
+breadcrumbs) and `sunrice_entries('pages')->childrenOf($entry)->get()`
+(sub-navigation; `childrenOf(null)` for top-level pages).
 
 ## Taxonomies
 

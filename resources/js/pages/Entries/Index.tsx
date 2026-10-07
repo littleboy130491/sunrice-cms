@@ -6,7 +6,7 @@ import { DataTable, type FilterDef } from '@/components/data-table/DataTable';
 import { adminUrl } from '@/lib/route';
 import type { ColumnDef, Paginated, SharedProps } from '@/types';
 
-interface Row { id: number; title: string; status: string; author: string; created_at: string | null; updated_at: string | null }
+interface Row { id: number; title: string; status: string; author: string; created_at: string | null; updated_at: string | null; [field: `field.${string}`]: string | null }
 
 interface Props {
     collection: { id: number; handle: string; title: string };
@@ -17,11 +17,13 @@ interface Props {
     /** Ordered by hand, but a search, filter or column sort is hiding that order. */
     reorderPaused?: boolean;
     visibleColumns?: string[];
+    /** Where this collection's column choice is saved. */
+    columnsKey?: string;
     /** People who created entries here, for the Created by filter. */
     authors?: { value: string; label: string }[];
 }
 
-export default function EntriesIndex({ collection, columns, rows, meta, can, visibleColumns, reorderPaused, authors = [] }: Props) {
+export default function EntriesIndex({ collection, columns, rows, meta, can, visibleColumns, columnsKey = 'entries', reorderPaused, authors = [] }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
 
     const filters: FilterDef[] = [
@@ -71,7 +73,7 @@ export default function EntriesIndex({ collection, columns, rows, meta, can, vis
                 columns={columns}
                 rows={rows}
                 meta={meta}
-                tableKey="entries"
+                tableKey={columnsKey}
                 reorderable={!!can.reorder}
                 reorderUrl={adminUrl(`collections/${collection.handle}/entries/reorder`, adminPath)}
                 visibleColumns={visibleColumns}
