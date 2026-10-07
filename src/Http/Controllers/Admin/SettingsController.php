@@ -117,7 +117,7 @@ class SettingsController extends Controller
             $seo = (array) $model->setting('seo', []);
             foreach (SeoFields::ROLES as $role) {
                 $value = $item['chosen'][$role] ?? '';
-                if ($value === '' || $value === null) {
+                if ($value === '') {
                     unset($seo[$role.'_field']);
                 } else {
                     $seo[$role.'_field'] = $value;
