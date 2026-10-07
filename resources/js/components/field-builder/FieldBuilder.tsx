@@ -144,6 +144,10 @@ function SettingControl({
                     })}
                 </div>
             );
+        case 'file_types':
+            return <FileTypesControl value={(config[key] as string[] | undefined) ?? []} options={def.options as FileTypesOptions} onChange={onChange} />;
+        case 'file_size':
+            return <FileSizeControl value={(config[key] as number | null | undefined) ?? null} options={def.options as FileSizeOptions} onChange={onChange} />;
         case 'key_value': {
             // Options as textarea "value|Label" per line.
             const rows = (config[key] as { value: string; label: string }[]) ?? [];
@@ -171,6 +175,106 @@ function SettingControl({
                 />
             );
     }
+}
+
+interface FileTypesOptions {
+    groups: { key: string; label: string; extensions: string[] }[];
+    blocked: string[];
+}
+
+interface FileSizeOptions {
+    default_kb: number;
+    server_kb: number | null;
+    upload_max_filesize: string;
+    post_max_size: string;
+}
+
+const formatKb = (kb: number) => (kb >= 1024 ? `${Math.round((kb / 1024) * 10) / 10} MB` : `${kb} KB`);
+
+/** Accepted upload types: common groups plus any other extensions. */
+function FileTypesControl({ value, options, onChange }: { value: string[]; options: FileTypesOptions; onChange: (v: unknown) => void }) {
+    const selected = value.map((e) => e.toLowerCase().replace(/^\./, ''));
+    const grouped = new Set(options.groups.flatMap((g) => g.extensions));
+    const extra = selected.filter((e) => !grouped.has(e));
+    const [extraText, setExtraText] = React.useState(extra.join(', '));
+
+    const setGroup = (extensions: string[], on: boolean) => {
+        const next = on ? [...new Set([...selected, ...extensions])] : selected.filter((e) => !extensions.includes(e));
+        onChange(next);
+    };
+    const applyExtra = (text: string) => {
+        const typed = text.split(/[\s,]+/).map((e) => e.toLowerCase().replace(/^\./, '')).filter((e) => /^[a-z0-9]{1,10}$/.test(e) && !options.blocked.includes(e));
+        onChange([...new Set([...selected.filter((e) => grouped.has(e)), ...typed])]);
+    };
+    const blockedTyped = extraText.split(/[\s,]+/).map((e) => e.toLowerCase().replace(/^\./, '')).filter((e) => options.blocked.includes(e));
+
+    return (
+        <div className="grid gap-2">
+            <div className="grid gap-1 sm:grid-cols-2">
+                {options.groups.map((g) => {
+                    const on = g.extensions.every((e) => selected.includes(e));
+                    const some = !on && g.extensions.some((e) => selected.includes(e));
+                    return (
+                        <label key={g.key} className="flex items-start gap-2 text-sm">
+                            <Checkbox className="mt-0.5" checked={on ? true : some ? 'indeterminate' : false} onCheckedChange={(c) => setGroup(g.extensions, c === true)} />
+                            <span>
+                                {g.label}
+                                <span className="block text-xs text-muted-foreground">{g.extensions.map((e) => `.${e}`).join(' ')}</span>
+                            </span>
+                        </label>
+                    );
+                })}
+            </div>
+            <div className="grid gap-1">
+                <span className="text-xs text-muted-foreground">Other extensions (comma separated)</span>
+                <Input value={extraText} placeholder="e.g. dwg, psd" onChange={(e) => setExtraText(e.target.value)} onBlur={(e) => applyExtra(e.target.value)} />
+            </div>
+            {blockedTyped.length > 0 && (
+                <p className="text-xs text-destructive">{blockedTyped.map((e) => `.${e}`).join(', ')} can't be accepted: these files could run as code.</p>
+            )}
+            <p className="text-xs text-muted-foreground">
+                {selected.length === 0
+                    ? 'Nothing ticked: any file type is accepted, except ones that could run as code (.php, .html, .js, .exe…).'
+                    : `Accepted: ${selected.map((e) => `.${e}`).join(', ')}. Visitors' file pickers show only these.`}
+            </p>
+        </div>
+    );
+}
+
+/** Maximum upload size in MB (stored in KB), next to this server's own limit. */
+function FileSizeControl({ value, options, onChange }: { value: number | null; options: FileSizeOptions; onChange: (v: unknown) => void }) {
+    const effective = value ?? options.default_kb;
+    const overServer = options.server_kb !== null && effective > options.server_kb;
+
+    return (
+        <div className="grid gap-1.5">
+            <div className="flex items-center gap-2">
+                <Input
+                    type="number"
+                    min={0.1}
+                    step={0.5}
+                    className="w-32"
+                    value={value === null ? '' : Math.round((value / 1024) * 100) / 100}
+                    placeholder={String(Math.round((options.default_kb / 1024) * 100) / 100)}
+                    onChange={(e) => onChange(e.target.value === '' ? null : Math.max(1, Math.round(Number(e.target.value) * 1024)))}
+                />
+                <span className="text-sm text-muted-foreground">MB</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+                Empty uses the site default ({formatKb(options.default_kb)}, <code>sunrice.forms.upload_max_kb</code>).
+            </p>
+            <p className="text-xs text-muted-foreground">
+                This server accepts uploads up to <strong>{options.server_kb === null ? 'no set limit' : formatKb(options.server_kb)}</strong>
+                {' '}(PHP <code>upload_max_filesize</code> = {options.upload_max_filesize || '—'}, <code>post_max_size</code> = {options.post_max_size || '—'}).
+            </p>
+            {overServer && (
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                    That's more than the server accepts, so files over {formatKb(options.server_kb!)} will still be refused. Raise
+                    upload_max_filesize and post_max_size in PHP's settings (php.ini) to allow larger files.
+                </p>
+            )}
+        </div>
+    );
 }
 
 function FieldRow({

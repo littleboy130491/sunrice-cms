@@ -38,7 +38,8 @@
                     <input id="f-{{ $field['handle'] }}" type="checkbox" name="{{ $name }}" value="1" @checked($old)>
                     @break
                 @case('file')
-                    <input id="f-{{ $field['handle'] }}" type="file" name="{{ $name }}" @required($field['required'] ?? false)>
+                    <input id="f-{{ $field['handle'] }}" type="file" name="{{ $name }}" accept="{{ \Sunrice\Fields\Types\File::acceptAttribute($field) }}" @required($field['required'] ?? false)>
+                    <small class="hint">{{ \Sunrice\Fields\Types\File::hint($field) }}</small>
                     @break
                 @default
                     <input id="f-{{ $field['handle'] }}"

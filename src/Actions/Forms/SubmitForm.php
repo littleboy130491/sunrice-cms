@@ -7,6 +7,7 @@ namespace Sunrice\Actions\Forms;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Sunrice\Fields\Types\File;
 use Sunrice\Mail\FormSubmittedNotification;
 use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
@@ -32,7 +33,15 @@ class SubmitForm
             $attributes['data.'.$field['handle']] = (string) (($field['label'] ?? '') ?: str_replace('_', ' ', $field['handle']));
         }
 
-        $data = Validator::make(['data' => $input], $schema->rules('data'), [], $attributes)->validate()['data'];
+        // Upload fields bring their own messages (types, size, server limit).
+        $messages = [];
+        foreach ($schema->fields() as $field) {
+            if (($field['type'] ?? null) === 'file') {
+                $messages += File::messages('data.'.$field['handle'], $field);
+            }
+        }
+
+        $data = Validator::make(['data' => $input], $schema->rules('data'), $messages, $attributes)->validate()['data'];
         $data = $schema->normalize($data);
 
         // Store uploaded files on the private forms disk.

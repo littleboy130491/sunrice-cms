@@ -72,7 +72,7 @@ export default function CollectionsIndex({ collections }: { collections: Collect
                                         size="sm"
                                         className="text-destructive"
                                         onClick={() => {
-                                            if (window.confirm(`Delete "${c.title}" and all its entries?`)) {
+                                            if (window.confirm(`Delete the "${c.title}" collection?\n\nIts entries are hidden from the admin and the site, but kept: create a collection with the handle "${c.handle}" again to bring them back. To erase them for good, run "php artisan sunrice:orphans --purge" on the server.`)) {
                                                 router.delete(adminUrl(`structure/collections/${c.id}`, adminPath));
                                             }
                                         }}

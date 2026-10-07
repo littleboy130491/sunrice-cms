@@ -10,17 +10,14 @@ use Sunrice\Models\Taxonomy;
 class DeleteTaxonomy
 {
     /**
-     * Deletes a taxonomy with its terms and translations.
+     * Soft-deletes a taxonomy. Its terms (and their links to entries) stay
+     * in the database, hidden; creating a taxonomy with the same handle
+     * brings them back. `sunrice:orphans --purge` deletes them for good.
      */
     public function handle(Taxonomy $taxonomy): void
     {
-        foreach ($taxonomy->terms()->withTrashed()->get() as $term) {
-            $term->translations()->delete();
-            $term->entries()->detach();
-            $term->forceDelete();
-        }
-
         $taxonomy->delete();
+
         ContentChanged::dispatch('taxonomy_deleted');
     }
 }

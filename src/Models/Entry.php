@@ -16,6 +16,7 @@ use Sunrice\Database\Factories\EntryFactory;
 use Sunrice\Fields\HydrationContext;
 use Sunrice\Fields\TranslationOverlay;
 use Sunrice\Frontend\UrlGenerator;
+use Sunrice\Models\Scopes\HiddenWithParent;
 use Sunrice\Support\Locales;
 
 /**
@@ -82,6 +83,9 @@ class Entry extends Model
 
     protected static function booted(): void
     {
+        // Hidden while its collection is deleted (see HiddenWithParent).
+        static::addGlobalScope(new HiddenWithParent('collection_id', 'sunrice_collections'));
+
         // New entries go to the end of their collection's manual order.
         static::creating(function (Entry $entry): void {
             if (! $entry->sort_order) {

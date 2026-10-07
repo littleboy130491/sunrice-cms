@@ -7,6 +7,7 @@ namespace Sunrice\Actions\Forms;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Sunrice\Actions\Assets\UploadAsset;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Form;
 use Sunrice\Permissions\SyncPermissions;
@@ -25,6 +26,13 @@ class SaveForm
      */
     public function handle(?Form $form, array $attributes): Form
     {
+        // Accepted file types may come as "pdf, jpg" (older forms): store a list.
+        foreach ($attributes['fields'] ?? [] as $i => $field) {
+            if (is_array($field) && is_string($field['config']['mimes'] ?? null)) {
+                $attributes['fields'][$i]['config']['mimes'] = array_values(array_filter(array_map('trim', explode(',', $field['config']['mimes']))));
+            }
+        }
+
         $validated = Validator::make($attributes, [
             'handle' => [
                 $form === null ? 'required' : 'sometimes',
@@ -39,10 +47,18 @@ class SaveForm
             'fields.*.required' => ['boolean'],
             'fields.*.validation' => ['nullable', 'array'],
             'fields.*.config' => ['nullable', 'array'],
+            // File fields: accepted extensions and size limit.
+            'fields.*.config.mimes' => ['nullable', 'array'],
+            'fields.*.config.mimes.*' => ['string', 'regex:/^\.?[A-Za-z0-9]{1,10}$/', Rule::notIn(UploadAsset::BLOCKED_EXTENSIONS)],
+            'fields.*.config.max_kb' => ['nullable', 'integer', 'min:1', 'max:2097152'],
             'settings' => ['nullable', 'array'],
             'settings.notify_emails' => ['nullable', 'string', 'max:1000'],
             'settings.success_message' => ['nullable', 'string', 'max:1000'],
             'settings.redirect_url' => ['nullable', 'string', 'max:255'],
+        ], [
+            'fields.*.config.mimes.*.regex' => 'Use file extensions such as "pdf" or "jpg".',
+            'fields.*.config.mimes.*.not_in' => '":input" files can\'t be accepted: they could run as code.',
+            'fields.*.config.max_kb.max' => 'The maximum file size can be at most 2 GB.',
         ])->validate();
 
         $form ??= new Form;

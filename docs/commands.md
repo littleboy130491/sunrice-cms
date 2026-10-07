@@ -60,6 +60,7 @@ the current main-language content), `--force` (skip confirmation).
 | --- | --- |
 | `sunrice:publish-scheduled` | Publishes entries whose scheduled time has passed. The scheduler runs it every minute. |
 | `sunrice:rename-field {blueprint} {from} {to}` | Renames a field handle in a blueprint and in all stored entry data. |
+| `sunrice:orphans` | Lists entries and terms kept from deleted collections and taxonomies. `--purge` deletes them permanently (asks first; `--force` skips that), `--handle=` limits it to some handles. See [Content modeling](content-modeling.md#deleting-collections-and-taxonomies). |
 
 ## Images
 

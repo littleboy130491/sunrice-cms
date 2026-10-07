@@ -105,7 +105,13 @@ class RolesController extends Controller
             foreach (array_intersect($validated['permissions'], $known) as $name) {
                 Permission::findOrCreate($name, $guard);
             }
-            $role->syncPermissions($validated['permissions']);
+            // Keep what the editor doesn't show (deleted collections and
+            // taxonomies), so restoring one keeps this role's access.
+            $hidden = array_values(array_diff(
+                array_intersect($role->permissions->pluck('name')->all(), $known),
+                app(PermissionRegistry::class)->visibleNames(),
+            ));
+            $role->syncPermissions(array_values(array_unique([...$validated['permissions'], ...$hidden])));
         }
 
         return back()->with('success', 'Role saved.');

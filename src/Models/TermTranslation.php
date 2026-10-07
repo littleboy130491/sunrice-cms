@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 use Sunrice\Database\Factories\TermTranslationFactory;
+use Sunrice\Models\Scopes\HiddenWithParent;
 
 /**
  * @property int $id
@@ -40,6 +41,12 @@ class TermTranslation extends Model
     protected static function newFactory(): TermTranslationFactory
     {
         return TermTranslationFactory::new();
+    }
+
+    protected static function booted(): void
+    {
+        // Hidden while its taxonomy is deleted (see HiddenWithParent).
+        static::addGlobalScope(new HiddenWithParent('taxonomy_id', 'sunrice_taxonomies'));
     }
 
     /** @return BelongsTo<Term, $this> */

@@ -16,4 +16,10 @@ return [
     'footer_menu' => 'Footer',
     'submit' => 'Kirim',
     'thank_you' => 'Terima kasih!',
+    'upload_failed' => 'Berkas tidak dapat diunggah. Mungkin ukurannya lebih dari :size.',
+    'upload_type' => 'Jenis berkas ini tidak diterima. Unggah berkas: :types.',
+    'upload_type_blocked' => 'Jenis berkas ini tidak diterima.',
+    'upload_size' => 'Berkas terlalu besar. Maksimal :size.',
+    'upload_hint' => 'Format: :types. Maksimal :size.',
+    'upload_hint_any' => 'Maksimal :size.',
 ];

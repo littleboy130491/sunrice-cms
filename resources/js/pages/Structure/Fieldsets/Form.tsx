@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import FieldBuilder, { BuilderField, FieldTypeDef } from '@/components/field-builder/FieldBuilder';
 import { adminUrl } from '@/lib/route';
 import type { SharedProps } from '@/types';
+import { HandleChangeWarning } from '@/components/app/handle-change-warning';
 
 interface Props {
     fieldset: { id: number; handle: string; title: string; fields: BuilderField[] } | null;
@@ -48,6 +49,7 @@ export default function FieldsetForm({ fieldset, fieldTypes, fieldsets }: Props)
                     <Label htmlFor="handle">Handle</Label>
                     <Input id="handle" value={handle} onChange={(e) => setHandle(e.target.value)} required />
                     {errors.handle && <p className="text-sm text-destructive">{errors.handle}</p>}
+                    <HandleChangeWarning kind="fieldset" original={fieldset?.handle} current={handle} />
                 </div>
             </div>
             <div className="grid gap-2">

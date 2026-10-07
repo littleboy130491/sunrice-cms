@@ -10,12 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
 use Inertia\Response;
+use Sunrice\Actions\Taxonomies\DeleteTaxonomy;
 use Sunrice\Actions\Taxonomies\SaveTaxonomy;
-use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Taxonomy;
-use Sunrice\Permissions\SyncPermissions;
 
 class TaxonomiesController extends Controller
 {
@@ -52,8 +51,12 @@ class TaxonomiesController extends Controller
     {
         $taxonomy = app(SaveTaxonomy::class)->handle($request->all());
 
-        return redirect()->route('sunrice.admin.structure.taxonomies.index')
-            ->with('success', "Taxonomy \"{$taxonomy->title}\" created.");
+        // Same handle as a deleted taxonomy: it came back with its terms.
+        $message = $taxonomy->wasRecentlyCreated
+            ? "Taxonomy \"{$taxonomy->title}\" created."
+            : "Taxonomy \"{$taxonomy->title}\" restored with its ".trans_choice('{0} no terms|{1} 1 term|[2,*] :count terms', $taxonomy->terms()->count()).'.';
+
+        return redirect()->route('sunrice.admin.structure.taxonomies.index')->with('success', $message);
     }
 
     public function edit(Taxonomy $taxonomy): Response
@@ -71,12 +74,10 @@ class TaxonomiesController extends Controller
 
     public function destroy(Taxonomy $taxonomy): RedirectResponse
     {
-        $taxonomy->delete();
-        app(SyncPermissions::class)->handle();
-        ContentChanged::dispatch('taxonomy_deleted');
+        app(DeleteTaxonomy::class)->handle($taxonomy);
 
         return redirect()->route('sunrice.admin.structure.taxonomies.index')
-            ->with('success', "Taxonomy \"{$taxonomy->title}\" deleted.");
+            ->with('success', "Taxonomy \"{$taxonomy->title}\" deleted. Its terms are hidden, not erased: create a taxonomy with the handle \"{$taxonomy->handle}\" to bring them back.");
     }
 
     protected function form(?Taxonomy $taxonomy): Response

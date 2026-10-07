@@ -60,8 +60,12 @@ class CollectionsController extends Controller
     {
         $collection = $save->handle($request->all());
 
-        return redirect()->route('sunrice.admin.structure.collections.index')
-            ->with('success', "Collection \"{$collection->title}\" created.");
+        // Same handle as a deleted collection: it came back with its entries.
+        $message = $collection->wasRecentlyCreated
+            ? "Collection \"{$collection->title}\" created."
+            : "Collection \"{$collection->title}\" restored with its ".trans_choice('{0} no entries|{1} 1 entry|[2,*] :count entries', $collection->entries()->count()).'.';
+
+        return redirect()->route('sunrice.admin.structure.collections.index')->with('success', $message);
     }
 
     public function edit(Collection $collection): Response
@@ -87,7 +91,7 @@ class CollectionsController extends Controller
     {
         $delete->handle($collection);
 
-        return back()->with('success', "Collection \"{$collection->title}\" deleted.");
+        return back()->with('success', "Collection \"{$collection->title}\" deleted. Its entries are hidden, not erased: create a collection with the handle \"{$collection->handle}\" to bring them back.");
     }
 
     public function reorder(Request $request, Reorder $reorder): RedirectResponse
