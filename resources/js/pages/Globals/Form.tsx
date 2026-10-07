@@ -147,46 +147,49 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
                     </CollapsibleCard>
                     <Button onClick={submitMeta} className="w-32" disabled={processing}>{processing ? 'Saving…' : 'Save'}</Button>
 
-                    <details className="rounded-md border p-4">
-                        <summary className="cursor-pointer text-sm font-medium">Global settings</summary>
-                        <div className="mt-4 flex flex-col gap-4">
-                            <div className="grid gap-2">
-                                <Label>Title</Label>
-                                <Input value={meta.title} onChange={(e) => setMeta({ ...meta, title: e.target.value })} />
-                                <InputError message={errors.title} />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label>Blueprint</Label>
-                                <Select value={String(meta.blueprint_id || '')} onValueChange={(v) => setMeta({ ...meta, blueprint_id: Number(v) })}>
-                                    <SelectTrigger className="w-64"><SelectValue placeholder="Choose…" /></SelectTrigger>
-                                    <SelectContent>
-                                        {blueprints.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.title}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <InputError message={errors.blueprint_id} />
-                            </div>
-                            <label className="flex items-center gap-2 text-sm">
-                                <Checkbox checked={meta.translatable} onCheckedChange={(c) => setMeta({ ...meta, translatable: !!c })} />
-                                Translatable
-                            </label>
-                            <Button
-                                variant="outline"
-                                className="w-40"
-                                disabled={processing}
-                                onClick={() => router.put(adminUrl(`globals/${globalSet.id}/meta`, adminPath), {
-                                    title: meta.title, blueprint_id: meta.blueprint_id, translatable: meta.translatable,
-                                }, {
-                                    preserveScroll: true,
-                                    onStart: () => setProcessing(true),
-                                    onFinish: () => setProcessing(false),
-                                    onSuccess: () => setErrors({}),
-                                    onError: (e) => setErrors(e),
-                                })}
-                            >
-                                Save settings
-                            </Button>
+                    <CollapsibleCard
+                        title="Settings"
+                        description="Title, blueprint and languages of this global set."
+                        storageKey="global:settings"
+                        defaultOpen={false}
+                        contentClassName="flex flex-col gap-4"
+                    >
+                        <div className="grid gap-2">
+                            <Label>Title</Label>
+                            <Input value={meta.title} onChange={(e) => setMeta({ ...meta, title: e.target.value })} />
+                            <InputError message={errors.title} />
                         </div>
-                    </details>
+                        <div className="grid gap-2">
+                            <Label>Blueprint</Label>
+                            <Select value={String(meta.blueprint_id || '')} onValueChange={(v) => setMeta({ ...meta, blueprint_id: Number(v) })}>
+                                <SelectTrigger className="w-64"><SelectValue placeholder="Choose…" /></SelectTrigger>
+                                <SelectContent>
+                                    {blueprints.map((b) => <SelectItem key={b.id} value={String(b.id)}>{b.title}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                            <InputError message={errors.blueprint_id} />
+                        </div>
+                        <label className="flex items-center gap-2 text-sm">
+                            <Checkbox checked={meta.translatable} onCheckedChange={(c) => setMeta({ ...meta, translatable: !!c })} />
+                            Translatable
+                        </label>
+                        <Button
+                            variant="outline"
+                            className="w-40"
+                            disabled={processing}
+                            onClick={() => router.put(adminUrl(`globals/${globalSet.id}/meta`, adminPath), {
+                                title: meta.title, blueprint_id: meta.blueprint_id, translatable: meta.translatable,
+                            }, {
+                                preserveScroll: true,
+                                onStart: () => setProcessing(true),
+                                onFinish: () => setProcessing(false),
+                                onSuccess: () => setErrors({}),
+                                onError: (e) => setErrors(e),
+                            })}
+                        >
+                            Save settings
+                        </Button>
+                    </CollapsibleCard>
                 </>
             )}
         </div>
