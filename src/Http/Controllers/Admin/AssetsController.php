@@ -117,10 +117,10 @@ class AssetsController extends Controller
 
             return match ($u['source_type']) {
                 'entry' => ($t = EntryTranslation::query()->with('entry.collection')->find($id)) !== null
-                    ? ['type' => $t->entry?->collection?->title ?? 'Entry', 'label' => $t->title.' ('.strtoupper($t->locale).')', 'href' => route('sunrice.admin.entries.edit', $t->entry_id)]
+                    ? ['type' => $t->entry->collection->title ?? 'Entry', 'label' => $t->title.' ('.strtoupper($t->locale).')', 'href' => route('sunrice.admin.entries.edit', $t->entry_id)]
                     : ['type' => 'Entry', 'label' => 'Deleted entry', 'href' => null],
                 'term' => ($t = TermTranslation::query()->with('term.taxonomy')->find($id)) !== null
-                    ? ['type' => $t->term?->taxonomy?->title ?? 'Term', 'label' => $t->name.' ('.strtoupper($t->locale).')', 'href' => route('sunrice.admin.terms.edit', $t->term_id)]
+                    ? ['type' => $t->term->taxonomy->title ?? 'Term', 'label' => $t->name.' ('.strtoupper($t->locale).')', 'href' => route('sunrice.admin.terms.edit', $t->term_id)]
                     : ['type' => 'Term', 'label' => 'Deleted term', 'href' => null],
                 'global' => ($v = GlobalValue::query()->with('globalSet')->find($id)) !== null
                     ? ['type' => 'Globals', 'label' => (string) $v->globalSet?->title, 'href' => route('sunrice.admin.globals.edit', $v->global_id)]

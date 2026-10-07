@@ -75,7 +75,7 @@ class UsersController extends Controller
                 'id' => $user->getKey(),
                 'name' => $user->getAttribute('name'),
                 'email' => $user->getAttribute('email'),
-                'roles' => $user->roles->pluck('name'),
+                'roles' => collect($user->getAttribute('roles'))->pluck('name'),
                 'content' => DeleteUser::counts($user),
                 'is_self' => (string) $user->getKey() === (string) request()->user()->getAuthIdentifier(),
             ],
