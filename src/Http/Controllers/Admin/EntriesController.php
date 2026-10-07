@@ -32,6 +32,7 @@ use Sunrice\Actions\Entries\TrashEntry;
 use Sunrice\Actions\Entries\UnpublishEntry;
 use Sunrice\Actions\Support\Reorder;
 use Sunrice\Admin\Export\CsvExporter;
+use Sunrice\Admin\RelatedLinks;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Admin\Table\EntryFieldColumns;
 use Sunrice\Admin\Table\TableQuery;
@@ -677,6 +678,7 @@ class EntriesController extends Controller
             ),
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
             // Hierarchical collections: entries this one can be placed under.
+            'related' => RelatedLinks::forEntry($collection->loadMissing(['taxonomies', 'blueprint']), $entry),
             'parentOptions' => $collection->isHierarchical() ? $this->parentOptions($collection, $entry) : null,
             'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title') + [
                 'single' => in_array($t->id, array_map('intval', (array) $collection->setting('single_term_taxonomies', [])), true),

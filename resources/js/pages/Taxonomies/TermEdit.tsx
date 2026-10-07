@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { RelatedMenu, type RelatedLink } from '@/components/app/related-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,6 +41,8 @@ interface Props {
     mainLocale: string;
     blueprint: AdminTab[] | null;
     can: { edit: boolean; delete: boolean };
+    /** Pages to jump to from the ⋮ menu. */
+    related?: RelatedLink[];
 }
 
 interface TermForm {
@@ -58,7 +61,7 @@ const initialForm = (term: Props['term'], locales: string[]): TermForm => ({
 });
 
 /** Create or edit a term: content and SEO per language, parent and template. */
-export default function TermEdit({ taxonomy, term, parents, locales, mainLocale, blueprint, can: allowed }: Props) {
+export default function TermEdit({ taxonomy, term, parents, locales, mainLocale, blueprint, can: allowed, related }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
     const isNew = term === null;
@@ -156,6 +159,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                     {allowed.edit && (
                         <Button type="submit" disabled={processing}>{processing ? 'Saving…' : isNew ? 'Create term' : 'Save'}</Button>
                     )}
+                    <RelatedMenu links={related} />
                 </div>
             </div>
 

@@ -16,6 +16,7 @@ use Inertia\Response;
 use Sunrice\Actions\Support\Reorder;
 use Sunrice\Actions\Taxonomies\SaveTerm;
 use Sunrice\Actions\Taxonomies\TrashTerm;
+use Sunrice\Admin\RelatedLinks;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Taxonomy;
@@ -238,6 +239,7 @@ class TermsController extends Controller
             'locales' => Locales::available(),
             'mainLocale' => $main,
             'blueprint' => $taxonomy->blueprint?->schema()->toAdminTabs(),
+            'related' => RelatedLinks::forTerm($taxonomy->loadMissing(['collections', 'blueprint']), $term),
             'can' => [
                 'edit' => $term === null || $user->can('update', $term),
                 'delete' => $term !== null && $user->can('delete', $term),

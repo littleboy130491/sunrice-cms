@@ -17,6 +17,7 @@ import { useBreadcrumbs } from '@/components/app/breadcrumbs';
 import FieldRenderer from '@/fields/FieldRenderer';
 import TermsField from '@/fields/TermsField';
 import { TemplateHelp } from '@/components/app/template-help';
+import { RelatedMenu, type RelatedLink } from '@/components/app/related-menu';
 import { TranslationModeProvider } from '@/fields/translation-mode';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
@@ -54,6 +55,8 @@ interface Props {
     blueprints: { id: number; title: string }[];
     /** Hierarchical collections: entries this one can go under (tree order). */
     parentOptions?: { id: number; title: string; depth: number }[] | null;
+    /** Pages to jump to from the ⋮ menu. */
+    related?: RelatedLink[];
     taxonomies: { id: number; handle: string; title: string; single?: boolean }[];
     locales: string[];
     mainLocale?: string;
@@ -81,7 +84,7 @@ function flatFields(tabs: AdminTab[] | null): AdminField[] {
     return (tabs ?? []).flatMap((t) => t.fields ?? []);
 }
 
-export default function EntryEdit({ collection, entry, blueprint, blueprints, parentOptions, taxonomies, locales, mainLocale = locales[0], can: allowed }: Props) {
+export default function EntryEdit({ collection, entry, blueprint, blueprints, parentOptions, related, taxonomies, locales, mainLocale = locales[0], can: allowed }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
     const isNew = entry === null;
@@ -280,6 +283,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                         </div>
                     </div>
                 </div>
+                {isNew && <RelatedMenu links={related} />}
                 {!isNew && (
                     <div className="flex items-center gap-2">
                         {current.url && (current.is_live || allowed?.view_drafts) && (
@@ -338,6 +342,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                             </DropdownMenuContent>
                         </DropdownMenu>
                         )}
+                        <RelatedMenu links={related} />
                     </div>
                 )}
             </div>
