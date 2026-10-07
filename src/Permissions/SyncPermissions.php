@@ -6,13 +6,17 @@ namespace Sunrice\Permissions;
 
 use Spatie\Permission\Contracts\Permission as PermissionContract;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use Sunrice\Database\Seeders\RolesSeeder;
 
 /**
  * Creates missing Sunrice permissions and deletes entity-scoped
  * permissions whose collection/taxonomy/form/resource is gone.
  * Permissions replaced by finer ones (PermissionRegistry::LEGACY) are
- * handed on to the roles and users that held them, then removed.
+ * handed on to the roles and users that held them, then removed. Global
+ * permissions added by an upgrade go to the default roles whose patterns
+ * cover them (e.g. Administrator's `sunrice.*`).
  * Called by the structure actions and `sunrice:sync-permissions`.
  */
 class SyncPermissions
@@ -43,6 +47,7 @@ class SyncPermissions
             $created[$name] = Permission::create(['name' => $name, 'guard_name' => $guard]);
         }
         $this->carryOverLegacy($created, $existing, $guard);
+        $this->grantNewGlobalsToDefaultRoles($created, $existing, $guard);
         if ($toDelete !== []) {
             Permission::query()->where('guard_name', $guard)->whereIn('name', $toDelete)->delete();
         }
@@ -50,6 +55,40 @@ class SyncPermissions
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         return ['created' => count($toCreate), 'deleted' => count($toDelete)];
+    }
+
+    /**
+     * Give global permissions added by an upgrade to the existing default
+     * roles whose seeder patterns cover them, so e.g. Administrator sees a
+     * new admin section without re-running `sunrice:seed-roles`. Skipped on
+     * a fresh install (seeding grants everything) and for replacements of
+     * legacy permissions (carryOverLegacy follows who actually held those).
+     *
+     * @param  array<string, PermissionContract>  $created
+     * @param  array<int, string>  $existing
+     */
+    protected function grantNewGlobalsToDefaultRoles(array $created, array $existing, string $guard): void
+    {
+        if ($existing === []) {
+            return;
+        }
+
+        $replacements = array_merge(...array_values(PermissionRegistry::LEGACY));
+        $new = array_values(array_diff(
+            array_intersect(array_keys($created), array_column($this->registry->global(), 'name')),
+            $replacements,
+        ));
+        if ($new === []) {
+            return;
+        }
+
+        foreach ((new RolesSeeder)->roles() as $roleName => $patterns) {
+            $role = Role::query()->where('name', $roleName)->where('guard_name', $guard)->first();
+            $names = RolesSeeder::match($new, $patterns);
+            if ($role !== null && $names !== []) {
+                $role->givePermissionTo($names);
+            }
+        }
     }
 
     /**

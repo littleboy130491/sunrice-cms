@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use Inertia\Testing\AssertableInertia as Assert;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Sunrice\Admin\Navigation;
+use Sunrice\Database\Seeders\RolesSeeder;
 use Sunrice\Http\Controllers\Admin\DocsController;
 use Sunrice\Permissions\SyncPermissions;
 use Workbench\App\Models\User;
@@ -72,4 +75,21 @@ it('404s for unknown guides', function () {
     docsUser(['sunrice.docs.view']);
 
     get('/cms/docs/nope')->assertNotFound();
+});
+
+it('gives the docs permission to the existing Administrator role on upgrade', function () {
+    (new RolesSeeder)->run();
+    $custom = Role::findOrCreate('Support', 'web');
+    $custom->givePermissionTo('sunrice.access-admin');
+
+    // An install from before the permission existed.
+    Permission::findByName('sunrice.docs.view', 'web')->delete();
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    app(SyncPermissions::class)->handle();
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+    expect(Role::findByName('Administrator', 'web')->hasPermissionTo('sunrice.docs.view'))->toBeTrue()
+        ->and(Role::findByName('Editor', 'web')->hasPermissionTo('sunrice.docs.view'))->toBeFalse()
+        ->and($custom->fresh()->hasPermissionTo('sunrice.docs.view'))->toBeFalse();
 });
