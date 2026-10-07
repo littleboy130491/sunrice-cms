@@ -32,8 +32,9 @@ class MenuBuilder
         // Only the structure is cached; the active state depends on the
         // current request, so it is applied to every read.
         // Cached as arrays: sites may refuse objects from the cache.
-        $nodes = collect(ContentCache::remember('menu:'.$handle, fn () => $this->buildMenu($handle, $locale)->map->toArray()->all(), $locale))
-            ->map(fn (array $node) => MenuNode::fromArray($node));
+        /** @var array<int, array<string, mixed>> $cached */
+        $cached = ContentCache::remember('menu:'.$handle, fn () => $this->buildMenu($handle, $locale)->map->toArray()->all(), $locale);
+        $nodes = collect($cached)->map(fn (array $node) => MenuNode::fromArray($node));
 
         return $this->withActiveState($nodes, '/'.trim((string) request()->path(), '/'));
     }

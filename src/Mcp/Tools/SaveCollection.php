@@ -32,7 +32,7 @@ class SaveCollection extends SunriceTool
         $collection = Collection::query()->where('handle', $args['handle'])->first();
         $this->authorize($collection === null ? 'create' : 'update', $collection ?? Collection::class);
 
-        $attributes = ['handle' => $args['handle'], 'title' => $args['title'] ?? $collection?->title ?? ucfirst($args['handle'])];
+        $attributes = ['handle' => $args['handle'], 'title' => $args['title'] ?? ($collection === null ? ucfirst($args['handle']) : $collection->title)];
         if (array_key_exists('blueprint', $args)) {
             $blueprint = $args['blueprint'] ? $this->findByHandle(Blueprint::class, $args['blueprint']) : null;
             if ($args['blueprint'] && $blueprint === null) {

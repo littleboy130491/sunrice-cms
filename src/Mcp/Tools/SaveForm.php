@@ -29,8 +29,8 @@ class SaveForm extends SunriceTool
 
         $saved = app(SaveFormAction::class)->handle($form, [
             'handle' => $args['handle'],
-            'title' => $args['title'] ?? $form?->title ?? ucfirst($args['handle']),
-            'fields' => $args['fields'] ?? $form?->fields ?? [],
+            'title' => $args['title'] ?? ($form === null ? ucfirst($args['handle']) : $form->title),
+            'fields' => $args['fields'] ?? ($form === null ? [] : $form->fields),
             'settings' => array_merge($form === null ? [] : ($form->settings ?? []), $args['settings'] ?? []),
         ]);
 

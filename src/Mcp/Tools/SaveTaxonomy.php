@@ -34,8 +34,8 @@ class SaveTaxonomy extends SunriceTool
 
         $attributes = [
             'handle' => $args['handle'],
-            'title' => $args['title'] ?? $taxonomy?->title ?? ucfirst($args['handle']),
-            'hierarchical' => $args['hierarchical'] ?? (bool) ($taxonomy?->hierarchical ?? false),
+            'title' => $args['title'] ?? ($taxonomy === null ? ucfirst($args['handle']) : $taxonomy->title),
+            'hierarchical' => $args['hierarchical'] ?? ($taxonomy !== null && $taxonomy->hierarchical),
             'blueprint_id' => $taxonomy?->blueprint_id,
             'settings' => array_merge($taxonomy === null ? [] : ($taxonomy->settings ?? []), $args['settings'] ?? []),
         ];

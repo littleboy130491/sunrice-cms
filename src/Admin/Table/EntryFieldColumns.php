@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sunrice\Admin\Table;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Sunrice\Fields\CustomField;
 use Sunrice\Fields\FieldRegistry;
@@ -125,7 +126,7 @@ class EntryFieldColumns
      * Load the titles, names and file names the shown reference fields
      * point at, for a page of entries (one query per kind).
      *
-     * @param  iterable<Entry>  $entries
+     * @param  iterable<Model>  $entries
      * @param  array<int, string>  $keys  visible column keys
      */
     public function preload(iterable $entries, array $keys): void
@@ -143,6 +144,9 @@ class EntryFieldColumns
                 continue;
             }
             foreach ($entries as $entry) {
+                if (! $entry instanceof Entry) {
+                    continue;
+                }
                 $value = $this->rawValue($entry, $handle);
                 if ($kind === 'link') {
                     if (is_array($value) && is_numeric($value['entry_id'] ?? null)) {

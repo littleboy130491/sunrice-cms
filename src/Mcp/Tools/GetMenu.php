@@ -32,7 +32,7 @@ class GetMenu extends SunriceTool
             'title' => $menu->title,
             'items' => $menu->items()->orderBy('sort_order')->get()->map(fn (MenuItem $i) => $i->only('id', 'parent_id', 'sort_order', 'type', 'target_id', 'url', 'labels', 'new_tab'))->all(),
             'rendered' => app(MenuBuilder::class)->build($menu->handle)->map->toArray()->all(),
-            'template_usage' => "@foreach (sunrice_menu('{$menu->handle}') as $item) … $item->label, $item->url, $item->isActive, $item->children",
+            'template_usage' => "@foreach (sunrice_menu('{$menu->handle}') as \$item) … \$item->label, \$item->url, \$item->isActive, \$item->children",
         ]);
     }
 

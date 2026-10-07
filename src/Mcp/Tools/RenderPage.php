@@ -38,7 +38,9 @@ class RenderPage extends SunriceTool
         $user = $guard->user();
         $original = app('request');
         try {
-            $guard->forgetUser();
+            if (method_exists($guard, 'forgetUser')) {
+                $guard->forgetUser();
+            }
             $response = app(Kernel::class)->handle(HttpRequest::create($args['path'], 'GET'));
         } catch (Throwable $e) {
             return Response::error('Rendering failed: '.$e->getMessage());
@@ -51,7 +53,7 @@ class RenderPage extends SunriceTool
 
         $html = (string) $response->getContent();
         $max = (int) ($args['max_length'] ?? 60000);
-        $exception = property_exists($response, 'exception') ? $response->exception : null;
+        $exception = $response->exception;
 
         return $this->json([
             'status' => $response->getStatusCode(),

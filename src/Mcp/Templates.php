@@ -98,7 +98,9 @@ class Templates
     {
         try {
             $php = Blade::compileString($blade);
-            token_get_all($php, TOKEN_PARSE);
+            // Throws a ParseError on invalid PHP.
+            $tokens = token_get_all($php, TOKEN_PARSE);
+            unset($tokens);
         } catch (Throwable $e) {
             return $e->getMessage().' (line '.$e->getLine().' of the compiled template)';
         }

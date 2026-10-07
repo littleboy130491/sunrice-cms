@@ -34,7 +34,7 @@ class SaveTerm extends SunriceTool
         if (! empty($args['id']) && $term === null) {
             return $this->notFound('Term');
         }
-        $taxonomy = $term?->taxonomy ?? $this->taxonomy($args['taxonomy'] ?? null);
+        $taxonomy = $term === null ? $this->taxonomy($args['taxonomy'] ?? null) : $term->taxonomy;
         if ($taxonomy === null) {
             return $this->notFound('Taxonomy');
         }
@@ -54,7 +54,7 @@ class SaveTerm extends SunriceTool
 
         // Languages not sent keep their current values.
         $translations = [];
-        foreach ($term?->translations ?? [] as $t) {
+        foreach ($term === null ? [] : $term->translations as $t) {
             $translations[$t->locale] = ['title' => $t->name, 'slug' => $t->slug, 'data' => $t->data ?? [], 'seo' => $t->seo ?? []];
         }
         foreach ((array) ($args['translations'] ?? []) as $locale => $t) {
