@@ -34,7 +34,7 @@ class SitemapBuilder
             return $sitemap->render();
         }
 
-        Collection::query()->with('entries.translations')->get()->each(function (Collection $collection) use ($sitemap, $urls): void {
+        Collection::query()->get()->each(function (Collection $collection) use ($sitemap, $urls): void {
             if ($collection->setting('has_archive')) {
                 foreach (Locales::available() as $locale) {
                     $sitemap->add(Url::create(url($urls->archive($collection, $locale))));
@@ -45,8 +45,10 @@ class SitemapBuilder
                 return;
             }
 
-            $collection->entries()->published()->with('translations')->get()
-                ->each(function ($entry) use ($sitemap, $urls): void {
+            // Streamed in chunks: a big site doesn't load every entry at once.
+            $collection->entries()->published()->with('translations')->lazyById(200)
+                ->each(function ($entry) use ($sitemap, $urls, $collection): void {
+                    $entry->setRelation('collection', $collection);
                     foreach (Locales::available() as $locale) {
                         $resolved = $entry->translation($locale);
                         if (! Locales::isMain($locale) && ! $resolved?->is_ready) {
@@ -63,12 +65,13 @@ class SitemapBuilder
                 });
         });
 
-        Taxonomy::query()->with('terms.translations')->get()->each(function (Taxonomy $taxonomy) use ($sitemap, $urls): void {
+        Taxonomy::query()->get()->each(function (Taxonomy $taxonomy) use ($sitemap, $urls): void {
             if (! $taxonomy->setting('has_archive')) {
                 return;
             }
             $routes = $taxonomy->termRoutes();
-            $taxonomy->terms()->with('translations')->get()->each(function ($term) use ($sitemap, $urls, $routes): void {
+            $taxonomy->terms()->with('translations')->lazyById(200)->each(function ($term) use ($sitemap, $urls, $routes, $taxonomy): void {
+                $term->setRelation('taxonomy', $taxonomy);
                 foreach (Locales::available() as $locale) {
                     $resolved = $term->translation($locale);
                     if (! Locales::isMain($locale) && $resolved === null) {

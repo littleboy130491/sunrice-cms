@@ -7,6 +7,7 @@ namespace Sunrice\Fields\Types;
 use Sunrice\Fields\FieldType;
 use Sunrice\Fields\HydrationContext;
 use Sunrice\Models\Collection;
+use Sunrice\Support\SafeUrl;
 
 /**
  * Internal (entry) or external link. Stored:
@@ -29,7 +30,12 @@ class Link extends FieldType
 
     public function rules(array $field): array
     {
-        return ['array'];
+        return ['array', function (string $attribute, mixed $value, \Closure $fail): void {
+            $url = is_array($value) ? ($value['url'] ?? null) : null;
+            if (is_string($url) && ! SafeUrl::isSafe($url)) {
+                $fail('Use a web address (https://…), a path on this site (/about), mailto: or tel:.');
+            }
+        }];
     }
 
     public function normalize(mixed $value, array $field): mixed
@@ -55,7 +61,8 @@ class Link extends FieldType
             return null;
         }
 
-        $url = $value['url'] ?? null;
+        // Saved before URLs were checked: never print an unsafe scheme.
+        $url = is_string($value['url'] ?? null) ? SafeUrl::orNull($value['url']) : null;
         $label = ($value['label'] ?? null) ?: null;
         $entryId = $value['entry_id'] ?? $value['entry'] ?? null;
         if (($value['type'] ?? null) === 'entry' && $entryId) {

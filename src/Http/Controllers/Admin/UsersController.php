@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
@@ -102,6 +103,9 @@ class UsersController extends Controller
 
         $this->guardSuperAdminRole($request, [], $validated['roles'] ?? []);
 
+        // Hashed here: the host's User model may not have the "hashed"
+        // cast (which skips values that are already hashed anyway).
+        $validated['password'] = Hash::make($validated['password']);
         $model = config('sunrice.auth.user_model');
         $user = $model::create(Arr::except($validated, 'roles'));
         $user->syncRoles($validated['roles'] ?? []);
@@ -125,6 +129,8 @@ class UsersController extends Controller
 
         if (empty($validated['password'])) {
             unset($validated['password']);
+        } else {
+            $validated['password'] = Hash::make($validated['password']);
         }
         // Check the role change before saving anything, so a refused
         // change doesn't leave the other fields half-saved.

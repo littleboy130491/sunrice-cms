@@ -40,6 +40,7 @@ use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
 use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\Revision;
+use Sunrice\Rules\ValidSlug;
 use Sunrice\Support\Locales;
 use Sunrice\Support\SlugValidator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -215,7 +216,7 @@ class EntriesController extends Controller
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'slug' => [
-                'nullable', 'string', 'max:255',
+                'nullable', 'string', 'max:255', new ValidSlug,
                 Rule::unique('sunrice_entry_translations', 'slug')
                     ->where(fn ($q) => $q->where('collection_id', $collection->id)->where('locale', Locales::main())),
             ],
@@ -252,11 +253,13 @@ class EntriesController extends Controller
         // the translate permission.
         $this->authorize(Locales::isMain((string) $request->input('locale', Locales::main())) ? 'update' : 'translate', $entry);
 
+        $existing = $entry->translations()->where('locale', (string) $request->input('locale', Locales::main()))->first();
         $validated = $request->validate([
             'locale' => ['required', 'string', 'max:10'],
             'title' => ['required', 'string', 'max:255'],
             'slug' => [
                 'nullable', 'string', 'max:255',
+                new ValidSlug([$existing?->slug, $existing?->draft['slug'] ?? null]),
                 Rule::unique('sunrice_entry_translations', 'slug')
                     ->where(fn ($q) => $q
                         ->where('collection_id', $entry->collection_id)

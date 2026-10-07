@@ -12,6 +12,7 @@ use Illuminate\Validation\ValidationException;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Jobs\GenerateImageSizes;
 use Sunrice\Models\Asset;
+use Sunrice\Support\SafeSvg;
 
 /**
  * Validates size/mime, stores the file on the configured disk under
@@ -113,6 +114,13 @@ class UploadAsset
         if (in_array($extension, static::BLOCKED_EXTENSIONS, true) || ! in_array($extension, static::allowedExtensions(), true)) {
             throw ValidationException::withMessages([
                 'file' => ".{$extension} files can't be uploaded. Allowed: ".implode(', ', static::allowedExtensions()).'.',
+            ]);
+        }
+
+        // Served from the site's own domain: an SVG must not be able to run script.
+        if (($extension === 'svg' || str_contains((string) $file->getMimeType(), 'svg')) && ! SafeSvg::isSafe((string) $file->getContent())) {
+            throw ValidationException::withMessages([
+                'file' => 'This SVG contains scripts or links that could run code, so it can\'t be uploaded. Export it again without scripts, or upload a PNG.',
             ]);
         }
     }

@@ -76,7 +76,7 @@ class FormSubmission extends Model
                 continue;
             }
             $path = $this->data[$field['handle']] ?? null;
-            if (is_string($path) && str_starts_with($path, $prefix) && $disk->exists($path)) {
+            if (is_string($path) && str_starts_with($path, $prefix) && ! str_contains($path, '..') && $disk->exists($path)) {
                 $disk->delete($path);
             }
         }

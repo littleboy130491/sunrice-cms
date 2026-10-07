@@ -31,16 +31,14 @@ class PasswordResetController extends Controller
     {
         $request->validate(['email' => ['required', 'email']]);
 
-        $status = Password::broker()->sendResetLink(
+        Password::broker()->sendResetLink(
             $request->only('email'),
             fn ($user, string $token) => $user->notify(new ResetAdminPassword($token)),
         );
 
-        if ($status !== Password::RESET_LINK_SENT) {
-            throw ValidationException::withMessages(['email' => [__($status)]]);
-        }
-
-        return back()->with('success', __($status));
+        // The same answer whether or not the address has an account (or was
+        // just sent a link), so the form can't be used to find admin emails.
+        return back()->with('success', __('If an account exists for that email, a password reset link is on its way.'));
     }
 
     public function edit(Request $request, string $token): Response

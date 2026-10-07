@@ -10,10 +10,21 @@ use Sunrice\Support\SlugValidator;
 
 class ValidSlug implements ValidationRule
 {
+    /**
+     * @param  array<mixed>  $current  Slugs the record already has: saving
+     *                                 one unchanged is always allowed, so
+     *                                 older slugs don't block other edits.
+     */
+    public function __construct(protected array $current = []) {}
+
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
+        if (is_string($value) && in_array($value, $this->current, true)) {
+            return;
+        }
+
         if (! is_string($value) || ! SlugValidator::isValid($value)) {
-            $fail('The :attribute must be a lowercase kebab-case slug that does not collide with a locale or the admin path.');
+            $fail('The :attribute may only use lowercase letters, numbers and dashes (like "my-page"), and can\'t be a language code or the admin path.');
         }
     }
 }

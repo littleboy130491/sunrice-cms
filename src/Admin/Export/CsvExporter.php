@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Response;
 use Spatie\SimpleExcel\SimpleExcelWriter;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Admin\Table\TableQuery;
+use Sunrice\Support\CsvCell;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -49,10 +50,10 @@ class CsvExporter
                 return $value ? 'true' : 'false';
             }
             if (is_array($value) || is_object($value)) {
-                return (string) json_encode($value, JSON_UNESCAPED_UNICODE);
+                return (string) CsvCell::safe((string) json_encode($value, JSON_UNESCAPED_UNICODE));
             }
 
-            return (string) ($value ?? '');
+            return (string) CsvCell::safe((string) ($value ?? ''));
         }, $columns);
     }
 

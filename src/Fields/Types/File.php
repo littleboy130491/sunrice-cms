@@ -25,8 +25,11 @@ class File extends FieldType
         if ($mimes = $field['config']['mimes'] ?? null) {
             $rules[] = 'mimes:'.(is_array($mimes) ? implode(',', $mimes) : $mimes);
         }
-        if ($max = $field['config']['max_kb'] ?? null) {
-            $rules[] = 'max:'.$max;
+        // A public form shouldn't take files of any size: fields without
+        // their own limit get the configured default.
+        $max = ($field['config']['max_kb'] ?? null) ?: config('sunrice.forms.upload_max_kb', 10240);
+        if ($max) {
+            $rules[] = 'max:'.(int) $max;
         }
 
         return $rules;

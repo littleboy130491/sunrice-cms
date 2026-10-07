@@ -11,11 +11,13 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Menu;
 use Sunrice\Models\MenuItem;
+use Sunrice\Support\SafeUrl;
 
 class MenuItemsController extends Controller
 {
@@ -102,7 +104,7 @@ class MenuItemsController extends Controller
             'parent_id' => ['nullable', 'integer', Rule::exists('sunrice_menu_items', 'id')->where('menu_id', $menu->id)],
             'type' => ['required', 'string', Rule::in(array_keys(self::TARGETS))],
             'target_id' => ['nullable', 'integer', 'required_unless:type,url', $this->targetExists($request)],
-            'url' => ['nullable', 'string', 'max:2048', 'required_if:type,url'],
+            'url' => ['nullable', 'string', 'max:2048', 'required_if:type,url', SafeUrl::rule()],
             'labels' => ['array'],
             'labels.*' => ['nullable', 'string', 'max:255'],
             'new_tab' => ['boolean'],
@@ -128,12 +130,20 @@ class MenuItemsController extends Controller
             // Switching type (or an item without one) needs the new target/URL.
             'target_id' => ['nullable', 'integer', $this->targetExists($request), Rule::requiredIf(fn () => $request->input('type') !== 'url'
                 && ($request->input('type') !== $item->type || $item->target_id === null))],
-            'url' => ['nullable', 'string', 'max:2048', Rule::requiredIf(fn () => $request->input('type') === 'url'
+            'url' => ['nullable', 'string', 'max:2048', SafeUrl::rule(), Rule::requiredIf(fn () => $request->input('type') === 'url'
                 && ($item->type !== 'url' || $item->url === null))],
             'labels' => ['sometimes', 'array'],
             'labels.*' => ['nullable', 'string', 'max:255'],
             'new_tab' => ['boolean'],
         ]));
+
+        if (array_key_exists('parent_id', $validated)) {
+            $parents = MenuItem::query()->where('menu_id', $item->menu_id)->pluck('parent_id', 'id')->all();
+            $parents[$item->id] = $validated['parent_id'];
+            if (static::hasCycle($parents)) {
+                throw ValidationException::withMessages(['parent_id' => 'An item can\'t be placed under one of its own sub-items.']);
+            }
+        }
 
         $item->update($validated);
         ContentChanged::dispatch('menu_saved');
@@ -162,6 +172,14 @@ class MenuItemsController extends Controller
             'items.*.parent_id' => ['nullable', 'integer', Rule::exists('sunrice_menu_items', 'id')->where('menu_id', $menu->id)],
         ]);
 
+        $parents = MenuItem::query()->where('menu_id', $menu->id)->pluck('parent_id', 'id')->all();
+        foreach ($validated['items'] as $row) {
+            $parents[$row['id']] = $row['parent_id'] ?? null;
+        }
+        if (static::hasCycle($parents)) {
+            throw ValidationException::withMessages(['items' => 'An item can\'t be placed under one of its own sub-items.']);
+        }
+
         foreach ($validated['items'] as $index => $row) {
             MenuItem::where('id', $row['id'])->update([
                 'parent_id' => $row['parent_id'] ?? null,
@@ -172,5 +190,26 @@ class MenuItemsController extends Controller
         ContentChanged::dispatch('menu_saved');
 
         return back();
+    }
+
+    /**
+     * Whether following parents from any item leads back to it (which
+     * would hide that branch from the menu).
+     *
+     * @param  array<mixed>  $parents  item id => parent id
+     */
+    protected static function hasCycle(array $parents): bool
+    {
+        foreach (array_keys($parents) as $id) {
+            $seen = [];
+            for ($current = $id; $current !== null; $current = $parents[$current] ?? null) {
+                if (isset($seen[$current])) {
+                    return true;
+                }
+                $seen[$current] = true;
+            }
+        }
+
+        return false;
     }
 }
