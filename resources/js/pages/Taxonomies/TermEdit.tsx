@@ -76,6 +76,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
         setSaved(JSON.stringify(next));
     }, [term, locales]);
 
+    const readOnly = !allowed.edit;
     const dirty = allowed.edit && JSON.stringify(form) !== saved;
     useUnsavedChanges(dirty && !processing, () => formRef.current?.requestSubmit());
 
@@ -179,8 +180,9 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
             )}
 
             <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-                <fieldset disabled={!allowed.edit} className="flex min-w-0 flex-col gap-6">
-                    <CollapsibleCard title="Content" storageKey="term:content" hasErrors={localeHasError(locale)} contentClassName="flex flex-col gap-5">
+                <div className="flex min-w-0 flex-col gap-6">
+                    <CollapsibleCard title="Content" storageKey="term:content" hasErrors={localeHasError(locale)}>
+                        <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-5">
                         <div className="grid gap-5 sm:grid-cols-2">
                             <div className="grid gap-2">
                                 <Label htmlFor="term-title">Title</Label>
@@ -216,6 +218,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                                 .
                             </p>
                         )}
+                        </fieldset>
                     </CollapsibleCard>
 
                     {taxonomy.has_pages && (
@@ -226,15 +229,18 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                             defaultOpen={false}
                             hasErrors={Object.keys(errorsFor('seo')).length > 0}
                         >
-                            <FieldRenderer fields={SEO_FIELDS} values={current.seo} pathPrefix="seo" errors={errorsFor('seo')} onChange={(seo) => setTranslation({ seo })} />
+                            <fieldset disabled={readOnly} className="min-w-0">
+                                <FieldRenderer fields={SEO_FIELDS} values={current.seo} pathPrefix="seo" errors={errorsFor('seo')} onChange={(seo) => setTranslation({ seo })} />
+                            </fieldset>
                         </CollapsibleCard>
                     )}
                     <InputError message={errors.translations} />
-                </fieldset>
+                </div>
 
-                <fieldset disabled={!allowed.edit} className="flex flex-col gap-6 lg:sticky lg:top-6">
+                <div className="flex flex-col gap-6 lg:sticky lg:top-6">
                     {taxonomy.hierarchical && (
                         <CollapsibleCard title="Parent" titleClassName="text-sm" storageKey="term:parent">
+                            <fieldset disabled={readOnly} className="min-w-0">
                             <Select value={form.parent_id === null ? 'none' : String(form.parent_id)} onValueChange={(v) => setForm({ ...form, parent_id: v === 'none' ? null : Number(v) })}>
                                 <SelectTrigger className="w-full" aria-label="Parent term"><SelectValue /></SelectTrigger>
                                 <SelectContent>
@@ -243,10 +249,12 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                                 </SelectContent>
                             </Select>
                             <InputError message={errors.parent_id} />
+                            </fieldset>
                         </CollapsibleCard>
                     )}
                     {taxonomy.has_pages && (
-                        <CollapsibleCard title="Template" titleClassName="text-sm" storageKey="term:template" defaultOpen={false} contentClassName="flex flex-col gap-2">
+                        <CollapsibleCard title="Template" titleClassName="text-sm" storageKey="term:template" defaultOpen={false}>
+                            <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-2">
                             <Label htmlFor="term-template" className="sr-only">Template</Label>
                             <Input
                                 id="term-template"
@@ -261,6 +269,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                                 defaults={[...(taxonomy.template ? [taxonomy.template] : []), `sunrice.taxonomies.${taxonomy.handle}.show`, 'sunrice.taxonomies.show']}
                                 lead="Overrides the taxonomy's template for this term's page."
                             />
+                            </fieldset>
                         </CollapsibleCard>
                     )}
                     {allowed.edit && (
@@ -268,7 +277,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                             {dirty ? 'Unsaved changes' : isNew ? 'Not saved yet' : 'All changes saved'} · Ctrl/⌘ S
                         </p>
                     )}
-                </fieldset>
+                </div>
             </div>
         </form>
     );
