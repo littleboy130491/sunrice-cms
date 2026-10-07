@@ -43,14 +43,29 @@ class DocsController extends Controller
             'title' => static::title($markdown) ?? Str::headline($page),
             'html' => static::render($markdown),
             'headings' => static::headings($markdown),
-            'sections' => collect(static::SECTIONS)->map(fn (array $pages, string $label) => [
-                'label' => $label,
-                'pages' => collect($pages)
-                    ->filter(fn (string $slug) => is_file(static::path($slug)))
-                    ->map(fn (string $slug) => ['slug' => $slug, 'title' => static::title((string) file_get_contents(static::path($slug))) ?? Str::headline($slug)])
-                    ->values(),
-            ])->values(),
+            'sections' => static::sections(),
         ]);
+    }
+
+    /**
+     * The guide list: sections with each guide's slug and title.
+     *
+     * @return array<int, array{label: string, pages: array<int, array{slug: string, title: string}>}>
+     */
+    protected static function sections(): array
+    {
+        $sections = [];
+        foreach (static::SECTIONS as $label => $slugs) {
+            $pages = [];
+            foreach ($slugs as $slug) {
+                if (is_file(static::path($slug))) {
+                    $pages[] = ['slug' => $slug, 'title' => static::title((string) file_get_contents(static::path($slug))) ?? Str::headline($slug)];
+                }
+            }
+            $sections[] = ['label' => $label, 'pages' => $pages];
+        }
+
+        return $sections;
     }
 
     public static function path(string $page): string

@@ -58,7 +58,8 @@ class LoginController extends Controller
 
         RateLimiter::clear($key);
 
-        if (TwoFactorLogin::enabled() && ($user = $guard->getLastAttempted()) !== null) {
+        if (TwoFactorLogin::enabled()) {
+            $user = $guard->getLastAttempted();
             if (($seconds = $twoFactor->lockedFor($user)) > 0) {
                 throw ValidationException::withMessages([
                     'email' => __('Too many wrong login codes. Try again in :minutes minutes.', ['minutes' => (int) ceil($seconds / 60)]),
