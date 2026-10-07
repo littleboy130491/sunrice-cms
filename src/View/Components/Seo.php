@@ -71,8 +71,8 @@ class Seo extends Component
         $this->title = $title
             ?? ((($seo['title'] ?? '') ?: null)
             ?? $defaultTitle
-            ?? $entry?->title
-            ?? $term?->name
+            ?? ($entry !== null ? $entry->title : null)
+            ?? ($term !== null ? $term->name : null)
             ?? $collection?->titleIn($this->locale)
             ?? (string) config('app.name'));
         $this->description = $description
@@ -105,15 +105,17 @@ class Seo extends Component
         if ($this->term !== null) {
             $translation = $this->term->resolved ?? $this->term->translation($this->locale) ?? $this->term->mainTranslation();
 
-            return (array) ($translation?->seo ?? []);
+            return $translation === null ? [] : (array) ($translation->seo ?? []);
         }
         if ($this->collection !== null) {
             $byLocale = ContentCollection::archiveByLocale($this->collection->archive_data);
+            /** @var array<string, mixed> $own */
             $own = (array) ($byLocale[$this->locale]['seo'] ?? []);
+            /** @var array<string, mixed> $main */
             $main = (array) ($byLocale[Locales::main()]['seo'] ?? []);
 
             // Field by field: a translation's empty field uses the main one.
-            return array_merge($main, array_filter($own, fn ($v) => $v !== null && $v !== ''));
+            return array_merge($main, array_filter($own, fn (mixed $v) => ! in_array($v, [null, ''], true)));
         }
 
         return [];
