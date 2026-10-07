@@ -92,3 +92,23 @@ it('validates SEO defaults on collections and taxonomies', function () {
         'settings' => ['seo' => ['description' => 'Defaults', 'image' => 'not-an-id']],
     ])->assertSessionHasErrors('settings.seo.image');
 });
+
+it('describes the current page from a bare <x-sunrice::seo /> in any layout', function () {
+    File::put($this->views.'/custom/bare.blade.php', '<head><x-sunrice::seo /></head>');
+    $this->pages->update(['settings' => array_merge($this->pages->settings, ['template' => 'custom.bare'])]);
+    $entry = createEntry($this->pages, 'About');
+    $entry->mainTranslation()->update(['seo' => ['title' => 'About Acme', 'description' => 'Who we are.']]);
+    $this->topics->update(['settings' => array_merge($this->topics->settings, ['template' => 'custom.bare'])]);
+    $this->term->translations()->first()->update(['seo' => ['description' => 'News stories.']]);
+    $news = createCollection('news', ['has_archive' => true, 'archive_template' => 'custom.bare']);
+    $news->update(['archive_data' => [Locales::main() => ['title' => 'News', 'seo' => ['title' => 'All the news']]]]);
+
+    get('/pages/about')->assertOk()
+        ->assertSee('<title>About Acme</title>', false)
+        ->assertSee('<meta name="description" content="Who we are.">', false)
+        ->assertSee('<link rel="canonical" href="'.url('/pages/about').'">', false);
+    get('/topics/news')->assertOk()
+        ->assertSee('<title>News</title>', false)
+        ->assertSee('<meta name="description" content="News stories.">', false);
+    get('/news')->assertOk()->assertSee('<title>All the news</title>', false);
+});

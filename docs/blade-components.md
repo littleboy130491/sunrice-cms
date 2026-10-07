@@ -43,19 +43,39 @@ link fields, and are shown only through templates:
 
 ## `<x-sunrice::seo>`
 
-`<x-sunrice::seo :entry="$entry" />` emits `<title>`, meta description,
+Put it once in the `<head>` of your site layout:
+
+```blade
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <x-sunrice::seo />
+    <x-sunrice::code position="head" />
+</head>
+```
+
+Without attributes it describes the page being rendered — an entry, a
+term page or a listing page — and emits `<title>`, meta description,
 `<meta name="robots">` (only when the page is hidden), canonical link,
 Open Graph tags, Twitter card tags, `hreflang` alternates and
 `x-default`. All URLs are absolute. Fallback pages canonicalize to the
-main-locale URL and emit no hreflang. Works without an entry (uses
-`app.name`, current URL).
+main-locale URL and emit no hreflang. On other pages (your own routes)
+it uses `app.name` and the current URL.
 
-Values come from the entry's SEO tab: meta title, description, canonical
-URL, share image and "Hide from search engines". Override them per call
-with the `title`, `description` and `noindex` props:
+Values come from the page's own SEO fields (entry editor, term editor,
+listing page editor: meta title, description, canonical URL, share image,
+"Hide from search engines"), then the collection's or taxonomy's SEO
+defaults, then **Settings**. Attributes override them:
 
 ```blade
-<x-sunrice::seo :entry="$entry ?? null" title="Search results" :noindex="true" />
+{{-- Force values (e.g. a search page) --}}
+<x-sunrice::seo title="Search results" :noindex="true" />
+
+{{-- Title only when the page has no meta title of its own --}}
+<x-sunrice::seo :default-title="$heading" />
+
+{{-- Describe a specific page instead of the current one --}}
+<x-sunrice::seo :entry="$otherEntry" />
 ```
 
 Hidden entries are also left out of `/sitemap.xml`. Hide a whole site

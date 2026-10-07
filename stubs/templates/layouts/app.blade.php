@@ -13,18 +13,14 @@
     page from $sunricePage: a child's `@foreach ($entries as $entry)`
     leaves $entry set to the last card when the layout renders.
 --}}
-@php
-    $page = $sunricePage ?? null;
-    $pageEntry = $page?->entry ?? (($pageType ?? null) === 'entry' ? ($entry ?? null) : null);
-@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', $locale ?? app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    {{-- SEO tags. Without an entry it falls back to app.name and the current URL. --}}
-    <x-sunrice::seo :entry="$pageEntry" :term="$page?->term" :collection="$page?->collection" :default-title="$seoTitle ?? null" />
+    {{-- SEO tags for the current page (entry, term or listing page): title, description, robots, canonical, Open Graph, hreflang. --}}
+    <x-sunrice::seo :default-title="$seoTitle ?? null" />
 
     {{-- Starter styles: delete this block and use your own CSS (Vite, Tailwind, ...). --}}
     <style>

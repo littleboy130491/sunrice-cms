@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Sunrice\View\Components;
 
 use Illuminate\View\Component;
+use Sunrice\Frontend\TemplateContext;
 use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Asset;
 use Sunrice\Models\Collection as ContentCollection;
@@ -13,10 +14,15 @@ use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
 
 /**
- * `<x-sunrice::seo :entry="$entry" />` — title, description, robots,
+ * `<x-sunrice::seo />` — title, description, robots,
  * canonical, Open Graph, Twitter card and hreflang alternates. Fallback
  * pages get a canonical pointing at the main-language URL and no hreflang
  * output. All URLs are absolute, as search engines require.
+ *
+ * Put it once in the <head> of your site layout: without attributes it
+ * describes the page being rendered (entry, term or listing page). Pass
+ * :entry / :term / :collection to describe another page, :title to force
+ * a title, or :default-title for pages without a meta title of their own.
  */
 class Seo extends Component
 {
@@ -58,6 +64,19 @@ class Seo extends Component
         protected ?Term $term = null,
         protected ?ContentCollection $collection = null,
     ) {
+        // Nothing passed: the page being rendered (set by the page
+        // controller), so a bare <x-sunrice::seo /> works in any layout.
+        if ($entry === null && $term === null && $collection === null) {
+            $page = request()->attributes->get('sunrice.page');
+            if ($page instanceof TemplateContext) {
+                $entry = $page->pageType === 'entry' ? $page->entry : null;
+                $term = $page->term;
+                $collection = $page->collection;
+                $this->term = $term;
+                $this->collection = $collection;
+            }
+        }
+
         $this->entry = $entry;
         $this->locale = $entry === null ? Locales::current() : ($entry->resolvedLocale ?? Locales::current());
         $this->isFallback = $entry !== null && (bool) $entry->isFallback;

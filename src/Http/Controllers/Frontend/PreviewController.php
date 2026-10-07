@@ -35,6 +35,7 @@ class PreviewController extends Controller
         );
 
         $view = app(TemplateResolver::class)->resolve($ctx);
+        request()->attributes->set('sunrice.page', $ctx);
 
         return response()
             ->view($view, [

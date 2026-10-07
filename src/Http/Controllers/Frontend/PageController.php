@@ -296,6 +296,8 @@ class PageController extends Controller
     protected function render(TemplateContext $context, array $viewData): Response
     {
         $view = app(TemplateResolver::class)->resolve($context);
+        // For components in any layout (<x-sunrice::seo />) to find the page.
+        request()->attributes->set('sunrice.page', $context);
 
         return response()->view($view, $viewData + [
             'locale' => $context->locale,
