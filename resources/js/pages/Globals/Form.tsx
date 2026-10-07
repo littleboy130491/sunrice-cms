@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { router, usePage } from '@inertiajs/react';
+import { KeptEditsNotice, VersionConflict, useEditLock } from '@/components/app/edit-lock';
+import { toast } from 'sonner';
 import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +19,8 @@ interface Props {
     globalSet: { id: number; handle: string; title: string; group: string; blueprint_id: number | null; translatable: boolean } | null;
     blueprint: AdminTab[] | null;
     values: Record<string, Record<string, Json>> | null;
+    /** Fingerprints of the loaded values per language: a save is refused if they changed meanwhile. */
+    versions?: Record<string, string> | null;
     blueprints: { id: number; title: string }[];
     locales: string[];
     mainLocale?: string;
@@ -26,7 +30,7 @@ interface Props {
 const valueErrors = (errors: Record<string, string>) =>
     Object.fromEntries(Object.entries(errors).map(([k, v]) => [k.replace(/^values\./, 'data.'), v]));
 
-export default function GlobalForm({ globalSet, blueprint, values, blueprints, locales, mainLocale = locales[0] }: Props) {
+export default function GlobalForm({ globalSet, blueprint, values, versions, blueprints, locales, mainLocale = locales[0] }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const isNew = globalSet === null;
     const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -55,8 +59,23 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
         setErrors({});
     }, [locale, saved]);
 
-    const dirty = !isNew && JSON.stringify(data) !== saved;
+    // Only one person edits a global set (in a language) at a time.
+    const lock = useEditLock({
+        type: 'global',
+        id: globalSet?.id,
+        locale: locale === '_shared' ? '' : locale,
+        enabled: !isNew,
+        getUnsaved: () => (JSON.stringify(data) !== saved ? { data } : null),
+        leaveTo: adminUrl('globals', adminPath),
+    });
+    const dirty = !isNew && !lock.readOnly && JSON.stringify(data) !== saved;
     useUnsavedChanges(dirty && !processing, () => submitMeta());
+    const loadKept = async (id: number) => {
+        const content = await lock.loadKept(id).catch(() => null);
+        if (!content) return toast.error('Could not load those changes.');
+        setData((content.data ?? {}) as Record<string, Json>);
+        toast.success('Loaded. Review them, then save.');
+    };
 
     // Each language is saved separately: don't drop this one's edits silently.
     const switchLocale = (lc: string) => {
@@ -65,7 +84,7 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
         setLocale(lc);
     };
 
-    const submitMeta = () => {
+    const submitMeta = (overwrite = false) => {
         const options = {
             preserveScroll: true,
             onStart: () => setProcessing(true),
@@ -79,6 +98,8 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
             router.put(adminUrl(`globals/${globalSet.id}`, adminPath), {
                 locale: locale === '_shared' ? null : locale,
                 values: data,
+                version: versions?.[locale] ?? '',
+                overwrite,
             }, options);
         }
     };
@@ -131,7 +152,7 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
                         <Checkbox checked={meta.translatable} onCheckedChange={(c) => setMeta({ ...meta, translatable: !!c })} />
                         Translatable
                     </label>
-                    <Button onClick={submitMeta} className="w-32" disabled={processing}>Create</Button>
+                    <Button onClick={() => submitMeta()} className="w-32" disabled={processing}>Create</Button>
                 </CollapsibleCard>
             ) : (
                 <>
@@ -142,10 +163,20 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
                             </TabsList>
                         </Tabs>
                     )}
+                    {lock.dialogs}
+                    <VersionConflict message={errors.version} onOverwrite={() => submitMeta(true)} />
+                    {!lock.readOnly && <KeptEditsNotice kept={lock.kept} onLoad={loadKept} onDiscard={lock.discardKept} />}
+                    {lock.readOnly && (
+                        <p className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                            {lock.viewingBy ?? 'Someone else'} is editing this. You&apos;re viewing it read-only.
+                        </p>
+                    )}
                     <CollapsibleCard title="Content" storageKey="global:content" hasErrors={Object.keys(errors).length > 0}>
-                        <FieldRenderer fields={fields} values={data} errors={valueErrors(errors)} onChange={setData} />
+                        <fieldset disabled={lock.readOnly} className="min-w-0">
+                            <FieldRenderer fields={fields} values={data} errors={valueErrors(errors)} onChange={setData} />
+                        </fieldset>
                     </CollapsibleCard>
-                    <Button onClick={submitMeta} className="w-32" disabled={processing}>{processing ? 'Saving…' : 'Save'}</Button>
+                    {!lock.readOnly && <Button onClick={() => submitMeta()} className="w-32" disabled={processing}>{processing ? 'Saving…' : 'Save'}</Button>}
 
                     <CollapsibleCard
                         title="Settings"
@@ -154,6 +185,7 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
                         defaultOpen={false}
                         contentClassName="flex flex-col gap-4"
                     >
+                        <fieldset disabled={lock.readOnly} className="flex min-w-0 flex-col gap-4">
                         <div className="grid gap-2">
                             <Label>Title</Label>
                             <Input value={meta.title} onChange={(e) => setMeta({ ...meta, title: e.target.value })} />
@@ -189,6 +221,7 @@ export default function GlobalForm({ globalSet, blueprint, values, blueprints, l
                         >
                             Save settings
                         </Button>
+                        </fieldset>
                     </CollapsibleCard>
                 </>
             )}

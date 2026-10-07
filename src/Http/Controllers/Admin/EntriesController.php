@@ -38,6 +38,7 @@ use Sunrice\Admin\Table\EntryFieldColumns;
 use Sunrice\Admin\Table\TableQuery;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Frontend\UrlGenerator;
+use Sunrice\Locks\Versions;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
@@ -300,7 +301,11 @@ class EntriesController extends Controller
             'term_ids' => ['sometimes', 'array'],
             'term_ids.*' => ['integer'],
             'parent_id' => ['sometimes', 'nullable', 'integer', SetEntryParent::rule($entry->collection, $entry)],
+            'version' => ['nullable', 'string', 'max:64'],
+            'overwrite' => ['nullable', 'boolean'],
         ]);
+        Versions::ensureUnchanged($validated['version'] ?? null, Versions::entry($existing), (bool) ($validated['overwrite'] ?? false));
+        unset($validated['version'], $validated['overwrite']);
 
         // The template belongs to the entry too (editors only, saved now).
         if (array_key_exists('template', $validated) && $request->user()->can('update', $entry)) {
@@ -641,6 +646,8 @@ class EntriesController extends Controller
                     'has_draft' => $t->draft !== null,
                     'draft_title' => $t->draft['title'] ?? $t->title,
                     'draft_slug' => $t->draft['slug'] ?? $t->slug,
+                    // What this editor loaded, to refuse saving over someone else's changes.
+                    'version' => Versions::entry($t),
                     // Public address (null without single pages); live only when
                     // published and Ready, otherwise a signed-in draft view.
                     'url' => app(UrlGenerator::class)->translationUrl($entry, $t),

@@ -19,6 +19,7 @@ use Sunrice\Actions\Taxonomies\TrashTerm;
 use Sunrice\Admin\RelatedLinks;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Frontend\UrlGenerator;
+use Sunrice\Locks\Versions;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Models\TermTranslation;
@@ -217,6 +218,7 @@ class TermsController extends Controller
             ],
             'term' => $term === null ? null : [
                 'id' => $term->id,
+                'version' => Versions::term($term),
                 'parent_id' => $term->parent_id,
                 'template' => $term->template,
                 'translations' => $term->translations->keyBy('locale')->map(fn (TermTranslation $tr) => [
@@ -259,8 +261,9 @@ class TermsController extends Controller
     public function update(Request $request, Term $term, SaveTerm $save): RedirectResponse
     {
         $this->authorize('update', $term);
+        Versions::ensureUnchanged($request->input('version'), Versions::term($term), $request->boolean('overwrite'));
 
-        $save->handle($term->taxonomy, $request->all(), $term);
+        $save->handle($term->taxonomy, $request->except(['version', 'overwrite']), $term);
 
         return back()->with('success', 'Term saved.');
     }

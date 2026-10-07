@@ -129,6 +129,14 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::put('settings/seo', [Admin\SettingsController::class, 'updateSeo'])->name('settings.seo.update');
     Route::post('settings/test-mail', [Admin\SettingsController::class, 'testMail'])->name('settings.test-mail');
 
+    // Edit locks: who is editing what, take over, kept unsaved changes
+    Route::post('locks/{type}/{id}', [Admin\EditLocksController::class, 'renew'])->whereIn('type', ['entry', 'term', 'global'])->whereNumber('id')->name('locks.renew');
+    Route::post('locks/{type}/{id}/take', [Admin\EditLocksController::class, 'take'])->whereIn('type', ['entry', 'term', 'global'])->whereNumber('id')->name('locks.take');
+    Route::post('locks/{type}/{id}/release', [Admin\EditLocksController::class, 'release'])->whereIn('type', ['entry', 'term', 'global'])->whereNumber('id')->name('locks.release');
+    Route::post('locks/{type}/{id}/keep', [Admin\EditLocksController::class, 'keep'])->whereIn('type', ['entry', 'term', 'global'])->whereNumber('id')->name('locks.keep');
+    Route::get('kept-edits/{kept}', [Admin\EditLocksController::class, 'show'])->name('kept-edits.show');
+    Route::delete('kept-edits/{kept}', [Admin\EditLocksController::class, 'destroy'])->name('kept-edits.destroy');
+
     // AI agents (MCP) access tokens
     Route::get('ai-access', [Admin\AiAccessController::class, 'index'])->name('ai-access.index');
     Route::post('ai-access', [Admin\AiAccessController::class, 'store'])->name('ai-access.store');

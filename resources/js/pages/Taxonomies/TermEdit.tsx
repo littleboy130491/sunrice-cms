@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
+import { toast } from 'sonner';
 import { ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RelatedMenu, type RelatedLink } from '@/components/app/related-menu';
@@ -11,6 +12,7 @@ import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { InputError } from '@/components/app/input-error';
 import { TemplateHelp } from '@/components/app/template-help';
 import { useBreadcrumbs } from '@/components/app/breadcrumbs';
+import { KeptEditsNotice, VersionConflict, useEditLock } from '@/components/app/edit-lock';
 import FieldRenderer from '@/fields/FieldRenderer';
 import { SEO_FIELDS } from '@/lib/seo-fields';
 import { adminUrl } from '@/lib/route';
@@ -33,6 +35,8 @@ interface Props {
         parent_id: number | null;
         template: string | null;
         translations: Record<string, Partial<TranslationValues>>;
+        /** Fingerprint of what was loaded: a save is refused if it changed meanwhile. */
+        version?: string;
         urls: Record<string, string> | null;
         entries: number;
     } | null;
@@ -79,11 +83,24 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
         setSaved(JSON.stringify(next));
     }, [term, locales]);
 
-    const readOnly = !allowed.edit;
-    const dirty = allowed.edit && JSON.stringify(form) !== saved;
-    useUnsavedChanges(dirty && !processing, () => formRef.current?.requestSubmit());
-
     const listUrl = adminUrl(`taxonomies/${taxonomy.handle}`, adminPath);
+    // Only one person edits a term at a time (all its languages together).
+    const lock = useEditLock({
+        type: 'term',
+        id: term?.id,
+        enabled: !isNew && allowed.edit,
+        getUnsaved: () => (JSON.stringify(form) !== saved ? (form as unknown as Record<string, unknown>) : null),
+        leaveTo: listUrl,
+    });
+    const readOnly = !allowed.edit || lock.readOnly;
+    const dirty = !readOnly && JSON.stringify(form) !== saved;
+    useUnsavedChanges(dirty && !processing, () => formRef.current?.requestSubmit());
+    const loadKept = async (id: number) => {
+        const content = await lock.loadKept(id).catch(() => null);
+        if (!content) return toast.error('Could not load those changes.');
+        setForm({ ...form, ...(content as Partial<TermForm>) });
+        toast.success('Loaded. Review them, then save.');
+    };
     const current = form.translations[locale];
     const fields = (blueprint ?? []).flatMap((t) => t.fields ?? []);
     const setTranslation = (patch: Partial<TranslationValues>) =>
@@ -99,7 +116,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
         { label: isNew ? 'New term' : term.translations[mainLocale]?.title || 'Term' },
     ]);
 
-    const submit = (e: React.FormEvent) => {
+    const submit = (e: React.FormEvent, overwrite = false) => {
         e.preventDefault();
         const options = {
             preserveScroll: true,
@@ -116,7 +133,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
         if (isNew) {
             router.post(adminUrl(`taxonomies/${taxonomy.handle}/terms`, adminPath), form as never, options);
         } else {
-            router.put(adminUrl(`terms/${term.id}`, adminPath), form as never, options);
+            router.put(adminUrl(`terms/${term.id}`, adminPath), { ...form, version: term.version ?? '', overwrite } as never, options);
         }
     };
 
@@ -151,18 +168,26 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                             <a href={pageUrl} target="_blank" rel="noopener"><ExternalLink /> View page</a>
                         </Button>
                     )}
-                    {allowed.delete && (
+                    {allowed.delete && !lock.readOnly && (
                         <Button type="button" variant="outline" size="icon" className="text-destructive" aria-label="Delete term" onClick={destroy}>
                             <Trash2 />
                         </Button>
                     )}
-                    {allowed.edit && (
+                    {!readOnly && (
                         <Button type="submit" disabled={processing}>{processing ? 'Saving…' : isNew ? 'Create term' : 'Save'}</Button>
                     )}
                     <RelatedMenu links={related} />
                 </div>
             </div>
 
+            {lock.dialogs}
+            <VersionConflict message={errors.version} onOverwrite={() => submit({ preventDefault() {} } as React.FormEvent, true)} />
+            {!readOnly && <KeptEditsNotice kept={lock.kept} onLoad={loadKept} onDiscard={lock.discardKept} />}
+            {lock.readOnly && (
+                <p className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                    {lock.viewingBy ?? 'Someone else'} is editing this term. You&apos;re viewing it read-only.
+                </p>
+            )}
             {locales.length > 1 && (
                 <Tabs value={locale} onValueChange={setLocale} activationMode="manual">
                     <TabsList>
@@ -276,7 +301,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                             </fieldset>
                         </CollapsibleCard>
                     )}
-                    {allowed.edit && (
+                    {!readOnly && (
                         <p className="text-center text-xs text-muted-foreground">
                             {dirty ? 'Unsaved changes' : isNew ? 'Not saved yet' : 'All changes saved'} · Ctrl/⌘ S
                         </p>

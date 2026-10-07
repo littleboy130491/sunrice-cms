@@ -52,6 +52,29 @@ switch in the editor; templates read keyed items with `->byKey('key')`.
 - Slugs are unique per `(collection, locale)` including trashed rows;
   rename + publish leaves a `301` redirect on the old slug.
 
+## Two people editing the same thing
+
+Editors take turns, like WordPress. Whoever opens an entry language, a
+term or a global set first holds it; the open page renews the hold every
+15 seconds, and it lapses 2 minutes after the page closes.
+
+- Someone else who opens it sees who is editing and since when, and can
+  **Go back**, **View only** (everything is read-only), or **Take over**
+  (after confirming).
+- On a take over, the first editor is told within a few seconds and sent
+  back to the list. Their unsaved changes are not lost: they're kept
+  aside, and the editor page shows them with **Load into the form** or
+  **Discard**. Nothing is written into the draft until someone saves.
+- Each language of an entry (and of a translatable global set) is held
+  separately, so translators can work side by side.
+- The same person in two tabs is never locked out by themselves.
+- Saves also check the version: if what you opened was saved by someone
+  else since (say, from a tab that never held the lock), the save is
+  refused and you choose **Reload** or **Overwrite with mine**.
+
+Holds live in the cache store (`sunrice.cache.store`), so every server
+must share it.
+
 ## Which URL wins
 
 Every collection's entry URL (`route`) and listing URL (`archive_route`),
