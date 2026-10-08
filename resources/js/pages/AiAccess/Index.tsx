@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { InputError } from '@/components/app/input-error';
 import { adminUrl } from '@/lib/route';
+import { copyText } from '@/lib/clipboard';
 import type { SharedProps } from '@/types';
 
 interface Token { id: number; name: string; last_used_at: string | null; created_at: string | null }
@@ -23,7 +24,7 @@ interface Props {
 }
 
 function copy(text: string) {
-    navigator.clipboard.writeText(text).then(() => toast.success('Copied.'), () => toast.error('Could not copy.'));
+    copyText(text).then(() => toast.success('Copied.'), () => toast.error('Could not copy.'));
 }
 
 function Snippet({ label, code }: { label: string; code: string }) {

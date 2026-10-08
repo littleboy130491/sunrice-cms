@@ -11,6 +11,7 @@ import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { InputError } from '@/components/app/input-error';
 import { useBreadcrumbs } from '@/components/app/breadcrumbs';
 import { adminUrl } from '@/lib/route';
+import { copyText } from '@/lib/clipboard';
 import { useCan } from '@/lib/can';
 import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 import type { SharedProps } from '@/types';
@@ -67,7 +68,7 @@ export default function AssetEdit({ asset, folder, usages }: Props) {
 
     const copyUrl = async () => {
         try {
-            await navigator.clipboard.writeText(new URL(asset.url, window.location.origin).toString());
+            await copyText(new URL(asset.url, window.location.origin).toString());
             toast.success('Link copied.');
         } catch {
             toast.error('Could not copy. Open the file and copy its address instead.');
