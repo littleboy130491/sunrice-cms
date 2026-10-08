@@ -82,9 +82,9 @@ class EntriesController extends Controller
             new Column('created_at', 'Created', sortable: true, type: 'date'),
             new Column('updated_at', 'Updated', sortable: true, type: 'date'),
             ...($collection->isHierarchical() ? [new Column('parent', 'Parent')] : []),
-            // The blueprint's fields, hidden until picked under Columns.
-            ...$fieldColumns->columns(),
         ];
+        // The blueprint's fields, hidden until picked under Columns.
+        $columns = [...$columns, ...$fieldColumns->columns(array_map(fn (Column $c) => $c->label, $columns))];
         $visible = $this->visibleEntryColumns((int) $userId, $collection, $fieldColumns);
         $rows = $table->paginate($request);
         $fieldColumns->preload($rows->getCollection(), $visible);

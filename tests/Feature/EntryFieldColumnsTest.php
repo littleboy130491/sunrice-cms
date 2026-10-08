@@ -82,3 +82,14 @@ it('keeps an earlier shared column choice and drops unknown field columns', func
     get('/cms/collections/products/entries')->assertInertia(fn (Assert $page) => $page
         ->where('visibleColumns', ['title', 'status']));
 });
+
+it('marks a field column named like a built-in column', function () {
+    $blueprint = Blueprint::create(['handle' => 'job', 'title' => 'Job', 'fields' => [
+        ['handle' => 'title', 'type' => 'text', 'label' => 'Title'],
+        ['handle' => 'status', 'type' => 'text'],
+    ]]);
+    createCollection('jobs', [], $blueprint);
+
+    get('/cms/collections/jobs/entries')->assertInertia(fn (Assert $page) => $page
+        ->where('columns', fn ($columns) => collect($columns)->pluck('label')->all() === ['Title', 'Status', 'Created by', 'Created', 'Updated', 'Title (field)', 'Status (field)']));
+});
