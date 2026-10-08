@@ -51,6 +51,14 @@ class JsonField
         static::assertSafe($path, $operator);
         $operator = strtolower($operator);
 
+        // Booleans (toggle fields) can't be cast to numbers on every
+        // database: compare the JSON value itself (true, or a legacy 1).
+        if (is_bool($value) && in_array($operator, ['=', '!=', '<>'], true)) {
+            $match = fn (Builder $q) => static::where($q, $column, $path, 'contains any', [$value, (int) $value], $cast);
+
+            return $operator === '=' ? $query->where($match) : $query->whereNot($match);
+        }
+
         return match ($operator) {
             'in' => $query->where(function (Builder $q) use ($column, $path, $value, $cast): void {
                 foreach ((array) $value as $v) {
