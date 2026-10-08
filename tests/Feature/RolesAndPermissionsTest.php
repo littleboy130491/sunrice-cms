@@ -6,6 +6,7 @@ use Inertia\Testing\AssertableInertia;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use Sunrice\Admin\AdminUrls;
 use Sunrice\Admin\Navigation;
 use Sunrice\Database\Seeders\RolesSeeder;
 use Sunrice\Models\Blueprint;
@@ -85,7 +86,7 @@ it('lets a translator edit other languages but not the main language or publish'
     $entry = createEntry($collection, 'Beranda', ['body' => 'Halo']);
     userWith(["sunrice.entries.{$collection->id}.view", "sunrice.entries.{$collection->id}.translate"]);
 
-    get("/cms/entries/{$entry->id}")->assertOk();
+    get(AdminUrls::entry($entry))->assertOk();
 
     put("/cms/entries/{$entry->id}", ['locale' => 'en', 'title' => 'Home', 'data' => ['body' => 'Hello'], 'is_ready' => true])
         ->assertRedirect();

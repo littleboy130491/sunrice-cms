@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Inertia\Testing\AssertableInertia;
+use Sunrice\Admin\AdminUrls;
 use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Menu;
@@ -102,7 +103,7 @@ it('restores a revision into the draft and can undo it', function () {
 
     post("/cms/revisions/{$revision->id}/restore")->assertSessionHas('success');
     expect($t->fresh()->draft['title'])->toBe('Ana');
-    get("/cms/entries/{$entry->id}")->assertInertia(fn (AssertableInertia $page) => $page
+    get(AdminUrls::entry($entry))->assertInertia(fn (AssertableInertia $page) => $page
         ->where('entry.translations.id.can_undo_restore', true)
         ->where('entry.translations.id.revisions.0.created_at_iso', $revision->created_at->toIso8601String()));
 

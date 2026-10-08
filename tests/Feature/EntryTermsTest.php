@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Inertia\Testing\AssertableInertia as Assert;
+use Sunrice\Admin\AdminUrls;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
@@ -78,7 +79,7 @@ it('gives the editor the attached taxonomies and picked terms', function () {
     $entry = createEntry($this->blog, 'Post');
     $entry->terms()->attach([$this->news->id, $this->video->id]);
 
-    get("/cms/entries/{$entry->id}")->assertInertia(fn (Assert $page) => $page
+    get(AdminUrls::entry($entry))->assertInertia(fn (Assert $page) => $page
         ->where('taxonomies', fn ($taxonomies) => collect($taxonomies)->firstWhere('handle', 'format')['single'] === true)
         ->where("entry.terms_by_taxonomy.{$this->topics->id}", [$this->news->id])
         ->where("entry.terms_by_taxonomy.{$this->format->id}", [$this->video->id]));

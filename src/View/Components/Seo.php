@@ -106,6 +106,10 @@ class Seo extends Component
             ?? (string) config('app.name'));
         $this->description = $description
             ?? ((($seo['description'] ?? '') ?: (($defaults['description'] ?? '') ?: config('sunrice.seo.description'))) ?: null);
+        // Whatever the source (a template passing a rich-text field, the
+        // page's own SEO, defaults), the tags hold plain text only.
+        $this->title = SeoFields::plainText($this->title, 300) ?? (string) config('app.name');
+        $this->description = SeoFields::plainText($this->description, 300);
         if (! is_numeric($seo['image'] ?? null) && is_numeric($defaults['image'] ?? null)) {
             $seo['image'] = $defaults['image'];
         }

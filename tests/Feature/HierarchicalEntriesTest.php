@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Inertia\Testing\AssertableInertia as Assert;
 use Sunrice\Actions\Entries\ForceDeleteEntry;
+use Sunrice\Admin\AdminUrls;
 use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Entry;
@@ -74,7 +75,7 @@ it('sets the parent from the editor and refuses loops and other collections', fu
     expect($this->leaders->fresh()->parent_id)->toBeNull();
 
     // The picker leaves out the entry itself and its children.
-    get("/cms/entries/{$this->team->id}")->assertInertia(fn (Assert $page) => $page
+    get(AdminUrls::entry($this->team))->assertInertia(fn (Assert $page) => $page
         ->where('entry.parent_id', $this->about->id)
         ->where('parentOptions', fn ($options) => collect($options)->pluck('id')->sort()->values()->all() === collect([$this->about->id, $this->leaders->id])->sort()->values()->all()));
 });

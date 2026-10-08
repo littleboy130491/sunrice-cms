@@ -31,6 +31,7 @@ use Sunrice\Actions\Entries\SyncEntryTerms;
 use Sunrice\Actions\Entries\TrashEntry;
 use Sunrice\Actions\Entries\UnpublishEntry;
 use Sunrice\Actions\Support\Reorder;
+use Sunrice\Admin\AdminUrls;
 use Sunrice\Admin\Export\CsvExporter;
 use Sunrice\Admin\RelatedLinks;
 use Sunrice\Admin\Table\Column;
@@ -99,6 +100,8 @@ class EntriesController extends Controller
 
         return Inertia::render('Entries/Index', [
             'collection' => $collection->only('id', 'handle', 'title', 'settings'),
+            // The ⋮ menu: listing page, terms, settings, blueprint.
+            'related' => RelatedLinks::forList($collection->loadMissing(['taxonomies', 'blueprint'])),
             'columns' => $columns,
             'rows' => $rows->through(function (Model $e) use ($fieldColumns, $visible, $collection): array {
                 /** @var Entry $e */
@@ -264,15 +267,25 @@ class EntriesController extends Controller
             return $entry;
         });
 
-        return redirect()->route('sunrice.admin.entries.edit', $entry)
+        return redirect()->to(AdminUrls::entry($entry))
             ->with('success', 'Entry created.');
     }
 
-    public function edit(Entry $entry): Response
+    public function edit(Collection $collection, Entry $entry): Response|RedirectResponse
     {
         $this->authorize('view', $entry);
+        // An entry opened under another collection's address: go to its own.
+        if ($entry->collection_id !== $collection->id) {
+            return redirect()->to(AdminUrls::entry($entry));
+        }
 
         return Inertia::render('Entries/Edit', $this->editorProps($entry->collection, $entry));
+    }
+
+    /** The editor's older address (/entries/{id}). */
+    public function legacyEdit(Entry $entry): RedirectResponse
+    {
+        return redirect()->to(AdminUrls::entry($entry), 301);
     }
 
     public function update(Request $request, Entry $entry, SaveDraft $saveDraft): RedirectResponse
@@ -409,7 +422,7 @@ class EntriesController extends Controller
         $this->authorize('create', [Entry::class, $entry->collection_id]);
         $copy = $duplicate->handle($entry);
 
-        return redirect()->route('sunrice.admin.entries.edit', $copy)->with('success', 'Entry duplicated.');
+        return redirect()->to(AdminUrls::entry($copy))->with('success', 'Entry duplicated.');
     }
 
     public function changeBlueprint(Request $request, Entry $entry, ChangeBlueprint $change): RedirectResponse
@@ -685,7 +698,6 @@ class EntriesController extends Controller
             ),
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
             // Hierarchical collections: entries this one can be placed under.
-            'related' => RelatedLinks::forEntry($collection->loadMissing(['taxonomies', 'blueprint']), $entry),
             'parentOptions' => $collection->isHierarchical() ? $this->parentOptions($collection, $entry) : null,
             'taxonomies' => $collection->taxonomies->map(fn ($t) => $t->only('id', 'handle', 'title') + [
                 'single' => in_array($t->id, array_map('intval', (array) $collection->setting('single_term_taxonomies', [])), true),

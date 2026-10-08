@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\PermissionRegistrar;
+use Sunrice\Admin\AdminUrls;
 use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
@@ -39,7 +40,7 @@ it('shows a draft entry with a banner to users who may view drafts', function ()
         ->assertSee('Coming soon')
         ->assertSee('data-sunrice-draft-banner', false)
         ->assertSee('masih draf dan tidak terlihat oleh publik', false)
-        ->assertSee(route('sunrice.admin.entries.edit', $entry), false)
+        ->assertSee(AdminUrls::entry($entry), false)
         ->assertHeader('X-Robots-Tag', 'noindex');
 });
 
@@ -80,11 +81,11 @@ it('gives the entry editor a page link that says whether it is live', function (
     $draft = createEntry($this->pages, 'Coming soon', status: 'draft');
     $live = createEntry($this->pages, 'About');
 
-    get("/cms/entries/{$draft->id}")->assertInertia(fn (Assert $page) => $page
+    get(AdminUrls::entry($draft))->assertInertia(fn (Assert $page) => $page
         ->where('entry.translations.id.url', '/pages/coming-soon')
         ->where('entry.translations.id.is_live', false)
         ->where('can.view_drafts', true));
-    get("/cms/entries/{$live->id}")->assertInertia(fn (Assert $page) => $page
+    get(AdminUrls::entry($live))->assertInertia(fn (Assert $page) => $page
         ->where('entry.translations.id.is_live', true));
 });
 
@@ -94,8 +95,8 @@ it('gives terms a page link when the taxonomy has term pages', function () {
     $term = Term::factory()->create(['taxonomy_id' => $taxonomy->id]);
     $term->translations()->first()->update(['slug' => 'news']);
 
-    get('/cms/taxonomies/topics')->assertInertia(fn (Assert $page) => $page->where('rows.data.0.url', '/topics/news'));
+    get('/cms/taxonomies/topics/terms')->assertInertia(fn (Assert $page) => $page->where('rows.data.0.url', '/topics/news'));
 
     $taxonomy->update(['settings' => ['has_archive' => false]]);
-    get('/cms/taxonomies/topics')->assertInertia(fn (Assert $page) => $page->where('rows.data.0.url', null));
+    get('/cms/taxonomies/topics/terms')->assertInertia(fn (Assert $page) => $page->where('rows.data.0.url', null));
 });

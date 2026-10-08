@@ -43,7 +43,7 @@ class Navigation
         $taxonomies = [];
         foreach (Taxonomy::query()->orderBy('handle')->get() as $taxonomy) {
             if ($user->can('viewAny', [Term::class, $taxonomy->id])) {
-                $taxonomies[] = ['label' => $taxonomy->title, 'href' => "taxonomies/{$taxonomy->handle}", 'icon' => 'tags'];
+                $taxonomies[] = ['label' => $taxonomy->title, 'href' => "taxonomies/{$taxonomy->handle}/terms", 'icon' => 'tags'];
             }
         }
         if ($taxonomies !== []) {
