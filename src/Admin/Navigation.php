@@ -121,7 +121,7 @@ class Navigation
                 'icon' => (string) ($item['icon'] ?? 'circle'),
                 // Outside the admin: a plain link, not an admin (Inertia) visit.
                 'external' => static::isExternal((string) $item['href']),
-            ], (array) ($group['items'] ?? []))),
+            ], (array) $group['items'])),
         ], array_filter($groups, fn ($group) => is_array($group) && ! empty($group['items'])));
     }
 
