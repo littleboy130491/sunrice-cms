@@ -252,8 +252,12 @@ class SunriceServiceProvider extends PackageServiceProvider
         }
 
         // Starter front-end templates: `php artisan vendor:publish --tag=sunrice-templates`
-        // copies them to resources/views/sunrice, where the template resolver finds them.
-        $this->publishes([__DIR__.'/../stubs/templates' => resource_path('views/sunrice')], 'sunrice-templates');
+        // copies them to resources/views/sunrice, where the template resolver finds them,
+        // and their stylesheet to public/sunrice-theme.
+        $this->publishes([
+            __DIR__.'/../stubs/templates' => resource_path('views/sunrice'),
+            __DIR__.'/../stubs/theme' => public_path('sunrice-theme'),
+        ], 'sunrice-templates');
     }
 
     /**

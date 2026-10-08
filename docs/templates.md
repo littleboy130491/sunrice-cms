@@ -9,12 +9,14 @@ php artisan vendor:publish --tag=sunrice-templates
 ```
 
 This copies them to `resources/views/sunrice/`, where the resolver below
-picks them up:
+picks them up, and their stylesheet to `public/sunrice-theme/app.css`:
 
 | File | Used for | Shows how to |
 | --- | --- | --- |
-| `layouts/app.blade.php` | every page | `<x-sunrice::seo>`, shared layout |
-| `partials/header.blade.php` | header | globals (`sunrice_global('site')`), menus (`sunrice_menu('main')`), language switcher (`sunrice_locale_urls()`) |
+| `layouts/app.blade.php` | every page | `<x-sunrice::seo>`, shared layout, links the stylesheet |
+| `public/sunrice-theme/app.css` | styles for all of the above | plain CSS; replace it with your own build (Vite, Tailwind…) and change the `<link>` in the layout |
+| `partials/header.blade.php` | header | globals (`sunrice_global('site')`), menus (`sunrice_menu('main')`) |
+| `partials/language-switcher.blade.php` | language links (in the header) | `sunrice_locale_urls()`, language names |
 | `partials/footer.blade.php` | footer | template-part globals, rich text, repeaters |
 | `partials/menu.blade.php` | menus | nested menu items |
 | `partials/card.blade.php` | listings | entry teaser (image, date, excerpt) |
@@ -48,16 +50,18 @@ field handles it expects.
 
 ### Language switcher
 
-The starter templates put the switcher in the header. After
-`php artisan vendor:publish --tag=sunrice-templates`, it lives in your app:
+The starter templates keep the switcher in its own partial, included by
+the header. After `php artisan vendor:publish --tag=sunrice-templates`, it
+lives in your app:
 
 | What | Where |
 | --- | --- |
-| Markup (links, order, what each one shows) | `resources/views/sunrice/partials/header.blade.php`, the `<nav class="lang-switch">` block |
-| Styles | `resources/views/sunrice/layouts/app.blade.php`, the `.lang-switch` rules in its `<style>` (or move them to your own CSS) |
+| Markup (links, order, what each one shows) | `resources/views/sunrice/partials/language-switcher.blade.php` |
+| Where it appears | `@include('sunrice.partials.language-switcher')` in `partials/header.blade.php`; include it anywhere else too (footer, mobile menu) |
+| Styles | `public/sunrice-theme/app.css`, the `.lang-switch` rules |
 | Language names shown | Settings → Languages in the admin (`Locales::name($code)`) |
 
-The block is plain Blade, so you can turn it into a dropdown, show flags
+The partial is plain Blade, so you can turn it into a dropdown, show flags
 or short codes, or move it to the footer. All it needs is
 `sunrice_locale_urls()`, which returns this page's address in each
 language:
@@ -85,8 +89,8 @@ language:
 - Keep `hreflang` and `lang` on the links when you rewrite them: they tell
   search engines and screen readers which language each one is.
 
-If you didn't publish the starter templates, your own layout is the
-place: add the snippet above wherever the switcher should go.
+If you didn't publish the starter templates, put the snippet above in a
+partial of your own and include it wherever the switcher should go.
 
 ### Archive/listing pages
 

@@ -12,7 +12,7 @@ use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 use Sunrice\Mcp\Templates;
 
 #[IsReadOnly]
-#[Description('Read a template file. source "site" (default): the site\'s templates in resources/views/sunrice; "starter": the starter templates shipped with Sunrice (complete examples: layouts/app, partials/header|footer|menu|card, show, index, articles/show, taxonomies/show, blocks/*); "default": the package fallback views (show, index, term); "theme": CSS/JS files in public/sunrice-theme. Paths are relative, e.g. "layouts/app.blade.php".')]
+#[Description('Read a template file. source "site" (default): the site\'s templates in resources/views/sunrice; "starter": the starter templates shipped with Sunrice (complete examples: layouts/app, partials/header|footer|menu|card|language-switcher, show, index, articles/show, taxonomies/show, blocks/*); "default": the package fallback views (show, index, term); "theme": CSS/JS files in public/sunrice-theme. Paths are relative, e.g. "layouts/app.blade.php".')]
 class ReadTemplate extends SunriceTool
 {
     protected string $name = 'read_template';

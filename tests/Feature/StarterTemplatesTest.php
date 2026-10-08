@@ -35,7 +35,16 @@ it('publishes the starter templates under the sunrice-templates tag', function (
     $this->artisan('vendor:publish', ['--tag' => 'sunrice-templates', '--force' => true])->assertSuccessful();
 
     expect(resource_path('views/sunrice/show.blade.php'))->toBeFile()
-        ->and(resource_path('views/sunrice/layouts/app.blade.php'))->toBeFile();
+        ->and(resource_path('views/sunrice/layouts/app.blade.php'))->toBeFile()
+        ->and(resource_path('views/sunrice/partials/language-switcher.blade.php'))->toBeFile()
+        ->and(public_path('sunrice-theme/app.css'))->toBeFile();
+
+    // The layout links the stylesheet instead of inlining it.
+    createEntry(createCollection('pages', ['route' => '/{slug}', 'template' => 'sunrice.show']), 'About');
+    RouteMatcher::flush();
+    get('/about')->assertOk()
+        ->assertSee('<link rel="stylesheet" href="'.asset('sunrice-theme/app.css').'?v=', false)
+        ->assertDontSee('<style>', false);
 });
 
 it('renders a page with globals, a menu and flexible content blocks', function () {

@@ -50,7 +50,8 @@ collection settings.
 
 - Pages `@extends('sunrice.layouts.app')` and fill `@section('content')`;
   pass `['seoTitle' => …]` as the second @extends argument for a fallback
-  `<title>`. The layout `@include`s `sunrice.partials.header` / `footer`.
+  `<title>`. The layout `@include`s `sunrice.partials.header` / `footer`;
+  the header includes `sunrice.partials.language-switcher`.
 - Layouts must contain `<x-sunrice::seo />` in `<head>` and the three
   `<x-sunrice::code position="head|body_start|body_end" />` snippets.
 - Layouts and partials read the page from `$sunricePage` (->entry, ->term,
@@ -87,7 +88,8 @@ spans all collections). Entries are already in the visitor's language.
   from slugs.
 - CSS/JS: put files in the theme folder (write_template target "theme",
   served at /sunrice-theme/…) and link them with `asset('sunrice-theme/…')`,
-  or keep a `<style>` in the layout like the starter. External CDNs work too.
+  like the starter's `sunrice-theme/app.css` (read it with read_template
+  source "theme"). External CDNs work too.
 - After writing, open the page with render_page and fix any error.
 MD;
 
