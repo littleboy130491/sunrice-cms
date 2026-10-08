@@ -6,12 +6,14 @@ namespace Sunrice\View\Components;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
 use Sunrice\Models\Collection as CollectionModel;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Query\EntryQuery;
+use Sunrice\View\Components\Filter\ActiveFilter;
+use Sunrice\View\Components\Filter\FilterControl;
+use Sunrice\View\Components\Filter\SortChoice;
 
 /**
  * `<x-sunrice::entry-filter>` — a filterable, sortable, paginated list of
@@ -31,13 +33,13 @@ use Sunrice\Query\EntryQuery;
  */
 class EntryFilter extends Entries
 {
-    /** @var array<int, Fluent<string, mixed>> */
+    /** @var array<int, FilterControl> */
     public array $filters = [];
 
-    /** @var array<int, Fluent<string, mixed>> */
+    /** @var array<int, SortChoice> */
     public array $sorts = [];
 
-    /** @var array<int, Fluent<string, mixed>> */
+    /** @var array<int, ActiveFilter> */
     public array $active = [];
 
     public string $action;
@@ -115,39 +117,31 @@ class EntryFilter extends Entries
 
     /**
      * One declared filter, by its query name.
-     *
-     * @return Fluent<string, mixed>|null
      */
-    public function filter(string $name): ?Fluent
+    public function filter(string $name): ?FilterControl
     {
         return collect($this->filters)->firstWhere('name', $name);
     }
 
     /**
      * @param  array<string, mixed>  $definition
-     * @return Fluent<string, mixed>
      */
-    protected function buildFilter(string $name, array $definition, CollectionModel $collection, Request $request): Fluent
+    protected function buildFilter(string $name, array $definition, CollectionModel $collection, Request $request): FilterControl
     {
         $type = (string) ($definition['type'] ?? 'select');
         $field = (string) ($definition['field'] ?? $name);
-        $filter = new Fluent([
-            'name' => $name,
-            'type' => $type,
-            'field' => $field,
-            'label' => (string) ($definition['label'] ?? Str::headline($name)),
-            'multiple' => (bool) ($definition['multiple'] ?? $type === 'terms'),
-            'options' => [],
-            'value' => null,
-            'inputs' => ['value' => $name],
-            // The query-string keys this filter reads.
-            'params' => [$name],
-        ]);
+        $filter = new FilterControl(
+            $name,
+            $type,
+            $field,
+            (string) ($definition['label'] ?? Str::headline($name)),
+            (bool) ($definition['multiple'] ?? $type === 'terms'),
+        );
         $raw = $request->query($name);
 
         switch ($type) {
             case 'search':
-                $filter->fields = (array) ($definition['fields'] ?? ['title']);
+                $filter->fields = array_values(array_map('strval', (array) ($definition['fields'] ?? ['title'])));
                 $filter->value = is_string($raw) ? trim(mb_substr($raw, 0, 200)) : '';
                 break;
 
@@ -180,7 +174,7 @@ class EntryFilter extends Entries
                 $filter->type = 'select';
                 $schemaField = $collection->blueprint?->schema()->field($field);
                 // A multiple-choice field stores a list of values.
-                $filter->stores_list = (bool) ($schemaField['config']['multiple'] ?? false);
+                $filter->storesList = (bool) ($schemaField['config']['multiple'] ?? false);
                 $filter->options = $this->selectOptions($definition, $collection, $field);
                 $allowed = array_column($filter->options, 'value');
                 $filter->value = $this->selected($raw, $allowed, $filter->multiple, $allowed === []);
@@ -198,8 +192,7 @@ class EntryFilter extends Entries
         return $filter;
     }
 
-    /** @param Fluent<string, mixed> $filter */
-    protected function apply(EntryQuery $query, Fluent $filter): void
+    protected function apply(EntryQuery $query, FilterControl $filter): void
     {
         $value = $filter->value;
         switch ($filter->type) {
@@ -231,7 +224,7 @@ class EntryFilter extends Entries
                 break;
             case 'terms':
                 if ($value !== [] && $value !== null) {
-                    $query->whereTerm($filter->taxonomy, (array) $value, includeChildren: true);
+                    $query->whereTerm((string) $filter->taxonomy, (array) $value, includeChildren: true);
                 }
                 break;
             default:
@@ -239,15 +232,14 @@ class EntryFilter extends Entries
         }
     }
 
-    /** @param Fluent<string, mixed> $filter */
-    protected function applySelect(EntryQuery $query, Fluent $filter): void
+    protected function applySelect(EntryQuery $query, FilterControl $filter): void
     {
         $values = array_values(array_filter((array) $filter->value, fn ($v) => $v !== '' && $v !== null));
         if ($values === []) {
             return;
         }
         // A list field: entries holding any of the chosen values.
-        if ($filter->stores_list) {
+        if ($filter->storesList) {
             $query->where($filter->field, 'contains any', $values);
 
             return;
@@ -316,7 +308,7 @@ class EntryFilter extends Entries
 
     /**
      * @param  array<string, array<string, string>|string>  $sorts
-     * @return array<int, Fluent<string, mixed>>
+     * @return array<int, SortChoice>
      */
     protected function sortChoices(array $sorts, string $current): array
     {
@@ -324,7 +316,7 @@ class EntryFilter extends Entries
         foreach ($sorts as $value => $sort) {
             $order = is_array($sort) ? (string) ($sort['order'] ?? '') : (string) $sort;
             $label = is_array($sort) && isset($sort['label']) ? (string) $sort['label'] : Str::headline((string) $value);
-            $choices[] = new Fluent(['value' => (string) $value, 'label' => $label, 'order' => $order, 'selected' => false]);
+            $choices[] = new SortChoice((string) $value, $label, $order);
         }
         $selected = collect($choices)->firstWhere('value', $current) ?? ($choices[0] ?? null);
         if ($selected !== null) {
@@ -337,7 +329,7 @@ class EntryFilter extends Entries
     /**
      * The applied filters, each with a link that removes just that value.
      *
-     * @return array<int, Fluent<string, mixed>>
+     * @return array<int, ActiveFilter>
      */
     protected function activeFilters(Request $request, string $pageName): array
     {
@@ -350,20 +342,20 @@ class EntryFilter extends Entries
             switch ($filter->type) {
                 case 'search':
                     if ($filter->value !== '') {
-                        $active[] = new Fluent(['filter' => $filter->name, 'label' => $filter->label, 'value' => $filter->value, 'remove_url' => $url(Arr::except($query, [$filter->name]))]);
+                        $active[] = new ActiveFilter($filter->name, $filter->label, (string) $filter->value, $url(Arr::except($query, [$filter->name])));
                     }
                     break;
                 case 'range':
                 case 'date_range':
                     foreach ($filter->inputs as $key => $input) {
                         if ($filter->value[$key] !== null) {
-                            $active[] = new Fluent(['filter' => $filter->name, 'label' => $filter->label, 'value' => $key.' '.$filter->value[$key], 'remove_url' => $url(Arr::except($query, [$input]))]);
+                            $active[] = new ActiveFilter($filter->name, $filter->label, $key.' '.$filter->value[$key], $url(Arr::except($query, [$input])));
                         }
                     }
                     break;
                 case 'toggle':
                     if ($filter->value) {
-                        $active[] = new Fluent(['filter' => $filter->name, 'label' => $filter->label, 'value' => $filter->label, 'remove_url' => $url(Arr::except($query, [$filter->name]))]);
+                        $active[] = new ActiveFilter($filter->name, $filter->label, $filter->label, $url(Arr::except($query, [$filter->name])));
                     }
                     break;
                 default:
@@ -376,7 +368,7 @@ class EntryFilter extends Entries
                         } else {
                             unset($rest[$filter->name]);
                         }
-                        $active[] = new Fluent(['filter' => $filter->name, 'label' => $filter->label, 'value' => $labelOf((string) $value), 'remove_url' => $url($rest)]);
+                        $active[] = new ActiveFilter($filter->name, $filter->label, $labelOf((string) $value), $url($rest));
                     }
             }
         }

@@ -85,7 +85,7 @@ class SiteSearch
     /** @param Builder<Entry> $builder */
     protected function dataAsText(Builder $builder): string
     {
-        return match ($builder->getConnection()->getDriverName()) {
+        return match ($builder->getModel()->getConnection()->getDriverName()) {
             'pgsql' => '"data"::text',
             'mysql', 'mariadb' => 'CAST(`data` AS CHAR)',
             default => '"data"',
@@ -95,6 +95,6 @@ class SiteSearch
     /** @param Builder<Entry> $builder */
     protected function likeOperator(Builder $builder): string
     {
-        return $builder->getConnection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
+        return $builder->getModel()->getConnection()->getDriverName() === 'pgsql' ? 'ILIKE' : 'LIKE';
     }
 }

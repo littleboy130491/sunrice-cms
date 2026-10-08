@@ -153,6 +153,6 @@ class Terms extends Component
 
         $found = $terms->first(fn (Term $t) => $t->slug === $parent || $t->mainTranslation()?->slug === $parent);
 
-        return $found?->id ?? -1;
+        return $found === null ? -1 : (int) $found->id;
     }
 }
