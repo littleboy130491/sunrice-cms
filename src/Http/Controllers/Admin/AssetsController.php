@@ -76,7 +76,7 @@ class AssetsController extends Controller
         }
 
         return Inertia::render('Assets/Index', [
-            'assets' => $query->paginate(24)->withQueryString()->through($this->serialize(...)),
+            'assets' => $query->paginate(TablePreferencesController::perPageFor($request, 'assets', 24))->withQueryString()->through($this->serialize(...)),
             'folders' => static::folderTree(),
             'filters' => $request->only(['folder', 'search', 'type', 'trashed']),
             'maxUploadKb' => UploadAsset::maxKilobytes(),

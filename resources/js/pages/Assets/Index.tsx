@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { adminUrl } from '@/lib/route';
+import { PerPageSelect } from '@/components/data-table/PerPageSelect';
 import { useCan } from '@/lib/can';
 import type { SharedProps } from '@/types';
 import { xsrfToken } from '@/lib/fetch-json';
@@ -29,7 +30,7 @@ interface AssetRow {
 }
 
 interface FolderRow { id: number; parent_id: number | null; name: string; depth: number }
-interface Paginated<T> { data: T[]; total: number; current_page: number; last_page: number; prev_page_url: string | null; next_page_url: string | null }
+interface Paginated<T> { data: T[]; total: number; current_page: number; last_page: number; per_page: number; prev_page_url: string | null; next_page_url: string | null }
 
 interface Props {
     assets: Paginated<AssetRow>;
@@ -299,7 +300,10 @@ export default function AssetsIndex({ assets, folders, filters, maxUploadKb, all
                     )}
                 </div>
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>{assets.total} asset(s) · up to {formatKb(maxUploadKb)} per file</span>
+                    <span className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <span>{assets.total} asset(s) · up to {formatKb(maxUploadKb)} per file</span>
+                        {assets.total > 12 && <PerPageSelect tableKey="assets" label="Per page" value={assets.per_page} options={[12, 24, 48, 96]} />}
+                    </span>
                     {assets.last_page > 1 && (
                         <span className="flex items-center gap-2">
                             <Button variant="outline" size="icon" className="size-8" disabled={!assets.prev_page_url} onClick={() => goToPage(assets.prev_page_url)} aria-label="Previous page"><ChevronLeft /></Button>

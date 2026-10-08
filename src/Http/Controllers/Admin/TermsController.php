@@ -87,7 +87,7 @@ class TermsController extends Controller
             $rows = $rows->sort(fn ($a, $b) => $direction * ($value($a) <=> $value($b)));
         }
 
-        $perPage = max(1, min(100, (int) $request->query('per_page', 25)));
+        $perPage = TablePreferencesController::perPageFor($request, "terms-{$taxonomy->handle}", 25);
         $page = max(1, (int) $request->query('page', 1));
         $urls = app(UrlGenerator::class);
         $hasPages = (bool) $taxonomy->setting('has_archive');

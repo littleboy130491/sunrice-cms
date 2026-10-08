@@ -87,7 +87,7 @@ class EntriesController extends Controller
         // The blueprint's fields, hidden until picked under Columns.
         $columns = [...$columns, ...$fieldColumns->columns(array_map(fn (Column $c) => $c->label, $columns))];
         $visible = $this->visibleEntryColumns((int) $userId, $collection, $fieldColumns);
-        $rows = $table->paginate($request);
+        $rows = $table->defaultPerPage(TablePreferencesController::perPageFor($request, self::columnsKey($collection), 20))->paginate($request);
         $fieldColumns->preload($rows->getCollection(), $visible);
 
         // People who wrote entries here, for the "Created by" filter.

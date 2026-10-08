@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useTableQuery } from './useTableQuery';
+import { PerPageSelect } from './PerPageSelect';
 import { adminUrl } from '@/lib/route';
 import type { ColumnDef, Paginated, SharedProps } from '@/types';
 import { toast } from 'sonner';
@@ -114,6 +115,7 @@ export function DataTable<T extends { id: number | string }>({
         search: meta.search ?? '',
         filters: meta.filters ?? {},
         sort: meta.sort ?? '',
+        perPage: rows.per_page,
     });
 
     const [visible, setVisible] = React.useState<string[]>(() =>
@@ -383,9 +385,14 @@ export function DataTable<T extends { id: number | string }>({
                 </DndContext>
 
                 <div className="flex items-center justify-between gap-4 px-6 py-4 text-sm text-muted-foreground">
-                    <span>
-                        {rows.total === 0 ? 'No rows' : `Showing ${rows.from ?? 0}–${rows.to ?? 0} of ${rows.total}`}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <span>
+                            {rows.total === 0 ? 'No rows' : `Showing ${rows.from ?? 0}–${rows.to ?? 0} of ${rows.total}`}
+                        </span>
+                        {rows.total > 10 && (
+                            <PerPageSelect tableKey={tableKey} value={rows.per_page} onChange={(perPage) => update({ perPage })} />
+                        )}
+                    </div>
                     {rows.last_page > 1 && (
                         <div className="flex items-center gap-2">
                             <span className="hidden sm:inline">

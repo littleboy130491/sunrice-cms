@@ -70,7 +70,7 @@ class ResourceController extends Controller
                 'singularLabel' => $class::singularLabel(),
             ],
             'columns' => $class::columns(),
-            'rows' => $table->paginate($request),
+            'rows' => $table->defaultPerPage(TablePreferencesController::perPageFor($request, "resource.{$resource}", 20))->paginate($request),
             'meta' => $table->meta(),
             'filters' => array_values(array_filter(array_map(fn (Filter $f) => $this->filterMeta($f), $class::filters()))),
             'visibleColumns' => TablePreferencesController::columnsFor(

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
+import { PerPageSelect } from '@/components/data-table/PerPageSelect';
 import type { SharedProps } from '@/types';
 import * as React from 'react';
 
@@ -25,6 +26,7 @@ interface Props {
         links: { url: string | null; label: string; active: boolean }[];
         current_page: number;
         last_page: number;
+        per_page: number;
         total: number;
         prev_page_url: string | null;
         next_page_url: string | null;
@@ -185,9 +187,12 @@ export default function Submissions({ form, submissions, filters }: Props) {
                     )}
                 </DialogContent>
             </Dialog>
-            {submissions.last_page > 1 && (
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <span>Page {submissions.current_page} of {submissions.last_page} · {submissions.total} submissions</span>
+            {submissions.total > 10 && (
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <span>Page {submissions.current_page} of {submissions.last_page} · {submissions.total} submissions</span>
+                        <PerPageSelect tableKey={`submissions-${form.handle}`} value={submissions.per_page} />
+                    </div>
                     <div className="flex gap-2">
                         <Button variant="outline" size="sm" disabled={!submissions.prev_page_url} onClick={() => submissions.prev_page_url && router.get(submissions.prev_page_url, {}, { preserveScroll: true })}>Previous</Button>
                         <Button variant="outline" size="sm" disabled={!submissions.next_page_url} onClick={() => submissions.next_page_url && router.get(submissions.next_page_url, {}, { preserveScroll: true })}>Next</Button>

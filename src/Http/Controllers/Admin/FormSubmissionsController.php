@@ -48,7 +48,7 @@ class FormSubmissionsController extends Controller
 
         return Inertia::render('Forms/Submissions', [
             'form' => $form->only('id', 'handle', 'title', 'fields'),
-            'submissions' => $query->paginate(25)->withQueryString()->through(fn (FormSubmission $s) => [
+            'submissions' => $query->paginate(TablePreferencesController::perPageFor($request, "submissions-{$form->handle}", 25))->withQueryString()->through(fn (FormSubmission $s) => [
                 'id' => $s->id,
                 'data' => $s->data,
                 'created_at' => $s->created_at?->toIso8601String(),
