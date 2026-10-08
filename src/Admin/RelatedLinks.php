@@ -9,6 +9,7 @@ use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
+use Sunrice\Models\GlobalSet;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
@@ -40,6 +41,22 @@ class RelatedLinks
     public static function forTermList(Taxonomy $taxonomy): array
     {
         return array_values(array_filter(static::forTerm($taxonomy, null), fn (array $l) => $l['href'] !== route('sunrice.admin.terms.index', $taxonomy)));
+    }
+
+    /**
+     * For a global set's editor: the globals list and its blueprint.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function forGlobal(GlobalSet $set): array
+    {
+        $links = [['group' => 'Globals', 'label' => 'All globals', 'href' => route('sunrice.admin.globals.index')]];
+        $blueprint = $set->blueprint;
+        if ($blueprint instanceof Blueprint && Gate::allows('update', $blueprint)) {
+            $links[] = ['group' => 'Structure', 'label' => "Blueprint: {$blueprint->title}", 'href' => route('sunrice.admin.structure.blueprints.edit', $blueprint)];
+        }
+
+        return $links;
     }
 
     /** @return array<int, array<string, mixed>> */

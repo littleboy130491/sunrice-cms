@@ -9,6 +9,7 @@ import type { BuilderField, FieldTypeDef } from '@/components/field-builder/Fiel
 import { adminUrl } from '@/lib/route';
 import { InputError } from '@/components/app/input-error';
 import type { SharedProps, Json } from '@/types';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 
 interface Props {
     form: {
@@ -60,6 +61,11 @@ export default function FormEditor({ form, fieldTypes }: Props) {
             return field ? `${field.label || field.handle || `Field ${index + 1}`}: ${v}` : v;
         });
     const settingsError = (key: string) => errors[`settings.${key}`];
+
+    // Ctrl/⌘ S saves.
+    useUnsavedChanges(false, () => {
+        if (!processing) save();
+    });
 
     return (
         <div className="mx-auto max-w-4xl space-y-6">

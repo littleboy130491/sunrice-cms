@@ -25,7 +25,7 @@ export default function MenusIndex({ menus }: { menus: Row[] }) {
                 <TableBody>
                     {menus.map((m) => (
                         <TableRow key={m.id}>
-                            <TableCell><Link className="font-medium hover:underline" href={adminUrl(`menus/${m.id}`, adminPath)}>{m.title}</Link></TableCell>
+                            <TableCell><Link className="font-medium hover:underline" href={adminUrl(`menus/${m.id}/edit`, adminPath)}>{m.title}</Link></TableCell>
                             <TableCell className="max-md:hidden"><code className="text-xs">{m.handle}</code></TableCell>
                             <TableCell>{m.items_count}</TableCell>
                             <TableCell>

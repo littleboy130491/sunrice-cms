@@ -66,7 +66,7 @@ export default function MenuEdit({ menu, items }: Props) {
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2">
             <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
                 {canEdit ? (
-                    <Link className="truncate font-medium hover:underline" href={adminUrl(`menu-items/${item.id}/edit`, adminPath)}>{label(item)}</Link>
+                    <Link className="truncate font-medium hover:underline" href={adminUrl(`menus/${menu.id}/items/${item.id}/edit`, adminPath)}>{label(item)}</Link>
                 ) : (
                     <span className="truncate font-medium">{label(item)}</span>
                 )}
@@ -82,7 +82,7 @@ export default function MenuEdit({ menu, items }: Props) {
                 <span className="flex shrink-0 items-center gap-1">
                     <Button variant="ghost" size="sm" onClick={() => move(item, -1)} disabled={position <= 0} aria-label="Move up"><ArrowUp className="h-3.5 w-3.5" /></Button>
                     <Button variant="ghost" size="sm" onClick={() => move(item, 1)} disabled={position >= siblings.length - 1} aria-label="Move down"><ArrowDown className="h-3.5 w-3.5" /></Button>
-                    <Button variant="ghost" size="sm" asChild aria-label="Edit"><Link href={adminUrl(`menu-items/${item.id}/edit`, adminPath)}><Pencil className="h-3.5 w-3.5" /></Link></Button>
+                    <Button variant="ghost" size="sm" asChild aria-label="Edit"><Link href={adminUrl(`menus/${menu.id}/items/${item.id}/edit`, adminPath)}><Pencil className="h-3.5 w-3.5" /></Link></Button>
                     {!nested && <Button variant="ghost" size="sm" asChild aria-label="Add sub-item"><Link href={adminUrl(`menus/${menu.id}/items/create?parent=${item.id}`, adminPath)}><Plus className="h-3.5 w-3.5" /></Link></Button>}
                     <Button variant="ghost" size="sm" className="text-destructive" onClick={() => remove(item.id)} aria-label="Remove"><Trash2 className="h-4 w-4" /></Button>
                 </span>

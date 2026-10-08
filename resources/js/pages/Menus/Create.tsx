@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { Link, useForm, usePage } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { InputError } from '@/components/app/input-error';
 import { useBreadcrumbs } from '@/components/app/breadcrumbs';
 import { adminUrl } from '@/lib/route';
 import type { SharedProps } from '@/types';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 
 /** New menu: a title and the handle templates use (<x-sunrice::menu handle="…">). */
 export default function MenuCreate() {
@@ -21,8 +23,12 @@ export default function MenuCreate() {
         form.post(adminUrl('menus', adminPath));
     };
 
+    // Leave-page warning for unsaved edits; Ctrl/⌘ S saves.
+    const formRef = React.useRef<HTMLFormElement>(null);
+    useUnsavedChanges(form.isDirty && !form.processing, () => formRef.current?.requestSubmit());
+
     return (
-        <form onSubmit={submit} className="flex max-w-2xl flex-col gap-6">
+        <form ref={formRef} onSubmit={submit} className="flex max-w-2xl flex-col gap-6">
             <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-3">
                     <Button variant="outline" size="icon" className="size-8 shrink-0" asChild>

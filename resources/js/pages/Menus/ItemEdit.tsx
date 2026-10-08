@@ -75,7 +75,7 @@ export default function MenuItemEdit({ menu, item, parent, collections, taxonomi
     const dirty = JSON.stringify(form) !== saved;
     useUnsavedChanges(dirty && !processing, () => formRef.current?.requestSubmit());
 
-    const menuUrl = adminUrl(`menus/${menu.id}`, adminPath);
+    const menuUrl = adminUrl(`menus/${menu.id}/edit`, adminPath);
     useBreadcrumbs([
         { label: 'Structure' },
         { label: 'Menus', href: adminUrl('menus', adminPath) },

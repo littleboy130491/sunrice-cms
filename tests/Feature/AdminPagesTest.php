@@ -439,6 +439,27 @@ it('updates global settings through the meta route', function () {
     expect($set->fresh()->title)->toBe('Site info')->and($set->fresh()->translatable)->toBeTrue();
 });
 
+it('saves a global set\'s values and settings with one save', function () {
+    $blueprint = Blueprint::factory()->create(['fields' => [['handle' => 'text', 'type' => 'text']]]);
+    $other = Blueprint::factory()->create(['title' => 'Footer']);
+    $set = GlobalSet::create(['handle' => 'site', 'title' => 'Site', 'group' => 'global', 'blueprint_id' => $blueprint->id]);
+
+    put("/cms/globals/{$set->id}", [
+        'values' => ['text' => 'Hello'],
+        'meta' => ['title' => 'Site info', 'blueprint_id' => $other->id, 'translatable' => false],
+    ])->assertSessionHasNoErrors()->assertSessionHas('success');
+
+    $set->refresh();
+    expect($set->title)->toBe('Site info')->and($set->blueprint_id)->toBe($other->id)
+        ->and($set->values()->first()->data)->toBe(['text' => 'Hello']);
+
+    // Settings errors come back under meta.*.
+    put("/cms/globals/{$set->id}", ['values' => [], 'meta' => ['title' => '', 'blueprint_id' => $other->id]])
+        ->assertSessionHasErrors('meta.title');
+
+    get("/cms/globals/{$set->id}/edit")->assertInertia(fn (Assert $page) => $page->where('related.0.label', 'All globals'));
+});
+
 it('lists everything a blueprint is used by', function () {
     $blueprint = Blueprint::factory()->create(['title' => 'Category']);
     Taxonomy::create(['handle' => 'topics', 'title' => 'Topics', 'blueprint_id' => $blueprint->id]);

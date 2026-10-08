@@ -12,6 +12,7 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Actions\Globals\SaveGlobalValues;
+use Sunrice\Admin\RelatedLinks;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Locks\Versions;
 use Sunrice\Models\Blueprint;
@@ -78,7 +79,14 @@ class GlobalsController extends Controller
         $validated = $request->validate([
             'locale' => ['nullable', 'string'],
             'values' => ['array'],
+            // The set's own settings, saved by the same Save button.
+            'meta' => ['nullable', 'array'],
+            'meta.title' => ['required_with:meta', 'string', 'max:255'],
+            'meta.blueprint_id' => ['required_with:meta', 'integer', 'exists:sunrice_blueprints,id'],
+            'meta.translatable' => ['boolean'],
         ]);
+        $meta = $validated['meta'] ?? null;
+        unset($validated['meta']);
 
         if (! $globalSet->translatable) {
             $validated['locale'] = null;
@@ -88,6 +96,10 @@ class GlobalsController extends Controller
         Versions::ensureUnchanged($request->input('version'), Versions::global($globalSet->values()->where('locale', $validated['locale'])->first()), $request->boolean('overwrite'));
 
         app(SaveGlobalValues::class)->handle($globalSet, $validated);
+        // Settings after the values, which were edited with the current blueprint.
+        if (is_array($meta)) {
+            $globalSet->update(array_intersect_key($meta, array_flip(['title', 'blueprint_id', 'translatable'])));
+        }
         ContentChanged::dispatch('global_saved');
 
         return back()->with('success', 'Saved.');
@@ -129,6 +141,7 @@ class GlobalsController extends Controller
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
             'locales' => Locales::available(),
             'mainLocale' => Locales::main(),
+            'related' => $set === null ? [] : RelatedLinks::forGlobal($set),
         ]);
     }
 }

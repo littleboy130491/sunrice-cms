@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { useForm } from '@inertiajs/react';
 import { usePage } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
@@ -7,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SettingsTabs } from '@/components/app/settings-tabs';
 import { adminUrl } from '@/lib/route';
 import type { SharedProps } from '@/types';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 
 type Role = 'title' | 'description' | 'image';
 interface Field { handle: string; label: string; type: string }
@@ -74,8 +76,12 @@ export default function SeoSettings({ collections, taxonomies }: Props) {
             </CollapsibleCard>
         );
 
+    // Leave-page warning for unsaved edits; Ctrl/⌘ S saves.
+    const formRef = React.useRef<HTMLFormElement>(null);
+    useUnsavedChanges(form.isDirty && !form.processing, () => formRef.current?.requestSubmit());
+
     return (
-        <form
+        <form ref={formRef}
             onSubmit={(e) => { e.preventDefault(); form.put(adminUrl('settings/seo', adminPath), { preserveScroll: true }); }}
             className="flex max-w-4xl flex-col gap-6"
         >

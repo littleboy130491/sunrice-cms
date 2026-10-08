@@ -90,7 +90,7 @@ export default function EntriesIndex({ collection, columns, rows, meta, can, vis
                     { key: 'delete', label: 'Delete forever', variant: 'destructive', confirm: 'Permanently delete? This cannot be undone.' },
                 ]}
                 // Trashed entries can't be opened: restore them first (bulk action).
-                rowHref={(row) => (row.status === 'trashed' ? null : adminUrl(`collections/${collection.handle}/entries/${row.id}`, adminPath))}
+                rowHref={(row) => (row.status === 'trashed' ? null : adminUrl(`collections/${collection.handle}/entries/${row.id}/edit`, adminPath))}
                 renderCell={(row, column) => {
                     if (column.key === 'status') {
                         return <Badge className="capitalize" variant={row.status === 'published' ? 'success' : row.status === 'trashed' ? 'destructive' : 'secondary'}>{row.status}</Badge>;

@@ -74,9 +74,10 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::post('collections/{collection:handle}/entries', [Admin\EntriesController::class, 'store'])->name('entries.store');
     Route::post('collections/{collection:handle}/entries/reorder', [Admin\EntriesController::class, 'reorder'])->name('entries.reorder');
     Route::post('collections/{collection:handle}/entries/bulk', [Admin\EntriesController::class, 'bulk'])->name('entries.bulk');
-    Route::get('collections/{collection:handle}/entries/{entry}', [Admin\EntriesController::class, 'edit'])->whereNumber('entry')->withoutScopedBindings()->name('entries.edit');
-    // Older address of the entry editor: sent to the one above.
-    Route::get('entries/{entry}', [Admin\EntriesController::class, 'legacyEdit'])->withTrashed()->name('entries.legacy-edit');
+    Route::get('collections/{collection:handle}/entries/{entry}/edit', [Admin\EntriesController::class, 'edit'])->whereNumber('entry')->withoutScopedBindings()->name('entries.edit');
+    // Older addresses of the entry editor: sent to the one above.
+    Route::get('collections/{collection:handle}/entries/{entry}', [Admin\EntriesController::class, 'legacyEdit'])->whereNumber('entry')->name('entries.legacy-nested-edit');
+    Route::get('entries/{entry}', [Admin\EntriesController::class, 'legacyEdit'])->whereNumber('entry')->name('entries.legacy-edit');
     Route::put('entries/{entry}', [Admin\EntriesController::class, 'update'])->name('entries.update');
     Route::delete('entries/{entry}', [Admin\EntriesController::class, 'destroy'])->name('entries.destroy');
     Route::post('entries/{entry}/publish', [Admin\EntriesController::class, 'publish'])->name('entries.publish');
@@ -97,9 +98,10 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::get('taxonomies/{taxonomy:handle}', [Admin\TermsController::class, 'legacyIndex'])->name('terms.legacy-index');
     Route::get('taxonomies/{taxonomy:handle}/terms/create', [Admin\TermsController::class, 'create'])->name('terms.create');
     Route::post('taxonomies/{taxonomy:handle}/terms', [Admin\TermsController::class, 'store'])->name('terms.store');
-    Route::get('taxonomies/{taxonomy:handle}/terms/{term}', [Admin\TermsController::class, 'edit'])->whereNumber('term')->withoutScopedBindings()->name('terms.edit');
-    // Older address of the term editor: sent to the one above.
-    Route::get('terms/{term}/edit', [Admin\TermsController::class, 'legacyEdit'])->name('terms.legacy-edit');
+    Route::get('taxonomies/{taxonomy:handle}/terms/{term}/edit', [Admin\TermsController::class, 'edit'])->whereNumber('term')->withoutScopedBindings()->name('terms.edit');
+    // Older addresses of the term editor: sent to the one above.
+    Route::get('taxonomies/{taxonomy:handle}/terms/{term}', [Admin\TermsController::class, 'legacyEdit'])->whereNumber('term')->name('terms.legacy-nested-edit');
+    Route::get('terms/{term}/edit', [Admin\TermsController::class, 'legacyEdit'])->whereNumber('term')->name('terms.legacy-edit');
     Route::put('terms/{term}', [Admin\TermsController::class, 'update'])->name('terms.update');
     Route::delete('terms/{term}', [Admin\TermsController::class, 'destroy'])->name('terms.destroy');
     Route::post('taxonomies/{taxonomy:handle}/terms/reorder', [Admin\TermsController::class, 'reorder'])->name('terms.reorder');
@@ -109,12 +111,14 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::get('menus', [Admin\MenusController::class, 'index'])->name('menus.index');
     Route::get('menus/create', [Admin\MenusController::class, 'create'])->name('menus.create');
     Route::post('menus', [Admin\MenusController::class, 'store'])->name('menus.store');
-    Route::get('menus/{menu}', [Admin\MenusController::class, 'edit'])->name('menus.edit');
+    Route::get('menus/{menu}/edit', [Admin\MenusController::class, 'edit'])->name('menus.edit');
+    Route::get('menus/{menu}', [Admin\MenusController::class, 'legacyEdit'])->whereNumber('menu')->name('menus.legacy-edit');
     Route::put('menus/{menu}', [Admin\MenusController::class, 'update'])->name('menus.update');
     Route::delete('menus/{menu}', [Admin\MenusController::class, 'destroy'])->name('menus.destroy');
     Route::get('menus/{menu}/items/create', [Admin\MenuItemsController::class, 'create'])->name('menu-items.create');
     Route::post('menus/{menu}/items', [Admin\MenuItemsController::class, 'store'])->name('menu-items.store');
-    Route::get('menu-items/{item}/edit', [Admin\MenuItemsController::class, 'edit'])->name('menu-items.edit');
+    Route::get('menus/{menu}/items/{item}/edit', [Admin\MenuItemsController::class, 'edit'])->whereNumber('item')->withoutScopedBindings()->name('menu-items.edit');
+    Route::get('menu-items/{item}/edit', [Admin\MenuItemsController::class, 'legacyEdit'])->whereNumber('item')->name('menu-items.legacy-edit');
     Route::put('menu-items/{item}', [Admin\MenuItemsController::class, 'update'])->name('menu-items.update');
     Route::delete('menu-items/{item}', [Admin\MenuItemsController::class, 'destroy'])->name('menu-items.destroy');
     Route::post('menus/{menu}/items/reorder', [Admin\MenuItemsController::class, 'reorder'])->name('menu-items.reorder');
@@ -187,7 +191,9 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::get('forms/create', [Admin\FormsController::class, 'create'])->name('forms.create');
     Route::post('forms', [Admin\FormsController::class, 'store'])->name('forms.store');
     Route::delete('forms/{form}', [Admin\FormsController::class, 'destroy'])->name('forms.destroy');
-    Route::get('forms/{form:handle}', [Admin\FormsController::class, 'edit'])->name('forms.edit');
+    Route::get('forms/{form}/edit', [Admin\FormsController::class, 'edit'])->whereNumber('form')->name('forms.edit');
+    // Older address of the form editor (by handle): sent to the one above.
+    Route::get('forms/{form:handle}', [Admin\FormsController::class, 'legacyEdit'])->name('forms.legacy-edit');
     Route::put('forms/{form}', [Admin\FormsController::class, 'update'])->name('forms.update');
     Route::get('forms/{form}/submissions', [Admin\FormSubmissionsController::class, 'index'])->name('forms.submissions');
     Route::get('forms/{form}/submissions/export', [Admin\FormSubmissionsController::class, 'export'])->name('forms.submissions.export');

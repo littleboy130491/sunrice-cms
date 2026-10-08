@@ -282,9 +282,11 @@ class EntriesController extends Controller
         return Inertia::render('Entries/Edit', $this->editorProps($entry->collection, $entry));
     }
 
-    /** The editor's older address (/entries/{id}). */
-    public function legacyEdit(Entry $entry): RedirectResponse
+    /** The editor's older addresses (/entries/{id}, …/entries/{id} without /edit). */
+    public function legacyEdit(Request $request): RedirectResponse
     {
+        $entry = Entry::withTrashed()->findOrFail((int) $request->route('entry'));
+
         return redirect()->to(AdminUrls::entry($entry), 301);
     }
 

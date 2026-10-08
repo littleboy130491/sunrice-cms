@@ -30,9 +30,19 @@ class MenuItemsController extends Controller
         return $this->editor($menu, null, $parentItem);
     }
 
-    public function edit(MenuItem $item): Response
+    /** The editor's older address (/menu-items/{id}/edit). */
+    public function legacyEdit(MenuItem $item): RedirectResponse
+    {
+        return redirect()->route('sunrice.admin.menu-items.edit', [$item->menu_id, $item], 301);
+    }
+
+    public function edit(Menu $menu, MenuItem $item): Response|RedirectResponse
     {
         $this->authorize('update', $item->menu);
+        // Opened under another menu's address: go to its own.
+        if ($item->menu_id !== $menu->id) {
+            return redirect()->route('sunrice.admin.menu-items.edit', [$item->menu_id, $item]);
+        }
 
         return $this->editor($item->menu, $item, $item->parent_id === null ? null : MenuItem::query()->find($item->parent_id));
     }

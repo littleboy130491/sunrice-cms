@@ -76,7 +76,7 @@ it('keeps only the field that matches the type and can switch type', function ()
 it('shows what each item links to in the editor', function () {
     addItem(['type' => 'term', 'target_id' => $this->term->id, 'labels' => []]);
 
-    get("/cms/menus/{$this->menu->id}")
+    get("/cms/menus/{$this->menu->id}/edit")
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Menus/Edit')
@@ -96,14 +96,14 @@ it('edits items on their own page', function () {
             ->has('collections', 1)
             ->has('taxonomies', 1));
 
-    get("/cms/menu-items/{$item->id}/edit")
+    get("/cms/menus/{$this->menu->id}/items/{$item->id}/edit")
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('Menus/ItemEdit')
             ->where('item.target_title', 'Topics: Laravel')
             ->where('item.target_taxonomy', 'topics'));
 
-    put("/cms/menu-items/{$item->id}", ['labels' => ['id' => 'Topik']])->assertRedirect("/cms/menus/{$this->menu->id}");
+    put("/cms/menu-items/{$item->id}", ['labels' => ['id' => 'Topik']])->assertRedirect("/cms/menus/{$this->menu->id}/edit");
 });
 
 it('lets menu editors search terms without term permissions', function () {
