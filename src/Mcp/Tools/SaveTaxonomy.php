@@ -13,7 +13,7 @@ use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Taxonomy;
 
-#[Description('Create or update a taxonomy (categories, tags…), found by handle. hierarchical allows parent terms. Settings: has_archive + route (term page URL, e.g. "/category/{slug}") + per_page, template (Blade view), sluggable, seo {description, image, noindex}. collections: handles of the collections whose entries use it.')]
+#[Description('Create or update a taxonomy (categories, tags…), found by handle. hierarchical allows parent terms. Settings: has_archive + route (term page URL, e.g. "/category/{slug}") + per_page, template (Blade view), sluggable, seo {description, image, noindex, title_field, description_field, image_field} (merged key by key; the *_field keys pick the term field that fills an empty meta title, description or share image: a field handle, "none", or "" for automatic). collections: handles of the collections whose entries use it.')]
 class SaveTaxonomy extends SunriceTool
 {
     protected string $name = 'save_taxonomy';
@@ -37,7 +37,7 @@ class SaveTaxonomy extends SunriceTool
             'title' => $args['title'] ?? ($taxonomy === null ? ucfirst($args['handle']) : $taxonomy->title),
             'hierarchical' => $args['hierarchical'] ?? ($taxonomy !== null && $taxonomy->hierarchical),
             'blueprint_id' => $taxonomy?->blueprint_id,
-            'settings' => array_merge($taxonomy === null ? [] : ($taxonomy->settings ?? []), $args['settings'] ?? []),
+            'settings' => static::mergeSettings($taxonomy === null ? [] : ($taxonomy->settings ?? []), $args['settings'] ?? []),
         ];
         if (! empty($args['blueprint'])) {
             $blueprint = $this->findByHandle(Blueprint::class, $args['blueprint']);

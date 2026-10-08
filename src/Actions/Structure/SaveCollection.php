@@ -64,6 +64,10 @@ class SaveCollection
             'settings.seo.description' => ['nullable', 'string', 'max:500'],
             'settings.seo.image' => ['nullable', 'integer'],
             'settings.seo.noindex' => ['nullable', 'boolean'],
+            // Which field fills an empty meta title/description/share image (Settings → SEO).
+            'settings.seo.title_field' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]*$/'],
+            'settings.seo.description_field' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]*$/'],
+            'settings.seo.image_field' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]*$/'],
             'settings.icon' => ['nullable', 'string', 'max:50', 'regex:/^[a-z0-9-]+$/'],
             'settings.archive_entries_in' => ['nullable', 'string', 'max:100'],
             'taxonomy_ids' => ['array'],

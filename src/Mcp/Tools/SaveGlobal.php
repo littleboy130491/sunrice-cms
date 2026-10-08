@@ -15,7 +15,7 @@ use Sunrice\Models\Blueprint;
 use Sunrice\Models\GlobalSet;
 use Sunrice\Support\Locales;
 
-#[Description('Create a global set (give title and blueprint; group "global" or "template_part") or change its values: `values` are merged by field handle into the values of `locale` (translatable sets; default the main language).')]
+#[Description('Create a global set (give title and blueprint; group "global" or "template_part") or change one: title, blueprint and translatable can change later too. `values` are merged by field handle into the values of `locale` (translatable sets; default the main language).')]
 class SaveGlobal extends SunriceTool
 {
     protected string $name = 'save_global';
@@ -51,6 +51,19 @@ class SaveGlobal extends SunriceTool
             $created = true;
         } else {
             $this->authorize('update', $set);
+            $meta = array_intersect_key($args, array_flip(['title', 'group', 'translatable']));
+            if (! empty($args['blueprint'])) {
+                $blueprint = $this->findByHandle(Blueprint::class, $args['blueprint']);
+                if ($blueprint === null) {
+                    return $this->notFound('Blueprint');
+                }
+                $meta['blueprint_id'] = $blueprint->id;
+            }
+            $meta = array_filter($meta, fn ($value) => $value !== null);
+            if ($meta !== []) {
+                $set->update($meta);
+                ContentChanged::dispatch('global_saved');
+            }
         }
 
         if (isset($args['values'])) {
@@ -68,10 +81,10 @@ class SaveGlobal extends SunriceTool
     {
         return [
             'handle' => $schema->string()->required(),
-            'title' => $schema->string()->description('When creating.'),
-            'blueprint' => $schema->string()->description('Blueprint handle, when creating.'),
+            'title' => $schema->string(),
+            'blueprint' => $schema->string()->description('Blueprint handle (required when creating).'),
             'group' => $schema->string()->enum(['global', 'template_part']),
-            'translatable' => $schema->boolean()->description('When creating: values differ per language.'),
+            'translatable' => $schema->boolean()->description('Values differ per language.'),
             'locale' => $schema->string(),
             'values' => $schema->object()->description('Field values by handle (merged).'),
         ];

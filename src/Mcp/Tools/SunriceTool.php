@@ -40,6 +40,24 @@ abstract class SunriceTool extends Tool
         return Response::error("{$what} not found.");
     }
 
+    /**
+     * Settings merged over the stored ones; `seo` is merged key by key,
+     * and an empty string removes a key.
+     *
+     * @param  array<string, mixed>  $current
+     * @param  array<string, mixed>  $changes
+     * @return array<string, mixed>
+     */
+    protected static function mergeSettings(array $current, array $changes): array
+    {
+        if (is_array($changes['seo'] ?? null)) {
+            $seo = array_merge((array) ($current['seo'] ?? []), $changes['seo']);
+            $changes['seo'] = array_filter($seo, fn ($value) => $value !== '' && $value !== null);
+        }
+
+        return array_merge($current, $changes);
+    }
+
     /** A collection by handle or id. */
     protected function collection(mixed $key): ?Collection
     {

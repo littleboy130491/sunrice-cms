@@ -51,6 +51,10 @@ class SaveTaxonomy
             'settings.seo.description' => ['nullable', 'string', 'max:500'],
             'settings.seo.image' => ['nullable', 'integer'],
             'settings.seo.noindex' => ['nullable', 'boolean'],
+            // Which field fills an empty meta title/description/share image (Settings → SEO).
+            'settings.seo.title_field' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]*$/'],
+            'settings.seo.description_field' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]*$/'],
+            'settings.seo.image_field' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]*$/'],
             'settings.template' => ['nullable', 'string', 'max:150', 'regex:/^[A-Za-z0-9_.:\/-]+$/'],
             'collection_ids' => ['array'],
             'collection_ids.*' => ['integer', Rule::exists('sunrice_collections', 'id')],
