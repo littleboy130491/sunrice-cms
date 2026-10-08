@@ -23,7 +23,6 @@ interface Settings {
     description: string | null;
     timezone: string;
     locales: { main: string; available: string[]; names: Record<string, string> };
-    seo: { noindex: boolean; twitter_site: string | null; image: number | null; title_suffix?: boolean; title_separator?: string | null };
     code: { head: string | null; body_start: string | null; body_end: string | null };
     branding?: { name: string | null; tagline: string | null; logo: number | null; font: string | null; color: string | null };
     security?: { two_factor: boolean };
@@ -42,7 +41,6 @@ interface MailInfo {
 interface Props {
     settings: Settings;
     homepage: PickedEntry | null;
-    shareImage: { id: number; url: string; filename: string } | null;
     timezones: string[];
     mainLocked: boolean;
     brandLogo?: { id: number; url: string; filename: string } | null;
@@ -50,10 +48,9 @@ interface Props {
     mail?: MailInfo;
 }
 
-export default function SettingsEdit({ settings, homepage, shareImage, timezones, mainLocked, brandLogo = null, fonts = [], mail }: Props) {
+export default function SettingsEdit({ settings, homepage, timezones, mainLocked, brandLogo = null, fonts = [], mail }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const [home, setHome] = React.useState<PickedEntry[]>(homepage ? [homepage] : []);
-    const [image, setImage] = React.useState(shareImage);
     const [logo, setLogo] = React.useState(brandLogo);
     const [newLocale, setNewLocale] = React.useState('');
 
@@ -66,13 +63,6 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
             main: settings.locales.main,
             available: settings.locales.available,
             names: settings.locales.names ?? {},
-        },
-        seo: {
-            noindex: !!settings.seo.noindex,
-            twitter_site: settings.seo.twitter_site ?? '',
-            image: settings.seo.image ?? null as number | null,
-            title_suffix: !!settings.seo.title_suffix,
-            title_separator: settings.seo.title_separator ?? '|',
         },
         branding: {
             name: settings.branding?.name ?? 'Sunrice',
@@ -220,68 +210,6 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                 </div>
                 {mainLocked && <MainLanguageHelp example={locales.available.find((code) => code !== locales.main) ?? 'en'} />}
                 <InputError message={errors['locales.main'] ?? errors['locales.available'] ?? Object.entries(errors).find(([k]) => k.startsWith('locales.'))?.[1]} />
-            </CollapsibleCard>
-
-            <CollapsibleCard title="Search engines & sharing" storageKey="settings:search-engines-sharing" hasErrors={Object.keys(errors).length > 0} contentClassName="flex flex-col gap-4">
-                <label className="flex items-start gap-3">
-                    <Switch checked={form.data.seo.noindex} onCheckedChange={(v) => form.setData('seo', { ...form.data.seo, noindex: v })} />
-                    <span className="grid gap-0.5 text-sm">
-                        <span className="font-medium">Hide the whole site from search engines</span>
-                        <span className="text-xs text-muted-foreground">Adds noindex to every page and empties the sitemap. Useful on staging.</span>
-                    </span>
-                </label>
-                <div className="flex flex-wrap items-start gap-3">
-                    <label className="flex flex-1 items-start gap-3">
-                        <Switch checked={form.data.seo.title_suffix} onCheckedChange={(v) => form.setData('seo', { ...form.data.seo, title_suffix: v })} />
-                        <span className="grid gap-0.5 text-sm">
-                            <span className="font-medium">Add the site name to page titles</span>
-                            <span className="text-xs text-muted-foreground">
-                                The browser tab and search results show “About us {form.data.seo.title_separator.trim() || '|'} {form.data.name || 'Site name'}”. Share previews keep the bare title.
-                            </span>
-                        </span>
-                    </label>
-                    {form.data.seo.title_suffix && (
-                        <div className="grid w-24 gap-1.5">
-                            <Label htmlFor="title-separator" className="text-xs">Separator</Label>
-                            <Input id="title-separator" maxLength={5} value={form.data.seo.title_separator} onChange={(e) => form.setData('seo', { ...form.data.seo, title_separator: e.target.value })} />
-                        </div>
-                    )}
-                </div>
-                <InputError message={errors['seo.title_separator']} />
-                <div className="grid gap-2 sm:max-w-xs">
-                    <Label htmlFor="twitter-site">X/Twitter handle</Label>
-                    <Input id="twitter-site" placeholder="@acme" value={form.data.seo.twitter_site} onChange={(e) => form.setData('seo', { ...form.data.seo, twitter_site: e.target.value })} />
-                    <InputError message={errors['seo.twitter_site']} />
-                </div>
-                <div className="grid gap-2">
-                    <Label>Default share image</Label>
-                    <div className="flex items-center gap-3">
-                        {image ? (
-                            <div className="flex items-center gap-2 rounded-md border p-2 text-sm">
-                                <img src={image.url} alt="" className="size-10 rounded object-cover" />
-                                <span className="max-w-48 truncate">{image.filename}</span>
-                                <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="Remove image"
-                                    onClick={() => { setImage(null); form.setData('seo', { ...form.data.seo, image: null }); }}>
-                                    <X className="size-4" />
-                                </button>
-                            </div>
-                        ) : (
-                            <span className="flex items-center gap-2 text-sm text-muted-foreground"><ImageIcon className="size-4" /> None</span>
-                        )}
-                        <AssetPicker
-                            imageOnly
-                            trigger={<Button type="button" variant="outline" size="sm">Choose image</Button>}
-                            onSelect={(assets: PickedAsset[]) => {
-                                const a = assets[0];
-                                if (!a) return;
-                                setImage({ id: a.id, url: a.url, filename: a.filename });
-                                form.setData('seo', { ...form.data.seo, image: a.id });
-                            }}
-                        />
-                    </div>
-                    <InputError message={errors['seo.image']} />
-                    <p className="text-xs text-muted-foreground">Shown when a page is shared and has no image of its own.</p>
-                </div>
             </CollapsibleCard>
 
             <CollapsibleCard

@@ -28,6 +28,7 @@ class SaveSiteSettings
     public function handle(array $input): void
     {
         $validated = validator($input, [
+            ...static::seoRules(),
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:500'],
             'timezone' => ['required', 'timezone:all'],
@@ -38,18 +39,12 @@ class SaveSiteSettings
             'locales.available.*' => ['required', 'string', 'distinct', 'regex:'.self::LOCALE_PATTERN],
             'locales.names' => ['array'],
             'locales.names.*' => ['nullable', 'string', 'max:100'],
-            'seo' => ['array'],
             'branding' => ['array'],
             'branding.name' => ['nullable', 'string', 'max:60'],
             'branding.tagline' => ['nullable', 'string', 'max:80'],
             'branding.logo' => ['nullable', 'integer', Rule::exists('sunrice_assets', 'id')],
             'branding.font' => ['nullable', Rule::in(array_keys(Branding::FONTS))],
             'branding.color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
-            'seo.noindex' => ['boolean'],
-            'seo.twitter_site' => ['nullable', 'string', 'max:50', 'regex:/^@?\w+$/'],
-            'seo.image' => ['nullable', 'integer', Rule::exists('sunrice_assets', 'id')],
-            'seo.title_suffix' => ['boolean'],
-            'seo.title_separator' => ['nullable', 'string', 'max:5'],
             'code' => ['array'],
             'code.head' => ['nullable', 'string', 'max:20000'],
             'code.body_start' => ['nullable', 'string', 'max:20000'],
@@ -81,13 +76,8 @@ class SaveSiteSettings
             'description' => $validated['description'] ?? null,
             'timezone' => $validated['timezone'],
             'locales' => ['main' => $locales['main'], 'available' => $available, 'names' => $names],
-            'seo' => [
-                'noindex' => (bool) ($validated['seo']['noindex'] ?? false),
-                'twitter_site' => $validated['seo']['twitter_site'] ?? null,
-                'image' => $validated['seo']['image'] ?? null,
-                'title_suffix' => (bool) ($validated['seo']['title_suffix'] ?? false),
-                'title_separator' => trim((string) ($validated['seo']['title_separator'] ?? '')) ?: '|',
-            ],
+            // Edited on Settings → SEO: kept as they are when not sent.
+            'seo' => array_key_exists('seo', $input) ? static::seo((array) ($validated['seo'] ?? [])) : (array) (SiteSettings::current()['seo'] ?? []),
             'branding' => [
                 'name' => trim((string) ($validated['branding']['name'] ?? '')) ?: Branding::DEFAULT_NAME,
                 'tagline' => trim((string) ($validated['branding']['tagline'] ?? '')),
@@ -106,5 +96,35 @@ class SaveSiteSettings
         ]);
 
         Setting::set('homepage_entry_id', $validated['homepage_entry_id'] ?? null);
+    }
+
+    /** @return array<string, mixed> */
+    public static function seoRules(): array
+    {
+        return [
+            'seo' => ['array'],
+            'seo.noindex' => ['boolean'],
+            'seo.twitter_site' => ['nullable', 'string', 'max:50', 'regex:/^@?\w+$/'],
+            'seo.image' => ['nullable', 'integer', Rule::exists('sunrice_assets', 'id')],
+            'seo.title_suffix' => ['boolean'],
+            'seo.title_separator' => ['nullable', 'string', 'max:5'],
+        ];
+    }
+
+    /**
+     * The site-wide search engine and sharing settings, from validated input.
+     *
+     * @param  array<string, mixed>  $seo
+     * @return array<string, mixed>
+     */
+    public static function seo(array $seo): array
+    {
+        return [
+            'noindex' => (bool) ($seo['noindex'] ?? false),
+            'twitter_site' => $seo['twitter_site'] ?? null,
+            'image' => $seo['image'] ?? null,
+            'title_suffix' => (bool) ($seo['title_suffix'] ?? false),
+            'title_separator' => trim((string) ($seo['title_separator'] ?? '')) ?: '|',
+        ];
     }
 }

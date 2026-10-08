@@ -171,3 +171,23 @@ it('adds the site name to page titles when turned on', function () {
     put('/cms/settings', siteSettings(['seo' => ['title_suffix' => true, 'title_separator' => '']]))->assertSessionHasNoErrors();
     get('/pages/tentang')->assertSee('<title>Tentang | Sunrice Demo</title>', false);
 });
+
+it('edits search engine and sharing settings on the SEO tab, and General keeps them', function () {
+    get('/cms/settings/seo')->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('Settings/Seo')
+        ->has('site')
+        ->has('siteName'));
+
+    put('/cms/settings/seo', ['seo' => ['noindex' => true, 'twitter_site' => '@gm', 'image' => null, 'title_suffix' => true, 'title_separator' => '-'], 'items' => []])
+        ->assertSessionHasNoErrors();
+    expect(config('sunrice.seo.noindex'))->toBeTrue()->and(config('sunrice.seo.title_separator'))->toBe('-');
+
+    $general = siteSettings();
+    unset($general['seo']);
+    put('/cms/settings', $general)->assertSessionHasNoErrors();
+
+    expect(Setting::get('site')['seo'])->toMatchArray(['noindex' => true, 'twitter_site' => '@gm', 'title_suffix' => true, 'title_separator' => '-'])
+        ->and(Setting::get('site')['name'])->toBe('Sunrice Demo');
+
+    put('/cms/settings/seo', ['seo' => ['twitter_site' => 'not valid!'], 'items' => []])->assertSessionHasErrors('seo.twitter_site');
+});

@@ -32,8 +32,6 @@ class SettingsController extends Controller
         Gate::authorize('sunrice.settings.edit');
 
         $homepage = Entry::query()->with('translations')->find((int) Setting::get('homepage_entry_id', 0));
-        $image = SiteSettings::current()['seo']['image'] ?? null;
-        $asset = is_numeric($image) ? Asset::query()->find((int) $image) : null;
 
         return Inertia::render('Settings/Edit', [
             'settings' => SiteSettings::current(),
@@ -42,7 +40,6 @@ class SettingsController extends Controller
                 'title' => $homepage->mainTranslation()->title ?? "Entry #{$homepage->id}",
                 'collection' => '',
             ],
-            'shareImage' => $asset === null ? null : ['id' => $asset->id, 'url' => $asset->url('thumbnail'), 'filename' => $asset->filename],
             'timezones' => timezone_identifiers_list(),
             'mainLocked' => EntryTranslation::query()->exists(),
             'brandLogo' => ($logo = is_numeric(config('sunrice.branding.logo')) ? Asset::query()->find((int) config('sunrice.branding.logo')) : null) === null
@@ -87,7 +84,14 @@ class SettingsController extends Controller
             ];
         };
 
+        $site = SiteSettings::current();
+        $image = $site['seo']['image'] ?? null;
+        $asset = is_numeric($image) ? Asset::query()->find((int) $image) : null;
+
         return Inertia::render('Settings/Seo', [
+            'site' => $site['seo'] ?? [],
+            'siteName' => (string) config('app.name'),
+            'shareImage' => $asset === null ? null : ['id' => $asset->id, 'url' => $asset->url('thumbnail'), 'filename' => $asset->filename],
             'collections' => Collection::query()->with('blueprint')->orderBy('title')->get()
                 ->filter(fn (Collection $c) => $c->hasSinglePages())
                 ->map(fn (Collection $c) => $row($c, 'collection'))->values(),
@@ -102,12 +106,20 @@ class SettingsController extends Controller
         Gate::authorize('sunrice.settings.edit');
 
         $validated = $request->validate([
-            'items' => ['required', 'array'],
+            ...SaveSiteSettings::seoRules(),
+            'items' => ['present', 'array'],
             'items.*.kind' => ['required', 'in:collection,taxonomy'],
             'items.*.id' => ['required', 'integer'],
             'items.*.chosen' => ['array'],
             'items.*.chosen.*' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]*$/'],
         ]);
+
+        // Search engines & sharing (site-wide).
+        if (array_key_exists('seo', $validated)) {
+            $stored = SiteSettings::stored();
+            $stored['seo'] = SaveSiteSettings::seo((array) $validated['seo']);
+            SiteSettings::save($stored);
+        }
 
         foreach ($validated['items'] as $item) {
             $model = $item['kind'] === 'collection' ? Collection::query()->find($item['id']) : Taxonomy::query()->find($item['id']);
@@ -130,7 +142,7 @@ class SettingsController extends Controller
         }
         ContentChanged::dispatch('seo_fields_saved');
 
-        return back()->with('success', 'SEO fields saved.');
+        return back()->with('success', 'SEO settings saved.');
     }
 
     /** Send a test email right away, so SMTP problems show up here. */
