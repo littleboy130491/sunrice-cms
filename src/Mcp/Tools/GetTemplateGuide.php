@@ -58,6 +58,13 @@ collection settings.
   ->collection, ->taxonomy, ->pageType, ->locale), never `$entry`: a child's
   `@foreach ($entries as $entry)` overwrites `$entry` before the layout
   renders.
+- Components (no markup of their own; loop in the slot): <x-sunrice::entries>,
+  <x-sunrice::terms> (taxonomy terms, counts, trees), <x-sunrice::entry-filter>
+  (URL-driven filters/sort/paging; form in partials/entry-filter),
+  <x-sunrice::search> (search box / results). Page links:
+  `$entries->links('sunrice.partials.pagination')`.
+- Site search page: template `sunrice.search` ($query, $results); error
+  pages: resources/views/errors/404|500|503.blade.php.
 - Reusable bits: `@include('sunrice.partials.card', ['entry' => $item])`;
   flexible-content blocks: one partial per block type in `blocks/`
   (`@includeFirst(['sunrice.blocks.'.$block->type, 'sunrice.blocks.default'], ['block' => $block])`).

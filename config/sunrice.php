@@ -176,6 +176,19 @@ return [
         'color' => env('SUNRICE_BRAND_COLOR'),
     ],
 
+    /*
+    | Site search: GET /search?q=… (and /{locale}/search), rendered with the
+    | `sunrice.search` template. Searches the title and field text of
+    | published entries that have pages; `collections` limits it to some
+    | handles (null = all). The path wins over a page with the same slug.
+    */
+    'search' => [
+        'enabled' => (bool) env('SUNRICE_SEARCH', true),
+        'path' => 'search',
+        'collections' => null,
+        'per_page' => 10,
+    ],
+
     'seo' => [
         'noindex' => (bool) env('SUNRICE_NOINDEX', false),
         'twitter_site' => env('SUNRICE_TWITTER_SITE'),

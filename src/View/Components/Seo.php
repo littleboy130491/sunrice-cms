@@ -137,6 +137,10 @@ class Seo extends Component
         if (! empty($seo['canonical'])) {
             $this->alternates = [];
         }
+        // Search result pages stay out of search engines.
+        if (request()->attributes->get('sunrice.noindex') === true) {
+            $this->robots = 'noindex, follow';
+        }
         // Error pages (404…) stay out of search results and claim no URL.
         if (request()->attributes->has('sunrice.error_status')) {
             $this->robots = 'noindex, follow';

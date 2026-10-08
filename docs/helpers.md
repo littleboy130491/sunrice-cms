@@ -53,6 +53,15 @@ sunrice_entries('articles')->where('published_at', '<', '2025-01-01')->get();
 `published_at` is the date shown on the site; editors change it in the
 entry's Status card (backdate, or a future date to schedule).
 
+`search($text, $fields)` keeps entries whose title or given fields contain
+the text (main language, case-insensitive); custom-field filters can also
+match a list field holding any of several values:
+
+```php
+sunrice_entries('products')->search('linen', ['title', 'summary'])->get();
+sunrice_entries('products')->where('colors', 'contains any', ['red', 'blue'])->get();
+```
+
 ### Reverse relationships
 
 `entries` and `terms` fields store ids on the entry that links. To go the

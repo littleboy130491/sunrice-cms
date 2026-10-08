@@ -9,17 +9,24 @@ php artisan vendor:publish --tag=sunrice-templates
 ```
 
 This copies them to `resources/views/sunrice/`, where the resolver below
-picks them up, and their stylesheet to `public/sunrice-theme/app.css`:
+picks them up, their stylesheet and script to `public/sunrice-theme/`, and
+the error pages to `resources/views/errors/`:
 
 | File | Used for | Shows how to |
 | --- | --- | --- |
 | `layouts/app.blade.php` | every page | `<x-sunrice::seo>`, shared layout, links the stylesheet |
 | `public/sunrice-theme/app.css` | styles for all of the above | plain CSS; replace it with your own build (Vite, Tailwind…) and change the `<link>` in the layout |
-| `partials/header.blade.php` | header | globals (`sunrice_global('site')`), menus (`sunrice_menu('main')`) |
+| `public/sunrice-theme/app.js` | the mobile menu button | a few lines of plain JavaScript, no dependencies |
+| `partials/header.blade.php` | header | globals (`sunrice_global('site')`), menus (`sunrice_menu('main')`), dropdown sub-menus, a "Menu" button on small screens |
+| `partials/search-form.blade.php` | search box (in the header and on 404 pages) | `<x-sunrice::search>` |
 | `partials/language-switcher.blade.php` | language links (in the header) | `sunrice_locale_urls()`, language names |
 | `partials/footer.blade.php` | footer | template-part globals, rich text, repeaters |
 | `partials/menu.blade.php` | menus | nested menu items |
 | `partials/card.blade.php` | listings | entry teaser (image, date, excerpt) |
+| `partials/pagination.blade.php` | page links | `$entries->links('sunrice.partials.pagination')` |
+| `partials/entry-filter.blade.php` | filter forms | the form for `<x-sunrice::entry-filter>` (not used by default) |
+| `search.blade.php` | the search page | `$query`, paginated `$results` |
+| `errors/404.blade.php`, `500`, `503` | error pages (in `resources/views/errors/`) | 404 in the site layout; 500 and 503 standalone |
 | `show.blade.php` | any entry | fields via `$entry->get()`, assets, flexible-content blocks |
 | `index.blade.php` | collection archives | paginated `$entries`, archive fields |
 | `articles/show.blade.php` | the `articles` collection only | dates, author, terms, relationship fields, `<x-sunrice::entries>` |
@@ -30,6 +37,29 @@ picks them up, and their stylesheet to `public/sunrice-theme/app.css`:
 Every template works on a fresh install: missing globals, menus and
 fields simply render nothing. Each file starts with a comment listing the
 field handles it expects.
+
+### Header and mobile menu
+
+The header lists the `main` menu, the search box and the language links.
+Sub-menu items open as dropdowns on wide screens. Below 760px they fold
+into a **Menu** button: `app.js` adds a `js` class to `<html>` and toggles
+`.site-menu.is-open` (Escape closes it). Without JavaScript the menu just
+stays visible. Change the breakpoint in `app.css` (`@media (max-width: 760px)`).
+
+### Search and error pages
+
+- **Search:** `/search?q=…` (and `/{locale}/search`) renders
+  `search.blade.php` with `$query` and `$results`. Without the starter
+  templates a plain package view is used. Results pages are `noindex`.
+  Turn the page off or narrow it with `sunrice.search` in
+  [Configuration](configuration.md); build other searches with
+  [`<x-sunrice::search>`](blade-components.md#x-sunricesearch).
+- **Errors:** Laravel shows `resources/views/errors/{status}.blade.php`.
+  The starter 404 uses the site layout (header, search box, a link home),
+  and Sunrice marks it `noindex`. The 500 and 503 (maintenance,
+  `php artisan down`) pages are standalone HTML with the stylesheet only,
+  since whatever failed (often the database) would fail again in the
+  layout. Add others the same way (`403.blade.php`, `419.blade.php`).
 
 ### Languages
 

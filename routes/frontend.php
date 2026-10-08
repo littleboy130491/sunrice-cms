@@ -7,6 +7,7 @@ use Spatie\Honeypot\ProtectAgainstSpam;
 use Sunrice\Http\Controllers\Frontend\FormSubmitController;
 use Sunrice\Http\Controllers\Frontend\PageController;
 use Sunrice\Http\Controllers\Frontend\PreviewController;
+use Sunrice\Http\Controllers\Frontend\SearchController;
 use Sunrice\Http\Controllers\Frontend\SitemapController;
 use Sunrice\Http\Middleware\SetFrontendLocale;
 use Sunrice\Support\Locales;
@@ -38,6 +39,17 @@ Route::middleware(SetFrontendLocale::class)->group(function (): void {
         Route::get('/{locale}', PageController::class)
             ->where('locale', '^(?:'.$locales.')$')
             ->name('sunrice.frontend.home.locale');
+    }
+
+    // Site search: /search and /{locale}/search.
+    if (config('sunrice.search.enabled', true)) {
+        $searchPath = trim((string) config('sunrice.search.path', 'search'), '/');
+        Route::get('/'.$searchPath, SearchController::class)->name('sunrice.frontend.search');
+        if ($locales !== '') {
+            Route::get('/{locale}/'.$searchPath, SearchController::class)
+                ->where('locale', '^(?:'.$locales.')$')
+                ->name('sunrice.frontend.search.locale');
+        }
     }
 
     // Catch-all: a fallback route so routes defined later (host app,

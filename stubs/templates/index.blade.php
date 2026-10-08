@@ -49,6 +49,6 @@
             @endforeach
         </ul>
 
-        <div class="pagination">{{ $entries->links() }}</div>
+        {{ $entries->links('sunrice.partials.pagination') }}
     @endif
 @endsection

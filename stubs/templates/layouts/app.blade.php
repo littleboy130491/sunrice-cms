@@ -26,6 +26,10 @@
     @if (is_file($sunriceCss = public_path('sunrice-theme/app.css')))
         <link rel="stylesheet" href="{{ asset('sunrice-theme/app.css') }}?v={{ filemtime($sunriceCss) }}">
     @endif
+    {{-- Starter script: the mobile menu button (public/sunrice-theme/app.js). --}}
+    @if (is_file($sunriceJs = public_path('sunrice-theme/app.js')))
+        <script src="{{ asset('sunrice-theme/app.js') }}?v={{ filemtime($sunriceJs) }}"></script>
+    @endif
     @stack('head')
     <x-sunrice::code position="head" />
 </head>
