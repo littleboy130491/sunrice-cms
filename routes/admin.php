@@ -22,9 +22,9 @@ Route::middleware('guest:'.config('sunrice.auth.guard', 'web'))->group(function 
     Route::post('login/code', [Admin\Auth\TwoFactorController::class, 'store'])->name('login.code.verify');
     Route::post('login/code/resend', [Admin\Auth\TwoFactorController::class, 'resend'])->name('login.code.resend');
     Route::get('forgot-password', [Admin\Auth\PasswordResetController::class, 'create'])->name('password.request');
-    Route::post('forgot-password', [Admin\Auth\PasswordResetController::class, 'store'])->name('password.email');
+    Route::post('forgot-password', [Admin\Auth\PasswordResetController::class, 'store'])->middleware('throttle:sunrice-password')->name('password.email');
     Route::get('reset-password/{token}', [Admin\Auth\PasswordResetController::class, 'edit'])->name('password.reset');
-    Route::post('reset-password', [Admin\Auth\PasswordResetController::class, 'update'])->name('password.update');
+    Route::post('reset-password', [Admin\Auth\PasswordResetController::class, 'update'])->middleware('throttle:sunrice-password')->name('password.update');
 });
 
 Route::post('logout', [Admin\Auth\LoginController::class, 'destroy'])->name('logout');

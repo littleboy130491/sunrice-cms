@@ -48,6 +48,8 @@ class SaveSiteSettings
             'seo.noindex' => ['boolean'],
             'seo.twitter_site' => ['nullable', 'string', 'max:50', 'regex:/^@?\w+$/'],
             'seo.image' => ['nullable', 'integer', Rule::exists('sunrice_assets', 'id')],
+            'seo.title_suffix' => ['boolean'],
+            'seo.title_separator' => ['nullable', 'string', 'max:5'],
             'code' => ['array'],
             'code.head' => ['nullable', 'string', 'max:20000'],
             'code.body_start' => ['nullable', 'string', 'max:20000'],
@@ -83,6 +85,8 @@ class SaveSiteSettings
                 'noindex' => (bool) ($validated['seo']['noindex'] ?? false),
                 'twitter_site' => $validated['seo']['twitter_site'] ?? null,
                 'image' => $validated['seo']['image'] ?? null,
+                'title_suffix' => (bool) ($validated['seo']['title_suffix'] ?? false),
+                'title_separator' => trim((string) ($validated['seo']['title_separator'] ?? '')) ?: '|',
             ],
             'branding' => [
                 'name' => trim((string) ($validated['branding']['name'] ?? '')) ?: Branding::DEFAULT_NAME,

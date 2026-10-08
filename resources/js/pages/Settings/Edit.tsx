@@ -23,7 +23,7 @@ interface Settings {
     description: string | null;
     timezone: string;
     locales: { main: string; available: string[]; names: Record<string, string> };
-    seo: { noindex: boolean; twitter_site: string | null; image: number | null };
+    seo: { noindex: boolean; twitter_site: string | null; image: number | null; title_suffix?: boolean; title_separator?: string | null };
     code: { head: string | null; body_start: string | null; body_end: string | null };
     branding?: { name: string | null; tagline: string | null; logo: number | null; font: string | null; color: string | null };
     security?: { two_factor: boolean };
@@ -71,6 +71,8 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
             noindex: !!settings.seo.noindex,
             twitter_site: settings.seo.twitter_site ?? '',
             image: settings.seo.image ?? null as number | null,
+            title_suffix: !!settings.seo.title_suffix,
+            title_separator: settings.seo.title_separator ?? '|',
         },
         branding: {
             name: settings.branding?.name ?? 'Sunrice',
@@ -228,6 +230,24 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                         <span className="text-xs text-muted-foreground">Adds noindex to every page and empties the sitemap. Useful on staging.</span>
                     </span>
                 </label>
+                <div className="flex flex-wrap items-start gap-3">
+                    <label className="flex flex-1 items-start gap-3">
+                        <Switch checked={form.data.seo.title_suffix} onCheckedChange={(v) => form.setData('seo', { ...form.data.seo, title_suffix: v })} />
+                        <span className="grid gap-0.5 text-sm">
+                            <span className="font-medium">Add the site name to page titles</span>
+                            <span className="text-xs text-muted-foreground">
+                                The browser tab and search results show “About us {form.data.seo.title_separator.trim() || '|'} {form.data.name || 'Site name'}”. Share previews keep the bare title.
+                            </span>
+                        </span>
+                    </label>
+                    {form.data.seo.title_suffix && (
+                        <div className="grid w-24 gap-1.5">
+                            <Label htmlFor="title-separator" className="text-xs">Separator</Label>
+                            <Input id="title-separator" maxLength={5} value={form.data.seo.title_separator} onChange={(e) => form.setData('seo', { ...form.data.seo, title_separator: e.target.value })} />
+                        </div>
+                    )}
+                </div>
+                <InputError message={errors['seo.title_separator']} />
                 <div className="grid gap-2 sm:max-w-xs">
                     <Label htmlFor="twitter-site">X/Twitter handle</Label>
                     <Input id="twitter-site" placeholder="@acme" value={form.data.seo.twitter_site} onChange={(e) => form.setData('seo', { ...form.data.seo, twitter_site: e.target.value })} />

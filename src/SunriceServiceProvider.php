@@ -197,6 +197,12 @@ class SunriceServiceProvider extends PackageServiceProvider
 
             return Limit::perMinutes((int) ($conf['per_minutes'] ?? 1), (int) ($conf['attempts'] ?? 5))->by($key);
         });
+
+        // The forgot / reset password forms: per IP, so they can't be used to
+        // flood inboxes or guess reset tokens.
+        RateLimiter::for('sunrice-password', fn (Request $request) => Limit::perMinute(
+            max(1, (int) config('sunrice.auth.throttle.password_resets_per_minute', 5))
+        )->by('sunrice-password|'.$request->ip()));
     }
 
     /**

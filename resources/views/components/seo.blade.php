@@ -1,4 +1,4 @@
-<title>{{ $title }}</title>
+<title>{{ $documentTitle }}</title>
 @if($description)
 <meta name="description" content="{{ $description }}">
 @endif

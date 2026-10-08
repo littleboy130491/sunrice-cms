@@ -149,3 +149,25 @@ it('keeps the Sunrice defaults when branding is left empty', function () {
         ->where('branding.is_default', true)
         ->where('branding.color', null));
 });
+
+it('adds the site name to page titles when turned on', function () {
+    $pages = createCollection('pages');
+    createEntry($pages, 'Tentang');
+    createEntry($pages, 'Sunrice Demo');
+    RouteMatcher::flush();
+
+    put('/cms/settings', siteSettings())->assertSessionHasNoErrors();
+    get('/pages/tentang')->assertSee('<title>Tentang</title>', false);
+
+    put('/cms/settings', siteSettings(['seo' => ['title_suffix' => true, 'title_separator' => ' – ']]))->assertSessionHasNoErrors();
+    expect(Setting::get('site')['seo'])->toMatchArray(['title_suffix' => true, 'title_separator' => '–']);
+
+    get('/pages/tentang')->assertOk()
+        ->assertSee('<title>Tentang – Sunrice Demo</title>', false)
+        ->assertSee('<meta property="og:title" content="Tentang">', false);
+    // A title that already ends with the site name isn't doubled.
+    get('/pages/sunrice-demo')->assertSee('<title>Sunrice Demo</title>', false);
+
+    put('/cms/settings', siteSettings(['seo' => ['title_suffix' => true, 'title_separator' => '']]))->assertSessionHasNoErrors();
+    get('/pages/tentang')->assertSee('<title>Tentang | Sunrice Demo</title>', false);
+});

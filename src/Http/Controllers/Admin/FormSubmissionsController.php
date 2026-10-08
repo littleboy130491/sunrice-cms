@@ -8,14 +8,17 @@ use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
 use Sunrice\Support\CsvCell;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FormSubmissionsController extends Controller
@@ -68,7 +71,7 @@ class FormSubmissionsController extends Controller
     /**
      * Authorized download of a private form-upload file.
      */
-    public function download(FormSubmission $submission, string $field): StreamedResponse
+    public function download(FormSubmission $submission, string $field): HttpResponse
     {
         Gate::authorize('viewSubmissions', $submission->form);
 
@@ -89,9 +92,19 @@ class FormSubmissionsController extends Controller
         $disk = Storage::disk(config('sunrice.forms.upload_disk'));
         abort_unless($disk->exists($path), 404, 'The uploaded file is missing from the "'.config('sunrice.forms.upload_disk').'" disk.');
 
-        // Streamed through the disk (works for local and cloud disks alike),
-        // as an attachment so the browser never renders it.
-        return $disk->download($path, basename($path));
+        // Sent whole (uploads are small and capped) rather than streamed: a
+        // streamed download announces its size up front, and anything else
+        // the server adds to the output (PHP output compression, a stray
+        // blank line from a config file) then breaks it ("invalid
+        // response"). As an attachment, so the browser never renders it.
+        $name = basename($path);
+
+        return response((string) $disk->get($path), 200, [
+            'Content-Type' => $disk->mimeType($path) ?: 'application/octet-stream',
+            'Content-Disposition' => HeaderUtils::makeDisposition(HeaderUtils::DISPOSITION_ATTACHMENT, $name, Str::ascii($name) ?: 'download'),
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, no-store',
+        ]);
     }
 
     public function destroy(FormSubmission $submission): RedirectResponse
