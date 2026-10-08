@@ -12,7 +12,7 @@ use Sunrice\Actions\Settings\SaveSiteSettings;
 use Sunrice\Models\Setting;
 use Sunrice\Support\SiteSettings;
 
-#[Description('Change site settings (merged into the current ones; get_site_info shows them): name, description (default meta description), timezone, homepage_entry_id, locales {main, available, names}, seo {noindex, twitter_site, image}, branding {name, tagline, logo, font, color}, code {head, body_start, body_end} (tracking scripts). The main language can\'t change once content exists.')]
+#[Description('Change site settings (merged into the current ones; get_site_info shows them): name, description (default meta description), timezone, homepage_entry_id, locales {main, available, names}, seo {noindex, twitter_site, image, title_suffix (append " | site name" to every <title>), title_separator}, branding {name, tagline, logo, font, color}, code {head, body_start, body_end} (tracking scripts). The main language can\'t change once content exists.')]
 class UpdateSiteSettings extends SunriceTool
 {
     protected string $name = 'update_site_settings';

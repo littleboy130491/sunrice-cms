@@ -42,6 +42,21 @@ return [
         // Two-factor login: after the password, a one-time code is emailed
         // and must be entered. Usually switched on in Settings → Security.
         'two_factor' => (bool) env('SUNRICE_TWO_FACTOR', false),
+        // Brute-force protection for the admin login. Wrong passwords are
+        // counted three ways; the first limit reached makes the person wait.
+        'throttle' => [
+            // The same email from the same IP.
+            'attempts' => 5,
+            'decay_seconds' => 60,
+            // One IP trying any emails (password spraying).
+            'per_ip' => 20,
+            'per_ip_decay_seconds' => 60,
+            // One account from any IPs (a botnet): it is locked for a while.
+            'per_account' => 30,
+            'account_lock_seconds' => 900,
+            // Forgot / reset password requests per IP per minute.
+            'password_resets_per_minute' => 5,
+        ],
     ],
 
     /*
@@ -164,6 +179,10 @@ return [
     'seo' => [
         'noindex' => (bool) env('SUNRICE_NOINDEX', false),
         'twitter_site' => env('SUNRICE_TWITTER_SITE'),
+        // Append the site name to every <title>: "About us | Acme". The
+        // separator goes between them (with a space on each side).
+        'title_suffix' => false,
+        'title_separator' => '|',
         'description' => null,
         'image' => null,
     ],

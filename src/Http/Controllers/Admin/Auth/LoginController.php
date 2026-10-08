@@ -9,10 +9,10 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Sunrice\Auth\LoginThrottle;
 use Sunrice\Auth\TwoFactorLogin;
 use Throwable;
 
@@ -23,7 +23,7 @@ class LoginController extends Controller
         return Inertia::render('Auth/Login');
     }
 
-    public function store(Request $request, TwoFactorLogin $twoFactor): RedirectResponse
+    public function store(Request $request, TwoFactorLogin $twoFactor, LoginThrottle $throttle): RedirectResponse
     {
         $credentials = $request->validate([
             'email' => ['required', 'string', 'email'],
@@ -31,12 +31,12 @@ class LoginController extends Controller
             'remember' => ['boolean'],
         ]);
 
-        $key = 'sunrice-login|'.mb_strtolower($credentials['email']).'|'.$request->ip();
-        if (RateLimiter::tooManyAttempts($key, 5)) {
+        $ip = (string) $request->ip();
+        if (($blocked = $throttle->blocked($credentials['email'], $ip)) !== null) {
             throw ValidationException::withMessages([
-                'email' => __('Too many login attempts. Try again in :seconds seconds.', [
-                    'seconds' => RateLimiter::availableIn($key),
-                ]),
+                'email' => $blocked['seconds'] > 120
+                    ? __('Too many login attempts. Try again in :minutes minutes.', ['minutes' => (int) ceil($blocked['seconds'] / 60)])
+                    : __('Too many login attempts. Try again in :seconds seconds.', ['seconds' => $blocked['seconds']]),
             ]);
         }
 
@@ -49,14 +49,14 @@ class LoginController extends Controller
         // code and ask for it on the next screen.
         $passwordOk = TwoFactorLogin::enabled() ? $guard->validate($login) : $guard->attempt($login, $remember);
         if (! $passwordOk) {
-            RateLimiter::hit($key, 60);
+            $throttle->failed($credentials['email'], $ip);
 
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
             ]);
         }
 
-        RateLimiter::clear($key);
+        $throttle->succeeded($credentials['email'], $ip);
 
         if (TwoFactorLogin::enabled()) {
             $user = $guard->getLastAttempted();

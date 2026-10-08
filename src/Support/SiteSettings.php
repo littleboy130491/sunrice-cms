@@ -18,7 +18,7 @@ use Throwable;
  *   description                → sunrice.seo.description
  *   timezone                   → app.timezone
  *   locales.main/available/names → sunrice.locales.*
- *   seo.noindex/twitter_site/image → sunrice.seo.*
+ *   seo.noindex/twitter_site/image/title_suffix/title_separator → sunrice.seo.*
  *   code.head/body_start/body_end  → sunrice.code.*
  *   security.two_factor        → sunrice.auth.two_factor
  */
@@ -37,6 +37,8 @@ class SiteSettings
         'seo.noindex' => 'sunrice.seo.noindex',
         'seo.twitter_site' => 'sunrice.seo.twitter_site',
         'seo.image' => 'sunrice.seo.image',
+        'seo.title_suffix' => 'sunrice.seo.title_suffix',
+        'seo.title_separator' => 'sunrice.seo.title_separator',
         'code.head' => 'sunrice.code.head',
         'code.body_start' => 'sunrice.code.body_start',
         'code.body_end' => 'sunrice.code.body_end',

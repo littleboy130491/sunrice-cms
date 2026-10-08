@@ -58,6 +58,9 @@ class Seo extends Component
 
     public string $siteName;
 
+    /** The <title>: the title plus " | site name" when Settings → General turns that on. og:title stays bare. */
+    public string $documentTitle;
+
     public ?string $twitterSite;
 
     /**
@@ -146,7 +149,19 @@ class Seo extends Component
             $this->modifiedTime = $entry->updated_at?->toIso8601String();
         }
         $this->siteName = (string) config('app.name');
+        $this->documentTitle = $this->withSuffix($this->title);
         $this->twitterSite = config('sunrice.seo.twitter_site') ?: null;
+    }
+
+    protected function withSuffix(string $title): string
+    {
+        $site = trim($this->siteName);
+        if (! config('sunrice.seo.title_suffix') || $site === '' || $title === $site || str_ends_with($title, $site)) {
+            return $title;
+        }
+        $separator = trim((string) config('sunrice.seo.title_separator', '|')) ?: '|';
+
+        return $title.' '.$separator.' '.$site;
     }
 
     /**

@@ -21,6 +21,7 @@ The main language can only be changed before any content exists.
 | `sunrice.admin.middleware` | `['web']` | Middleware stack for admin routes. |
 | `sunrice.auth.guard` | `web` | Guard used for admin login and permissions. |
 | `sunrice.auth.user_model` | `App\Models\User` (`SUNRICE_USER_MODEL`) | Eloquent user model (must use `HasRoles`). |
+| `sunrice.auth.throttle.*` | see [Security](#security) | Login and password-reset limits against brute force. |
 | `sunrice.auth.two_factor` | `env('SUNRICE_TWO_FACTOR', false)` | Two-factor login: a code is emailed after the password (Settings → Security). See [Mail](mail.md#two-factor-login). |
 | `sunrice.locales.main` | `id` | Main locale; unprefixed URLs resolve in it. |
 | `sunrice.locales.available` | `['id']` | All locales. |
@@ -36,6 +37,7 @@ The main language can only be changed before any content exists.
 | `sunrice.branding.*` | name `Sunrice`, tagline, logo (asset id), font `instrument-sans`, color `null` | White-label the admin panel (Settings → Branding): its name, tagline, logo/favicon, font (a key of `Branding::FONTS`) and accent color (`#rrggbb`). `SUNRICE_BRAND_NAME`, `SUNRICE_BRAND_COLOR`. |
 | `sunrice.seo.noindex` | `env('SUNRICE_NOINDEX', false)` | Add `noindex, follow` to every page (e.g. staging). |
 | `sunrice.seo.twitter_site` | `env('SUNRICE_TWITTER_SITE')` | X/Twitter handle for `twitter:site`. |
+| `sunrice.seo.title_suffix` / `title_separator` | `false` / `\|` | Add the site name to every `<title>` ("About us \| Acme"), set in Settings → General. `og:title` and `twitter:title` keep the bare title, and a title already ending with the site name is left alone. |
 | `sunrice.seo.description` | `null` | Default meta description. |
 | `sunrice.seo.image` | `null` | Default share image (asset id). |
 | `sunrice.code.head` / `body_start` / `body_end` | `null` | HTML snippets printed by `<x-sunrice::code>`. |
@@ -49,6 +51,32 @@ The main language can only be changed before any content exists.
 | `sunrice.forms.rate_limit` | `{attempts: 5, per_minutes: 1}` | Per-IP+form submission limit. |
 | `sunrice.revisions.keep` | `50` | Revisions kept per entry translation. |
 | `sunrice.super_admin_role` | `Super Admin` | Role that bypasses all permissions. |
+
+## Security
+
+The admin login is protected against password guessing. Wrong passwords
+are counted three ways, and reaching any limit makes that login wait
+(even with the right password):
+
+| Key (`sunrice.auth.throttle.*`) | Default | What it limits |
+|---|---|---|
+| `attempts` / `decay_seconds` | `5` / `60` | One email from one IP: 5 wrong passwords, then wait a minute. |
+| `per_ip` / `per_ip_decay_seconds` | `20` / `60` | One IP across all emails (password spraying). |
+| `per_account` / `account_lock_seconds` | `30` / `900` | One account across all IPs (a botnet): locks that account for 15 minutes. |
+| `password_resets_per_minute` | `5` | The forgot-password and reset-password forms, per IP (answers 429 beyond it). |
+
+Set a limit to `0` to turn it off. A successful login clears that email's
+counts; the IP count stays. Every failed login is logged (`notice`, with
+email and IP) and every lockout too (`warning`), so attacks show in
+`storage/logs` and can feed a tool such as fail2ban. Two-factor login
+([Mail](mail.md#two-factor-login)) adds its own limit: 10 wrong codes
+lock the login for 15 minutes.
+
+Behind a load balancer or proxy (Cloudflare…), configure Laravel's
+trusted proxies so the limits see visitors' real IPs, not the proxy's.
+
+Public forms have their own limit (`sunrice.forms.rate_limit`) and a
+honeypot; the MCP endpoint allows 300 requests a minute per token.
 
 ## Honeypot
 
