@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Sunrice\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -86,6 +87,40 @@ class Term extends Model
     public function entries(): BelongsToMany
     {
         return $this->belongsToMany(Entry::class, 'sunrice_entry_term');
+    }
+
+    /**
+     * Set `entries_count` on each term with one grouped query. withCount()
+     * runs a count per term, which gets slow with hundreds of terms and
+     * thousands of entries.
+     *
+     * @param  iterable<Term>  $terms
+     * @param  (\Closure(Builder<Entry>): mixed)|null  $constrain  narrow the counted entries
+     */
+    public static function loadEntryCounts(iterable $terms, ?\Closure $constrain = null): void
+    {
+        $ids = [];
+        foreach ($terms as $term) {
+            $ids[] = (int) $term->id;
+        }
+        if ($ids === []) {
+            return;
+        }
+
+        $query = Entry::query()
+            ->join('sunrice_entry_term', 'sunrice_entry_term.entry_id', '=', 'sunrice_entries.id')
+            ->whereIntegerInRaw('sunrice_entry_term.term_id', $ids)
+            ->groupBy('sunrice_entry_term.term_id')
+            ->select('sunrice_entry_term.term_id')
+            ->selectRaw('count(*) as aggregate');
+        if ($constrain !== null) {
+            $constrain($query);
+        }
+        $counts = $query->toBase()->pluck('aggregate', 'term_id');
+
+        foreach ($terms as $term) {
+            $term->setAttribute('entries_count', (int) ($counts[$term->id] ?? 0));
+        }
     }
 
     public function translation(string $locale): ?TermTranslation

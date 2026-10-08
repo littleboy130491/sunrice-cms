@@ -54,13 +54,7 @@ class Terms extends Component
         $this->collectionModel = $collection === null ? null : CollectionModel::query()->where('handle', $collection)->firstOrFail();
         $locale = Locales::current();
 
-        $query = Term::query()->where('taxonomy_id', $model->id)->with('translations')
-            ->withCount(['entries as entries_count' => function (Builder $q): void {
-                $q->where('sunrice_entries.status', 'published')->where('sunrice_entries.published_at', '<=', now());
-                if ($this->collectionModel !== null) {
-                    $q->where('sunrice_entries.collection_id', $this->collectionModel->id);
-                }
-            }]);
+        $query = Term::query()->where('taxonomy_id', $model->id)->with('translations');
         if ($entry !== null) {
             $entryId = $entry instanceof Entry ? $entry->id : $entry;
             $query->whereHas('entries', fn (Builder $q) => $q->where('sunrice_entries.id', $entryId));
@@ -70,6 +64,12 @@ class Terms extends Component
         $all = $query->get()->each(function (Term $term) use ($locale, $model): void {
             $term->setRelation('taxonomy', $model);
             $term->resolveFor($locale);
+        });
+        Term::loadEntryCounts($all, function (Builder $q): void {
+            $q->where('sunrice_entries.status', 'published')->where('sunrice_entries.published_at', '<=', now());
+            if ($this->collectionModel !== null) {
+                $q->where('sunrice_entries.collection_id', $this->collectionModel->id);
+            }
         });
 
         $all = $this->sorted($all, $orderBy);

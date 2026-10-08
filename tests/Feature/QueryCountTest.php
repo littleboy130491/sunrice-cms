@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Setting;
 use Sunrice\Models\Taxonomy;
@@ -60,4 +61,63 @@ it('reads a setting once per request and sees its own writes', function () {
     Setting::set('demo', 2);
     expect(Setting::get('demo'))->toBe(2)
         ->and(Setting::get('missing', 'fallback'))->toBe('fallback');
+});
+
+it('keeps the queries of admin lists and editors flat as content grows', function () {
+    actingAsSuperAdmin();
+    $articles = createCollection('articles');
+    $topics = Taxonomy::factory()->create(['handle' => 'topics']);
+    $articles->taxonomies()->attach($topics);
+    $terms = Term::factory()->count(3)->create(['taxonomy_id' => $topics->id]);
+    $add = fn (int $i) => createEntry($articles, "Article $i")->terms()->attach($terms[$i % 3]->id);
+    foreach (range(1, 3) as $i) {
+        $add($i);
+    }
+    $edit = '/cms/collections/articles/entries/'.$articles->entries()->value('id').'/edit';
+    $fewList = queriesFor('/cms/collections/articles/entries');
+    $fewTerms = queriesFor('/cms/taxonomies/topics/terms');
+    $fewEdit = queriesFor($edit);
+
+    foreach (range(4, 30) as $i) {
+        $add($i);
+    }
+    Term::factory()->count(20)->create(['taxonomy_id' => $topics->id]);
+
+    expect(queriesFor('/cms/collections/articles/entries'))->toBe($fewList)
+        ->and(queriesFor('/cms/taxonomies/topics/terms'))->toBe($fewTerms)
+        ->and(queriesFor($edit))->toBe($fewEdit);
+});
+
+it('counts the entries of many terms in one query', function () {
+    $articles = createCollection('articles');
+    $other = createCollection('news');
+    $topics = Taxonomy::factory()->create(['handle' => 'topics']);
+    [$a, $b, $empty] = Term::factory()->count(3)->create(['taxonomy_id' => $topics->id])->all();
+    createEntry($articles, 'One')->terms()->attach([$a->id, $b->id]);
+    createEntry($articles, 'Two')->terms()->attach($a->id);
+    createEntry($articles, 'Draft', [], 'draft')->terms()->attach($a->id);
+    createEntry($other, 'Elsewhere')->terms()->attach($a->id);
+    $gone = createEntry($articles, 'Gone');
+    $gone->terms()->attach($b->id);
+    $gone->delete();
+
+    $terms = Term::query()->whereIn('id', [$a->id, $b->id, $empty->id])->get();
+    DB::enableQueryLog();
+    Term::loadEntryCounts($terms);
+    expect(DB::getQueryLog())->toHaveCount(1);
+    DB::disableQueryLog();
+    expect($terms->pluck('entries_count', 'id')->all())->toBe([$a->id => 4, $b->id => 1, $empty->id => 0]);
+
+    Term::loadEntryCounts($terms, fn ($q) => $q->where('sunrice_entries.status', 'published')->where('sunrice_entries.collection_id', $articles->id));
+    expect($terms->pluck('entries_count', 'id')->all())->toBe([$a->id => 2, $b->id => 1, $empty->id => 0]);
+});
+
+it('indexes the columns used to look up content by term, form and folder', function () {
+    $indexed = fn (string $table, string $column) => collect(Schema::getIndexes($table))->contains(fn (array $index) => $index['columns'][0] === $column);
+
+    expect($indexed('sunrice_entry_term', 'term_id'))->toBeTrue()
+        ->and($indexed('sunrice_terms', 'taxonomy_id'))->toBeTrue()
+        ->and($indexed('sunrice_revisions', 'entry_translation_id'))->toBeTrue()
+        ->and($indexed('sunrice_form_submissions', 'form_id'))->toBeTrue()
+        ->and($indexed('sunrice_assets', 'folder_id'))->toBeTrue();
 });

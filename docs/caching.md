@@ -47,8 +47,8 @@ database queries behind a page, install
 [Laravel Debugbar](https://github.com/barryvdh/laravel-debugbar) on
 staging (`APP_DEBUG=true`), or [Telescope](https://laravel.com/docs/telescope).
 
-For reference, with 10,000 articles (SQLite, PHP 8.4, no full-page cache,
-default templates, median of 5 requests):
+For reference, with 10,000 articles (PHP 8.4, no full-page cache,
+default templates):
 
 | Page | Time | Queries |
 | --- | --- | --- |
@@ -56,9 +56,19 @@ default templates, median of 5 requests):
 | Listing (first or last page) | ~10 ms | 5 |
 | Term page | ~23 ms | 13 |
 | Search | ~26 ms | 9 |
-| Admin: entries list / search | ~24 / ~37 ms | 11 |
+| Admin: dashboard | ~18 ms | 9 |
+| Admin: entries list / search / sort by title | ~20 / ~32 / ~36 ms | 11 |
+| Admin: entry editor | ~12 ms | 12 |
+| Admin: terms list (200 terms) | ~32 ms | 7 |
+| Admin: CSV export of all 10,000 | ~1.3 s | 104 |
 
-Query counts don't grow with the amount of content or the number of cards
-on a page (a test guards this). Settings are read once per request, and
-listed entries share their collection and blueprint instead of loading
-them one by one.
+Public pages measured on SQLite, admin pages on Postgres. Query counts
+don't grow with the amount of content or the number of cards on a page
+(tests guard this, for public and admin pages). Settings are read once per
+request, listed entries share their collection and blueprint instead of
+loading them one by one, and term entry counts come from one grouped
+query rather than one per term.
+
+On Postgres, right after a big import, pages can be slower until the
+database refreshes its statistics (autovacuum does this within minutes);
+run `ANALYZE;` in `psql` to do it at once.
