@@ -7,6 +7,7 @@ import FieldBuilder, { BuilderField, FieldTypeDef } from '@/components/field-bui
 import { adminUrl } from '@/lib/route';
 import type { SharedProps } from '@/types';
 import { HandleChangeWarning } from '@/components/app/handle-change-warning';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 
 interface Props {
     blueprint: { id: number; handle: string; title: string; fields: BuilderField[] } | null;
@@ -33,8 +34,12 @@ export default function BlueprintForm({ blueprint, fieldTypes, fieldsets }: Prop
         }
     };
 
+    // Ctrl/⌘ S saves.
+    const formRef = React.useRef<HTMLFormElement>(null);
+    useUnsavedChanges(false, () => formRef.current?.requestSubmit());
+
     return (
-        <form onSubmit={submit} className="flex max-w-3xl flex-col gap-6">
+        <form ref={formRef} onSubmit={submit} className="flex max-w-3xl flex-col gap-6">
             <h1 className="sunrice-page-title">{blueprint ? `Edit ${blueprint.title}` : 'New blueprint'}</h1>
             <div className="grid grid-cols-2 gap-4 items-start">
                 <div className="grid gap-2">

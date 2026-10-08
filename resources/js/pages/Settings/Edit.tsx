@@ -16,6 +16,7 @@ import { SettingsTabs } from '@/components/app/settings-tabs';
 import { adminUrl } from '@/lib/route';
 import { usePage } from '@inertiajs/react';
 import type { SharedProps } from '@/types';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 
 interface Settings {
     name: string;
@@ -122,8 +123,12 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
         });
     };
 
+    // Leave-page warning for unsaved edits; Ctrl/⌘ S saves.
+    const formRef = React.useRef<HTMLFormElement>(null);
+    useUnsavedChanges(form.isDirty && !form.processing, () => formRef.current?.requestSubmit());
+
     return (
-        <form onSubmit={submit} className="flex max-w-3xl flex-col gap-6">
+        <form ref={formRef} onSubmit={submit} className="flex max-w-3xl flex-col gap-6">
             <div className="flex items-center justify-between">
                 <h1 className="sunrice-page-title">Settings</h1>
                 <Button type="submit" disabled={form.processing}>

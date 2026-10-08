@@ -1,3 +1,4 @@
+import * as React from 'react';
 import { useForm, usePage, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ import type { Json, SharedProps } from '@/types';
 import FieldRenderer from '@/fields/FieldRenderer';
 import { SEO_DEFAULT_FIELDS, type SeoDefaults } from '@/lib/seo-fields';
 import { HandleChangeWarning } from '@/components/app/handle-change-warning';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 
 interface CollectionShape {
     id: number;
@@ -71,8 +73,12 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
         }
     };
 
+    // Leave-page warning for unsaved edits; Ctrl/⌘ S saves.
+    const formRef = React.useRef<HTMLFormElement>(null);
+    useUnsavedChanges(form.isDirty && !form.processing, () => formRef.current?.requestSubmit());
+
     return (
-        <form onSubmit={submit} className="flex max-w-2xl flex-col gap-6">
+        <form ref={formRef} onSubmit={submit} className="flex max-w-2xl flex-col gap-6">
             <h1 className="sunrice-page-title">{collection ? `Edit ${collection.title}` : 'New collection'}</h1>
             <CollapsibleCard title="Basics" storageKey="collection:basics" hasErrors={Object.keys(errors).length > 0} contentClassName="flex flex-col gap-4">
                 <div className="grid gap-2">

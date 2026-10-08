@@ -5,6 +5,7 @@ import { CollapsibleCard } from '@/components/app/collapsible-card';
 import { adminUrl } from '@/lib/route';
 import FieldRenderer from '@/fields/FieldRenderer';
 import type { AdminField, SharedProps, Json } from '@/types';
+import { useUnsavedChanges } from '@/lib/use-unsaved-changes';
 
 interface Props {
     resource: { key: string; label: string; singularLabel: string };
@@ -37,6 +38,11 @@ export default function ResourceEdit({ resource, fields, record }: Props) {
             router.put(adminUrl(`resources/${resource.key}/${(record as Record<string, Json>).id}`, adminPath), payload, options);
         }
     }
+
+    // Ctrl/⌘ S saves.
+    useUnsavedChanges(false, () => {
+        if (!processing) save();
+    });
 
     return (
         <div className="mx-auto max-w-3xl space-y-6">
