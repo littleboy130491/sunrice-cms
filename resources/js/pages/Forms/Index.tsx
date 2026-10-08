@@ -43,7 +43,7 @@ export default function FormsIndex({ forms }: Props) {
                         <TableRow key={form.id}>
                             <TableCell className="font-medium">
                                 {form.can.submissions || form.can.edit ? (
-                                    <Link className="hover:underline" href={adminUrl(form.can.submissions ? `forms/${form.id}/submissions` : `forms/${form.handle}`, adminPath)}>
+                                    <Link className="hover:underline" href={adminUrl(form.can.submissions ? `forms/${form.id}/submissions` : `forms/${form.id}/edit`, adminPath)}>
                                         {form.title}
                                     </Link>
                                 ) : form.title}
@@ -58,7 +58,7 @@ export default function FormsIndex({ forms }: Props) {
                                 )}
                                 {form.can.edit && (
                                     <Button variant="ghost" size="sm" asChild>
-                                        <Link href={adminUrl(`forms/${form.handle}`, adminPath)}>Edit</Link>
+                                        <Link href={adminUrl(`forms/${form.id}/edit`, adminPath)}>Edit</Link>
                                     </Button>
                                 )}
                                 {form.can.delete && (

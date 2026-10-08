@@ -51,7 +51,13 @@ class FormsController extends Controller
 
         $form = $save->handle(null, $request->all());
 
-        return redirect()->route('sunrice.admin.forms.edit', $form->handle)->with('success', "Form \"{$form->title}\" created.");
+        return redirect()->route('sunrice.admin.forms.edit', $form)->with('success', "Form \"{$form->title}\" created.");
+    }
+
+    /** The editor's older address (/forms/{handle}). */
+    public function legacyEdit(Form $form): RedirectResponse
+    {
+        return redirect()->route('sunrice.admin.forms.edit', $form, 301);
     }
 
     public function edit(Form $form): Response

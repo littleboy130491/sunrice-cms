@@ -60,6 +60,12 @@ class MenusController extends Controller
             ->with('success', "Menu \"{$menu->title}\" created.");
     }
 
+    /** The editor's older address (/menus/{id}). */
+    public function legacyEdit(Menu $menu): RedirectResponse
+    {
+        return redirect()->route('sunrice.admin.menus.edit', $menu, 301);
+    }
+
     public function edit(Menu $menu): Response
     {
         return Inertia::render('Menus/Edit', [

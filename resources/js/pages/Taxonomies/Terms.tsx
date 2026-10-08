@@ -73,7 +73,7 @@ export default function TermsPage({ taxonomy, columns, rows, meta, parents, reor
                 reorderUrl={adminUrl(`taxonomies/${taxonomy.handle}/terms/reorder`, adminPath)}
                 bulkUrl={canDelete ? adminUrl(`taxonomies/${taxonomy.handle}/terms/bulk`, adminPath) : undefined}
                 bulkActions={canDelete ? [{ key: 'delete', label: 'Delete', variant: 'destructive', confirm: 'Delete the selected terms? Their child terms are deleted too, and they are removed from every entry.' }] : []}
-                rowHref={canEditTerms ? (row) => adminUrl(`taxonomies/${taxonomy.handle}/terms/${row.id}`, adminPath) : undefined}
+                rowHref={canEditTerms ? (row) => adminUrl(`taxonomies/${taxonomy.handle}/terms/${row.id}/edit`, adminPath) : undefined}
                 renderCell={(row, column) => {
                     if (column.key === 'title') {
                         return (

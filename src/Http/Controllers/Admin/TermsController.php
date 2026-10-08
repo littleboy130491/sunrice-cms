@@ -206,9 +206,11 @@ class TermsController extends Controller
         return $this->editor($term->taxonomy, $term);
     }
 
-    /** The editor's older address (/terms/{id}/edit). */
-    public function legacyEdit(Term $term): RedirectResponse
+    /** The editor's older addresses (/terms/{id}/edit, …/terms/{id} without /edit). */
+    public function legacyEdit(Request $request): RedirectResponse
     {
+        $term = Term::query()->findOrFail((int) $request->route('term'));
+
         return redirect()->to(AdminUrls::term($term), 301);
     }
 

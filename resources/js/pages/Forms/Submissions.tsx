@@ -79,7 +79,7 @@ export default function Submissions({ form, submissions, filters }: Props) {
                 <div className="flex gap-2">
                     {can(`sunrice.forms.${form.id}.edit`) && (
                         <Button variant="outline" asChild>
-                            <Link href={adminUrl(`forms/${form.handle}`, adminPath)}>Edit form</Link>
+                            <Link href={adminUrl(`forms/${form.id}/edit`, adminPath)}>Edit form</Link>
                         </Button>
                     )}
                     {can(`sunrice.forms.${form.id}.export-submissions`) && (

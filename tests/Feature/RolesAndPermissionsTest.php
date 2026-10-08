@@ -217,5 +217,5 @@ it('sends submission viewers to submissions, not the form builder', function () 
     get('/cms/forms')->assertInertia(fn (AssertableInertia $page) => $page
         ->where('forms.0.can', ['edit' => false, 'submissions' => true, 'delete' => false]));
     get("/cms/forms/{$form->id}/submissions")->assertOk();
-    get("/cms/forms/{$form->handle}")->assertForbidden();
+    get("/cms/forms/{$form->id}/edit")->assertForbidden();
 });
