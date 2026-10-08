@@ -61,6 +61,7 @@ the current main-language content), `--force` (skip confirmation).
 | --- | --- |
 | `sunrice:publish-scheduled` | Publishes entries whose scheduled time has passed. The scheduler runs it every minute. |
 | `sunrice:rename-field {blueprint} {from} {to}` | Renames a field handle in a blueprint and in all stored entry data. |
+| `sunrice:demo-content {count=1000}` | Adds fake published articles to a separate `demo` collection (with a `demo_topics` taxonomy) to see how the site performs with lots of content, and prints pages to try. `--collection=` picks another handle; `--remove` deletes all demo content again (asks first; `--force` skips that). It never touches other collections. See [Caching and performance](caching.md#testing-with-lots-of-content). |
 | `sunrice:orphans` | Lists entries and terms kept from deleted collections and taxonomies. `--purge` deletes them permanently (asks first; `--force` skips that), `--handle=` limits it to some handles. See [Content modeling](content-modeling.md#deleting-collections-and-taxonomies). |
 
 ## Images

@@ -115,6 +115,8 @@ class PageController extends Controller
         }
 
         $entry = $translation->entry;
+        // Rendering reads every language (URLs, hreflang, fallbacks): load them once.
+        $entry->loadMissing(['translations', 'collection.blueprint']);
         if ($nested && (int) Setting::get('homepage_entry_id') !== (int) $entry->id) {
             $canonical = app(UrlGenerator::class)->entryUrl($entry, $locale);
             if ($canonical !== null && $canonical !== Locales::prefix($locale).'/'.$path) {
@@ -169,13 +171,15 @@ class PageController extends Controller
         }
 
         $term = $translation->term;
+        // Rendering reads every language (URLs, hreflang): load them once.
+        $term->loadMissing('translations');
         $term->resolveFor($locale);
 
         $entries = $term->entries()
             ->published()
             // Per-collection term pages list only that collection's entries.
             ->when($match->collection !== null, fn ($q) => $q->where('collection_id', $match->collection->id))
-            ->with('translations')
+            ->with(['translations', 'collection.blueprint'])
             ->paginate((int) $match->taxonomy->setting('per_page', 12))
             ->withQueryString();
 
