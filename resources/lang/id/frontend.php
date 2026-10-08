@@ -29,4 +29,29 @@ return [
     'draft_not_ready' => 'Terjemahan ini belum ditandai Siap, jadi publik melihat versi :language.',
     'draft_signed_in' => 'Anda dapat melihatnya karena sedang masuk.',
     'edit_entry' => 'Edit entri',
+    // Entry filter (<x-sunrice::entry-filter> + partials/entry-filter).
+    'filter_min' => 'Min',
+    'filter_max' => 'Maks',
+    'filter_from' => 'Dari',
+    'filter_to' => 'Sampai',
+    'filter_any' => 'Semua',
+    'filter_apply' => 'Terapkan',
+    'filter_clear' => 'Hapus filter',
+    'filter_remove' => 'Hapus :filter',
+    'sort_by' => 'Urutkan',
+    'results' => '{0} Tidak ada hasil|{1} 1 hasil|[2,*] :count hasil',
+    // Site search.
+    'search' => 'Cari',
+    'search_placeholder' => 'Cari di situs ini',
+    'search_results_for' => 'Hasil untuk “:query”',
+    'search_nothing' => 'Tidak ada yang cocok dengan “:query”. Coba kata lain.',
+    'search_hint' => 'Ketik beberapa kata untuk mencari di situs.',
+    // Header menu on small screens.
+    'menu' => 'Menu',
+    // Error pages.
+    'error_404_title' => 'Halaman tidak ditemukan',
+    'error_404_text' => 'Halaman yang Anda cari tidak ada atau sudah dipindahkan.',
+    'error_500_title' => 'Terjadi kesalahan',
+    'error_500_text' => 'Halaman ini tidak dapat ditampilkan. Silakan coba lagi sebentar lagi.',
+    'back_home' => 'Kembali ke beranda',
 ];

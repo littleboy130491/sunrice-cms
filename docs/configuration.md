@@ -36,6 +36,8 @@ The main language can only be changed before any content exists.
 | `sunrice.translation.*` | see [translation](translation.md) | Driver, model and API keys for `sunrice:translate` (`SUNRICE_TRANSLATE_DRIVER`, `SUNRICE_TRANSLATE_MODEL`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`). |
 | `sunrice.branding.*` | name `Sunrice`, tagline, logo (asset id), font `instrument-sans`, color `null` | White-label the admin panel (Settings → Branding): its name, tagline, logo/favicon, font (a key of `Branding::FONTS`) and accent color (`#rrggbb`). `SUNRICE_BRAND_NAME`, `SUNRICE_BRAND_COLOR`. |
 | `sunrice.seo.noindex` | `env('SUNRICE_NOINDEX', false)` | Add `noindex, follow` to every page (e.g. staging). |
+| `sunrice.search.enabled` / `path` | `true` (`SUNRICE_SEARCH`) / `search` | The site search page at `/search` and `/{locale}/search`. It wins over a page with the same slug. |
+| `sunrice.search.collections` / `per_page` | `null` (all with entry pages) / `10` | What the search page covers, and results per page. |
 | `sunrice.seo.twitter_site` | `env('SUNRICE_TWITTER_SITE')` | X/Twitter handle for `twitter:site`. |
 | `sunrice.seo.title_suffix` / `title_separator` | `false` / `\|` | Add the site name to every `<title>` ("About us \| Acme"), set in Settings → General. `og:title` and `twitter:title` keep the bare title, and a title already ending with the site name is left alone. |
 | `sunrice.seo.description` | `null` | Default meta description. |

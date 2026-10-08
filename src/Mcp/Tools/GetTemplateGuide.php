@@ -50,13 +50,21 @@ collection settings.
 
 - Pages `@extends('sunrice.layouts.app')` and fill `@section('content')`;
   pass `['seoTitle' => …]` as the second @extends argument for a fallback
-  `<title>`. The layout `@include`s `sunrice.partials.header` / `footer`.
+  `<title>`. The layout `@include`s `sunrice.partials.header` / `footer`;
+  the header includes `sunrice.partials.language-switcher`.
 - Layouts must contain `<x-sunrice::seo />` in `<head>` and the three
   `<x-sunrice::code position="head|body_start|body_end" />` snippets.
 - Layouts and partials read the page from `$sunricePage` (->entry, ->term,
   ->collection, ->taxonomy, ->pageType, ->locale), never `$entry`: a child's
   `@foreach ($entries as $entry)` overwrites `$entry` before the layout
   renders.
+- Components (no markup of their own; loop in the slot): <x-sunrice::entries>,
+  <x-sunrice::terms> (taxonomy terms, counts, trees), <x-sunrice::entry-filter>
+  (URL-driven filters/sort/paging; form in partials/entry-filter),
+  <x-sunrice::search> (search box / results). Page links:
+  `$entries->links('sunrice.partials.pagination')`.
+- Site search page: template `sunrice.search` ($query, $results); error
+  pages: resources/views/errors/404|500|503.blade.php.
 - Reusable bits: `@include('sunrice.partials.card', ['entry' => $item])`;
   flexible-content blocks: one partial per block type in `blocks/`
   (`@includeFirst(['sunrice.blocks.'.$block->type, 'sunrice.blocks.default'], ['block' => $block])`).
@@ -87,7 +95,8 @@ spans all collections). Entries are already in the visitor's language.
   from slugs.
 - CSS/JS: put files in the theme folder (write_template target "theme",
   served at /sunrice-theme/…) and link them with `asset('sunrice-theme/…')`,
-  or keep a `<style>` in the layout like the starter. External CDNs work too.
+  like the starter's `sunrice-theme/app.css` (read it with read_template
+  source "theme"). External CDNs work too.
 - After writing, open the page with render_page and fix any error.
 MD;
 

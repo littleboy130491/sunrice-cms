@@ -9,6 +9,8 @@ export interface NavItem {
     href: string;
     /** lucide icon name in kebab-case, e.g. `file-text`. */
     icon?: string;
+    /** A link outside the admin (an app route or another site): a plain link. */
+    external?: boolean;
 }
 
 export interface NavGroup {

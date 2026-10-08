@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Sunrice\Frontend\RouteMatcher;
@@ -35,7 +37,16 @@ it('publishes the starter templates under the sunrice-templates tag', function (
     $this->artisan('vendor:publish', ['--tag' => 'sunrice-templates', '--force' => true])->assertSuccessful();
 
     expect(resource_path('views/sunrice/show.blade.php'))->toBeFile()
-        ->and(resource_path('views/sunrice/layouts/app.blade.php'))->toBeFile();
+        ->and(resource_path('views/sunrice/layouts/app.blade.php'))->toBeFile()
+        ->and(resource_path('views/sunrice/partials/language-switcher.blade.php'))->toBeFile()
+        ->and(public_path('sunrice-theme/app.css'))->toBeFile();
+
+    // The layout links the stylesheet instead of inlining it.
+    createEntry(createCollection('pages', ['route' => '/{slug}', 'template' => 'sunrice.show']), 'About');
+    RouteMatcher::flush();
+    get('/about')->assertOk()
+        ->assertSee('<link rel="stylesheet" href="'.asset('sunrice-theme/app.css').'?v=', false)
+        ->assertDontSee('<style>', false);
 });
 
 it('renders a page with globals, a menu and flexible content blocks', function () {
@@ -321,4 +332,77 @@ it('shows collection and taxonomy titles in the page language', function () {
 
     get('/topik/laravel')->assertOk()->assertSee('<title>Laravel — Topik</title>', false);
     get('/en/topik/laravel')->assertOk()->assertSee('<title>Laravel — Topics</title>', false);
+});
+
+it('searches the site in the page language and keeps results out of search engines', function () {
+    $pages = createCollection('pages', ['route' => '/{slug}']);
+    $about = createEntry($pages, 'About the bakery', ['body' => 'Fresh sourdough every morning']);
+    createEntry($pages, 'Contact', ['body' => 'Call us']);
+    createEntry($pages, 'Secret sourdough', ['body' => 'x'], status: 'draft');
+    $other = collect(Locales::available())->first(fn (string $l) => ! Locales::isMain($l));
+    $about->translations()->create(['collection_id' => $pages->id, 'locale' => $other, 'title' => 'Translated bakery', 'slug' => 'translated-bakery', 'data' => [], 'seo' => [], 'is_ready' => true]);
+    RouteMatcher::flush();
+
+    get('/search?q=SOURDOUGH')->assertOk()
+        ->assertSee('About the bakery')
+        ->assertDontSee('Secret sourdough')
+        ->assertDontSee('Contact</a>', false)
+        ->assertSee('<meta name="robots" content="noindex, follow">', false)
+        ->assertSee('class="search-results"', false);
+
+    // Other languages search their own text and link their own pages.
+    get("/{$other}/search?q=translated")->assertOk()->assertSee('Translated bakery')->assertSee("/{$other}/translated-bakery", false);
+
+    get('/search')->assertOk()->assertSee(__('sunrice::frontend.search_hint'));
+    get('/search?q=nothing-like-this')->assertOk()->assertSee('nothing-like-this');
+});
+
+it('renders the header with the mobile menu button and the search box', function () {
+    Menu::create(['handle' => 'main', 'title' => 'Main']);
+    $pages = createCollection('pages', ['route' => '/{slug}', 'template' => 'sunrice.show']);
+    createEntry($pages, 'Home page');
+    RouteMatcher::flush();
+
+    get('/home-page')->assertOk()
+        ->assertSee('aria-controls="site-menu" aria-expanded="false" data-menu-toggle', false)
+        ->assertSee('<div class="site-menu" id="site-menu">', false)
+        ->assertSee('class="search-form" method="get" action="'.url('/search').'"', false);
+});
+
+it('ships error pages that use the site layout for 404', function () {
+    $dir = sys_get_temp_dir().'/sunrice-errors-'.uniqid();
+    mkdir($dir);
+    symlink(realpath(__DIR__.'/../../stubs/errors'), $dir.'/errors');
+    View::getFinder()->prependLocation($dir);
+
+    get('/no-such-page')->assertNotFound()
+        ->assertSee(__('sunrice::frontend.error_404_title'))
+        ->assertSee('class="site-header"', false)
+        ->assertSee('<meta name="robots" content="noindex, follow">', false);
+
+    $html = view('errors.500')->render();
+    expect($html)->toContain(__('sunrice::frontend.error_500_title'))->not->toContain('site-header');
+});
+
+it('renders the entry filter partial', function () {
+    $blueprint = Blueprint::create(['handle' => 'product', 'title' => 'Product', 'fields' => [
+        ['handle' => 'brand', 'type' => 'select', 'label' => 'Brand', 'config' => ['options' => ['acme', 'zen']]],
+        ['handle' => 'price', 'type' => 'number', 'label' => 'Price'],
+    ]]);
+    $products = createCollection('products', ['route' => '/products/{slug}'], $blueprint);
+    createEntry($products, 'Kettle', ['brand' => 'acme', 'price' => 30]);
+    createEntry($products, 'Teapot', ['brand' => 'zen', 'price' => 50]);
+    $this->app->instance('request', Request::create('/shop', 'GET', ['brand' => 'zen']));
+
+    $html = Blade::render(<<<'BLADE'
+        <x-sunrice::entry-filter collection="products" :filters="['q' => 'search', 'brand' => 'select', 'price' => 'range']" :sorts="['newest' => '-published_at', 'cheap' => 'price']">
+            @include('sunrice.partials.entry-filter', ['filter' => $component])
+            @foreach ($component->entries as $entry)<b>{{ $entry->title }}</b>@endforeach
+        </x-sunrice::entry-filter>
+        BLADE);
+
+    expect($html)->toContain('<b>Teapot</b>')->not->toContain('<b>Kettle</b>')
+        ->toContain('name="brand"')->toContain('<option value="zen" selected>')
+        ->toContain('name="price_min"')->toContain('name="sort"')
+        ->toContain('Brand: zen ×')->toContain('1 result');
 });

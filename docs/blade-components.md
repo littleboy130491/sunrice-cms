@@ -5,6 +5,11 @@
 Render published entries of a collection inside a slot — the slot
 receives the component (`$component->entries`).
 
+The component only fetches the entries; it prints no markup of its own
+(its view is just `{{ $slot }}`). You write the HTML between the tags, so
+every list can look different. To reuse one design, put the loop in a
+partial, e.g. `@include('sunrice.partials.card', ['entry' => $entry])`.
+
 ```blade
 <x-sunrice::entries collection="articles" :paginate="true" :per-page="10">
     @foreach ($component->entries as $entry)
@@ -40,6 +45,160 @@ link fields, and are shown only through templates:
     @endforeach
 </x-sunrice::entries>
 ```
+
+## `<x-sunrice::terms>`
+
+A taxonomy's terms, like `<x-sunrice::entries>` for entries. It prints
+nothing itself: loop over `$component->terms` in the slot. Each term is in
+the page's language (`name`, `slug`, `get('field')`) and carries
+`entries_count`, its number of published entries.
+
+```blade
+{{-- A category sidebar for the blog, with counts --}}
+<x-sunrice::terms taxonomy="categories" collection="articles" :hide-empty="true">
+    <ul>
+        @foreach ($component->terms as $term)
+            <li @class(['is-active' => $component->isCurrent($term)])>
+                <a href="{{ $component->url($term) }}">{{ $term->name }}</a> ({{ $term->entries_count }})
+            </li>
+        @endforeach
+    </ul>
+</x-sunrice::terms>
+
+{{-- Nested, for hierarchical taxonomies --}}
+<x-sunrice::terms taxonomy="categories" :tree="true">
+    @foreach ($component->terms as $term)
+        {{ $term->name }}
+        @foreach ($term->children as $child) — {{ $child->name }} @endforeach
+    @endforeach
+</x-sunrice::terms>
+
+{{-- The terms of one entry --}}
+<x-sunrice::terms taxonomy="tags" :entry="$entry">…</x-sunrice::terms>
+```
+
+| Prop | Meaning |
+| --- | --- |
+| `taxonomy` | Taxonomy handle (required). |
+| `collection` | Count only this collection's entries; `$component->url($term)` then links the term's page for that collection. |
+| `parent` | `root` for top-level terms, or a term's slug or id for its children. |
+| `tree` | Nest children under their parents (`$term->children`); the list holds the top level. |
+| `hide-empty` | Leave out terms without published entries (in a tree, a parent stays when a child has entries). |
+| `order-by` | `manual` (the admin's drag-and-drop order, default), `name`, `entries`, `created_at`; `-` in front for descending. |
+| `limit` | At most this many terms. |
+| `entry` | Only this entry's terms. |
+
+`$component->isCurrent($term)` is true on that term's own page.
+
+## `<x-sunrice::entry-filter>`
+
+A list of entries that visitors filter, sort and page through, driven by
+the URL (`/shop?category[]=shoes&price_max=100&sort=cheap`), so results
+can be shared and the form works without JavaScript. Like the other
+components it has no markup of its own: the starter templates include an
+unstyled form, `partials/entry-filter.blade.php`, to copy and restyle.
+
+```blade
+<x-sunrice::entry-filter collection="products"
+    :filters="[
+        'q' => ['type' => 'search', 'fields' => ['title', 'summary']],
+        'category' => ['type' => 'terms', 'taxonomy' => 'categories'],
+        'brand' => 'select',
+        'colors' => ['type' => 'select', 'multiple' => true],
+        'price' => 'range',
+        'published' => ['type' => 'date_range', 'field' => 'published_at'],
+        'in_stock' => ['type' => 'toggle', 'label' => 'In stock only'],
+    ]"
+    :sorts="[
+        'newest' => '-published_at',
+        'cheap' => ['label' => 'Lowest price', 'order' => 'price'],
+        'pricey' => ['label' => 'Highest price', 'order' => '-price'],
+    ]"
+    :per-page="24">
+    @include('sunrice.partials.entry-filter', ['filter' => $component])
+
+    <ul class="cards">
+        @foreach ($component->entries as $entry)
+            @include('sunrice.partials.card', ['entry' => $entry])
+        @endforeach
+    </ul>
+    {{ $component->entries->links('sunrice.partials.pagination') }}
+</x-sunrice::entry-filter>
+```
+
+Each key of `filters` is the name in the URL; the value is a type, or an
+array with `type` and options:
+
+| Type | URL | Matches | Options |
+| --- | --- | --- | --- |
+| `search` | `?q=linen` | title or `fields` contain the text | `fields` (default `['title']`) |
+| `terms` | `?category[]=shoes` | entries with any chosen term, or its child terms | `taxonomy` (default: the key), `multiple` (default true), `hide_empty` |
+| `select` | `?brand=acme`, or `?colors[]=red` with `multiple` | the field equals a chosen value (list fields: holds any of them) | `field`, `options` (default: the select field's own options), `multiple` |
+| `range` | `?price_min=10&price_max=50` | number field within the range | `field` |
+| `date_range` | `?published_from=2025-01-01&published_to=…` | date field (or `published_at`) within the dates | `field` |
+| `toggle` | `?in_stock=1` | the field is on | `field` |
+
+Every type also takes `label` (default: the key, title-cased) and `field`
+(default: the key). Only declared filters are read, and `terms` / `select`
+values must be one of their options, so the URL can't query anything else.
+`where` and `terms` props work as on `<x-sunrice::entries>`, for a fixed
+scope (e.g. only one brand's products).
+
+The slot gets:
+
+- `$component->entries`: the current page (paginator; keeps the filters in
+  its links).
+- `$component->filters`: for building the form. Each has `name`, `type`,
+  `label`, `value` (current), `inputs` (form field names, e.g. `category[]`,
+  or `price_min` / `price_max`) and `options` (`value`, `label`,
+  `selected`, plus `count` and `depth` for terms).
+- `$component->filter('brand')`: one of them by name.
+- `$component->sorts`: `value`, `label`, `selected`; the URL name is
+  `$component->sortParam` (`sort`).
+- `$component->active`: the applied filters (`label`, `value`,
+  `remove_url`) for "Brand: Acme ×" chips; `$component->clearUrl` removes
+  them all, `$component->filtered()` tells whether any is applied.
+
+## `<x-sunrice::search>`
+
+Site search. GET `/search?q=…` (and `/{locale}/search`) shows results with
+the `sunrice.search` template (see [Templates](templates.md#search-and-error-pages));
+the component helps build search boxes and custom result lists:
+
+```blade
+{{-- A search box anywhere: the starter header's partials/search-form --}}
+<x-sunrice::search>
+    <form method="get" action="{{ $component->action }}" role="search">
+        <input type="search" name="{{ $component->name }}" value="{{ $component->query }}">
+        <button>Search</button>
+    </form>
+</x-sunrice::search>
+
+{{-- Results inside a template, e.g. searching the help articles only --}}
+<x-sunrice::search :results="true" collections="help" :per-page="20">
+    @foreach ($component->results as $entry)
+        <a href="{{ $entry->url }}">{{ $entry->title }}</a>
+    @endforeach
+    {{ $component->results->links('sunrice.partials.pagination') }}
+</x-sunrice::search>
+```
+
+The search covers published entries that have pages of their own: their
+title and field text, in the visitor's language (Ready translations) or
+the main one. `action` is the search page in the page's language, `query`
+what was searched, `name` the URL name (`q`). Settings:
+`sunrice.search` in [Configuration](configuration.md).
+
+## Pagination
+
+Lists are Laravel paginators, so `{{ $entries->links() }}` works and uses
+Laravel's own (Tailwind) view. The starter templates ship a plain one to
+restyle: `{{ $entries->links('sunrice.partials.pagination') }}`. To change
+every list at once, publish Laravel's views
+(`php artisan vendor:publish --tag=laravel-pagination`) or set
+`Paginator::defaultView('sunrice.partials.pagination')` in a service
+provider. The words come from `lang/{locale}/pagination.php` (Sunrice adds
+Indonesian).
 
 ## `<x-sunrice::seo>`
 

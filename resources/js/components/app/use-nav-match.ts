@@ -19,6 +19,7 @@ export function useNavMatch(): NavMatch | null {
     let bestLength = 0;
     for (const group of navigation ?? []) {
         for (const item of group.items) {
+            if (item.external) continue;
             const href = adminUrl(item.href, adminPath);
             if ((path === href || path.startsWith(`${href}/`)) && href.length > bestLength) {
                 best = { group, item };

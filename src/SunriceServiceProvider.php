@@ -48,9 +48,12 @@ use Sunrice\Policies\UserPolicy;
 use Sunrice\Support\CoreTranslations;
 use Sunrice\Support\SiteSettings;
 use Sunrice\View\Components\Entries;
+use Sunrice\View\Components\EntryFilter;
 use Sunrice\View\Components\Form as FormComponent;
+use Sunrice\View\Components\Search;
 use Sunrice\View\Components\Seo;
 use Sunrice\View\Components\SiteCode;
+use Sunrice\View\Components\Terms;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class SunriceServiceProvider extends PackageServiceProvider
@@ -228,6 +231,9 @@ class SunriceServiceProvider extends PackageServiceProvider
         // <body @bodyClass> or <body @bodyClass('dark wide')>
         Blade::directive('bodyClass', fn (string $extra) => '<?php echo \'class="\'.e(sunrice_body_class('.($extra === '' ? '[]' : $extra).')).\'"\'; ?>');
         Blade::component(Entries::class, 'sunrice::entries');
+        Blade::component(Terms::class, 'sunrice::terms');
+        Blade::component(EntryFilter::class, 'sunrice::entry-filter');
+        Blade::component(Search::class, 'sunrice::search');
         Blade::component(Seo::class, 'sunrice::seo');
         Blade::component(SiteCode::class, 'sunrice::code');
         Blade::component(FormComponent::class, 'sunrice::form');
@@ -252,8 +258,14 @@ class SunriceServiceProvider extends PackageServiceProvider
         }
 
         // Starter front-end templates: `php artisan vendor:publish --tag=sunrice-templates`
-        // copies them to resources/views/sunrice, where the template resolver finds them.
-        $this->publishes([__DIR__.'/../stubs/templates' => resource_path('views/sunrice')], 'sunrice-templates');
+        // copies them to resources/views/sunrice, where the template resolver finds them,
+        // their stylesheet and script to public/sunrice-theme, and the 404/500/503
+        // pages to resources/views/errors.
+        $this->publishes([
+            __DIR__.'/../stubs/templates' => resource_path('views/sunrice'),
+            __DIR__.'/../stubs/theme' => public_path('sunrice-theme'),
+            __DIR__.'/../stubs/errors' => resource_path('views/errors'),
+        ], 'sunrice-templates');
     }
 
     /**

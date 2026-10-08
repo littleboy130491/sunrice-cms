@@ -33,6 +33,12 @@ class Sunrice
     /** @var array<int, string> */
     protected array $adminStyles = [];
 
+    /** @var array<int, array{label: string, href: string, icon: string, group: string, can: string|callable|null}> */
+    protected array $navigationItems = [];
+
+    /** @var array<int, callable> */
+    protected array $navigationHooks = [];
+
     public function version(): string
     {
         return '1.0.0';
@@ -151,6 +157,50 @@ class Sunrice
     public function templateHooks(): array
     {
         return $this->templateHooks;
+    }
+
+    /**
+     * Add a link to the admin sidebar.
+     *
+     * - $href: a path inside the admin ("resources/products", "reports")
+     *   or an address of its own ("/reports", "https://…"), opened as a
+     *   normal page.
+     * - $icon: a sidebar icon name (see the docs for the list).
+     * - $group: an existing group ("Content", "Structure", "Manage"…) or
+     *   a new one, shown before "Manage".
+     * - $can: who sees it: an ability/permission name, or a callable
+     *   receiving the user and returning a bool. Null shows it to everyone
+     *   who can open the admin.
+     */
+    public function addNavigationItem(string $label, string $href, string $icon = 'circle', string $group = 'Tools', string|callable|null $can = null): void
+    {
+        $this->navigationItems[] = ['label' => $label, 'href' => $href, 'icon' => $icon, 'group' => $group, 'can' => $can];
+    }
+
+    /**
+     * @return array<int, array{label: string, href: string, icon: string, group: string, can: string|callable|null}>
+     */
+    public function navigationItems(): array
+    {
+        return $this->navigationItems;
+    }
+
+    /**
+     * Change the whole admin sidebar. Hooks run in registration order;
+     * each receives (array $groups, $user) and returns the groups to use.
+     * A group is ['label' => …, 'items' => [['label', 'href', 'icon'], …]].
+     */
+    public function navigationUsing(callable $hook): void
+    {
+        $this->navigationHooks[] = $hook;
+    }
+
+    /**
+     * @return array<int, callable>
+     */
+    public function navigationHooks(): array
+    {
+        return $this->navigationHooks;
     }
 
     /**

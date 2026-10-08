@@ -67,10 +67,17 @@ export function AppSidebar() {
                                             isActive={match?.item === item}
                                             tooltip={item.label}
                                         >
-                                            <Link href={adminUrl(item.href, adminPath)} prefetch>
-                                                <Icon />
-                                                <span>{item.label}</span>
-                                            </Link>
+                                            {item.external ? (
+                                                <a href={item.href}>
+                                                    <Icon />
+                                                    <span>{item.label}</span>
+                                                </a>
+                                            ) : (
+                                                <Link href={adminUrl(item.href, adminPath)} prefetch>
+                                                    <Icon />
+                                                    <span>{item.label}</span>
+                                                </Link>
+                                            )}
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
                                 );

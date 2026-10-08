@@ -30,4 +30,29 @@ return [
     'draft_not_ready' => 'This translation isn\'t marked Ready, so the public sees the :language version.',
     'draft_signed_in' => 'You can see it because you\'re signed in.',
     'edit_entry' => 'Edit entry',
+    // Entry filter (<x-sunrice::entry-filter> + partials/entry-filter).
+    'filter_min' => 'Min',
+    'filter_max' => 'Max',
+    'filter_from' => 'From',
+    'filter_to' => 'To',
+    'filter_any' => 'Any',
+    'filter_apply' => 'Apply',
+    'filter_clear' => 'Clear filters',
+    'filter_remove' => 'Remove :filter',
+    'sort_by' => 'Sort by',
+    'results' => '{0} No results|{1} 1 result|[2,*] :count results',
+    // Site search.
+    'search' => 'Search',
+    'search_placeholder' => 'Search this site',
+    'search_results_for' => 'Results for “:query”',
+    'search_nothing' => 'Nothing matches “:query”. Try other words.',
+    'search_hint' => 'Type a few words to search the site.',
+    // Header menu on small screens.
+    'menu' => 'Menu',
+    // Error pages.
+    'error_404_title' => 'Page not found',
+    'error_404_text' => 'The page you are looking for doesn\'t exist or has moved.',
+    'error_500_title' => 'Something went wrong',
+    'error_500_text' => 'We couldn\'t show this page. Please try again in a moment.',
+    'back_home' => 'Back to the home page',
 ];

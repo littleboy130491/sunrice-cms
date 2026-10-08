@@ -28,7 +28,16 @@ Start with get_site_info: handles, languages, field types and your permissions.
 - To change structure: get_blueprint, then save_blueprint, then save_collection.
 - Before touching templates, call get_template_guide, then read_template / write_template / render_page.
 - For SEO: seo_audit, then fix the issues with update_entry (seo) and save_asset (alt text).
-- For other languages: translate_entry, or write the translation yourself with update_entry locale.
+
+Translating (get_site_info → languages: main is the source, the other available languages are translations):
+- Entries: translate_entry (machine translation, when the site has an API key), or translate yourself and save with update_entry locale (title, slug, data, seo). get_entry shows each language and missing_languages; seo_audit lists entries missing a translation. Only translatable fields need a value; the rest are shared with the main language.
+- Listing pages: get_listing, then save_listing with locale (title, intro, data, seo).
+- Terms: save_term with translations {locale: {name, slug, data, seo}}.
+- Globals: save_global with locale and values (only sets marked translatable; others are shared).
+- Menus: save_menu item labels {locale: text} (empty = the target's title in that language).
+- Collection and taxonomy names: save_collection / save_taxonomy settings.titles {locale: name}.
+- Whole site at once: run_command sunrice:translate (entries, terms, globals, menus and language files; entries become drafts to review).
+- Not translatable per language: form labels and messages, asset alt text and captions.
 
 Ask the user before deleting anything or publishing large changes. Use read_docs for details.
 MD)]

@@ -7,6 +7,10 @@
 - **Interface text** in your Laravel language files: `lang/{locale}/*.php`
   (including subfolders) and `lang/{locale}.json`.
 
+**Not covered by the command:** listing page content and collection or
+taxonomy names. Translate those in the admin, or ask an
+[AI agent](ai-agents.md#translating-content).
+
 ## Setup
 
 Add one API key to `.env`. Gemini is the default because it is fast,

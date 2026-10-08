@@ -16,7 +16,7 @@ use InvalidArgumentException;
 class JsonField
 {
     /** Operators accepted by where(); anything else is a programming error. */
-    public const OPERATORS = ['=', '!=', '<>', '<', '<=', '>', '>=', 'like', 'not like', 'in', 'contains'];
+    public const OPERATORS = ['=', '!=', '<>', '<', '<=', '>', '>=', 'like', 'not like', 'in', 'contains', 'contains any'];
 
     /**
      * Field paths go into raw SQL (castExpression), so only plain handle
@@ -51,6 +51,14 @@ class JsonField
         static::assertSafe($path, $operator);
         $operator = strtolower($operator);
 
+        // Booleans (toggle fields) can't be cast to numbers on every
+        // database: compare the JSON value itself (true, or a legacy 1).
+        if (is_bool($value) && in_array($operator, ['=', '!=', '<>'], true)) {
+            $match = fn (Builder $q) => static::where($q, $column, $path, 'contains any', [$value, (int) $value], $cast);
+
+            return $operator === '=' ? $query->where($match) : $query->whereNot($match);
+        }
+
         return match ($operator) {
             'in' => $query->where(function (Builder $q) use ($column, $path, $value, $cast): void {
                 foreach ((array) $value as $v) {
@@ -58,6 +66,12 @@ class JsonField
                 }
             }),
             'contains' => $query->whereJsonContains($column.'->'.$path, $value),
+            // A list field holding at least one of the values.
+            'contains any' => $query->where(function (Builder $q) use ($column, $path, $value): void {
+                foreach ((array) $value as $v) {
+                    $q->orWhereJsonContains($column.'->'.$path, $v);
+                }
+            }),
             '!=' => $query->where(fn (Builder $q) => static::compare($q, $column, $path, '<>', $value, $cast)),
             default => $query->where(fn (Builder $q) => static::compare($q, $column, $path, $operator, $value, $cast)),
         };

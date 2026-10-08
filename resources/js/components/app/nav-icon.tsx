@@ -1,6 +1,7 @@
 import {
-    Blocks, BookOpen, Bot, Briefcase, Calendar, Circle, Database, FileText, Folder, Globe, Home, Image, Inbox,
-    LayoutGrid, LayoutTemplate, Library, ListTree, Megaphone, Newspaper, Settings, ShoppingBag, Shield, Star, Tags, Users,
+    Blocks, BookOpen, Bot, Briefcase, Calendar, ChartColumn, Circle, ClipboardList, CreditCard, Database, ExternalLink, FileText,
+    Folder, Globe, Home, Image, Inbox, LayoutGrid, LayoutTemplate, Library, Link, ListTree, Mail, MapPin, Megaphone, Newspaper,
+    Package, Settings, ShoppingBag, ShoppingCart, Shield, Star, Tags, Users, Wrench,
     type LucideIcon,
 } from 'lucide-react';
 
@@ -15,7 +16,11 @@ const icons: Record<string, LucideIcon> = {
     bot: Bot,
     briefcase: Briefcase,
     calendar: Calendar,
+    'chart-column': ChartColumn,
+    'clipboard-list': ClipboardList,
+    'credit-card': CreditCard,
     database: Database,
+    'external-link': ExternalLink,
     'file-text': FileText,
     folder: Folder,
     globe: Globe,
@@ -25,15 +30,21 @@ const icons: Record<string, LucideIcon> = {
     'layout-grid': LayoutGrid,
     'layout-template': LayoutTemplate,
     library: Library,
+    link: Link,
     'list-tree': ListTree,
+    mail: Mail,
+    'map-pin': MapPin,
     megaphone: Megaphone,
     newspaper: Newspaper,
+    package: Package,
     settings: Settings,
     'shopping-bag': ShoppingBag,
+    'shopping-cart': ShoppingCart,
     shield: Shield,
     star: Star,
     tags: Tags,
     users: Users,
+    wrench: Wrench,
 };
 
 /** Icon names a collection can pick in its settings. */

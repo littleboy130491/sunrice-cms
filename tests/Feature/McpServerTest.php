@@ -19,6 +19,7 @@ use Sunrice\Models\Menu;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
 use Sunrice\Permissions\SyncPermissions;
+use Sunrice\Support\Locales;
 use Workbench\App\Models\User;
 
 use function Pest\Laravel\postJson;
@@ -314,4 +315,18 @@ it('changes a global set and merges SEO settings key by key', function () {
     expect($collection['settings']['seo'])->toEqual(['description' => 'Our pages', 'title_field' => 'headline']);
     $collection = mcpResult(SunriceServer::actingAs($this->admin)->tool(Tools\SaveCollection::class, ['handle' => 'pages', 'settings' => ['seo' => ['title_field' => '']]]));
     expect($collection['settings']['seo'])->toEqual(['description' => 'Our pages']);
+});
+
+it('translates collection and taxonomy names through their settings', function () {
+    $other = collect(Locales::available())->first(fn (string $l) => ! Locales::isMain($l));
+
+    mcpResult(SunriceServer::actingAs($this->admin)->tool(Tools\SaveCollection::class, [
+        'handle' => 'pages', 'settings' => ['titles' => [$other => 'Translated pages']],
+    ]));
+    mcpResult(SunriceServer::actingAs($this->admin)->tool(Tools\SaveTaxonomy::class, [
+        'handle' => 'topics', 'title' => 'Topics', 'settings' => ['titles' => [$other => 'Translated topics']],
+    ]));
+
+    expect($this->pages->fresh()->titleIn($other))->toBe('Translated pages')
+        ->and(Taxonomy::query()->where('handle', 'topics')->first()->titleIn($other))->toBe('Translated topics');
 });

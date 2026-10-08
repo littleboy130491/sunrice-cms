@@ -136,6 +136,41 @@ class EntryQuery
     }
 
     /**
+     * Text search: entries whose title or any of the given fields (main
+     * language) contain $term, case-insensitive.
+     *
+     *     sunrice_entries('products')->search('linen', ['title', 'description'])->get();
+     *
+     * @param  array<int, string>  $fields  'title' and/or custom field handles
+     */
+    public function search(string $term, array $fields = ['title']): static
+    {
+        $term = trim($term);
+        if ($term === '' || $fields === []) {
+            return $this;
+        }
+        foreach ($fields as $field) {
+            if ($field !== 'title') {
+                JsonField::assertSafe($field);
+            }
+        }
+
+        $this->filters['search'][] = [$term, $fields];
+        $this->joinTranslation();
+        $like = '%'.mb_strtolower($term).'%';
+        $grammar = $this->query->getQuery()->getGrammar();
+        $this->query->where(function (Builder $q) use ($fields, $like, $grammar): void {
+            foreach ($fields as $field) {
+                // lower() on both sides: JSON text is compared case-sensitively on MySQL.
+                $column = $grammar->wrap($field === 'title' ? 't.title' : 't.data->'.$field);
+                $q->orWhereRaw('lower('.$column.') like ?', [$like]);
+            }
+        });
+
+        return $this;
+    }
+
+    /**
      * Filter to entries carrying a term (slug or id list) of a
      * taxonomy; includeChildren() adds descendant terms.
      */

@@ -25,7 +25,7 @@ class DocsController extends Controller
         'Content' => ['content-modeling', 'custom-fields', 'assets', 'forms'],
         'Frontend' => ['templates', 'blade-components', 'helpers'],
         'Languages' => ['multilingual', 'translation'],
-        'Admin' => ['permissions', 'resources', 'ai-agents'],
+        'Admin' => ['permissions', 'extending', 'resources', 'ai-agents'],
         'Operations' => ['mail', 'caching'],
     ];
 

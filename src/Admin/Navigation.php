@@ -20,7 +20,7 @@ class Navigation
     /**
      * Each item carries a lucide icon name (kebab-case) for the sidebar.
      *
-     * @return array<int, array{label: string, items: array<int, array{label: string, href: string, icon: string}>}>
+     * @return array<int, array{label: string, items: array<int, array{label: string, href: string, icon: string, external: bool}>}>
      */
     public function for(mixed $user): array
     {
@@ -107,7 +107,58 @@ class Navigation
         if ($admin !== []) {
             $groups[] = ['label' => 'Manage', 'items' => $admin];
         }
+        $groups = $this->withRegisteredItems($groups, $user);
+
+        foreach (app(Sunrice::class)->navigationHooks() as $hook) {
+            $groups = array_values((array) $hook($groups, $user));
+        }
+
+        return array_map(fn (array $group): array => [
+            'label' => (string) $group['label'],
+            'items' => array_values(array_map(fn (array $item): array => [
+                'label' => (string) $item['label'],
+                'href' => (string) $item['href'],
+                'icon' => (string) ($item['icon'] ?? 'circle'),
+                // Outside the admin: a plain link, not an admin (Inertia) visit.
+                'external' => static::isExternal((string) $item['href']),
+            ], (array) $group['items'])),
+        ], array_filter($groups, fn ($group) => is_array($group) && ! empty($group['items'])));
+    }
+
+    /**
+     * Items added with Sunrice::addNavigationItem(), into their group
+     * (new groups go after the built-in ones, before "Manage").
+     *
+     * @param  array<int, array<string, mixed>>  $groups
+     * @return array<int, array<string, mixed>>
+     */
+    protected function withRegisteredItems(array $groups, mixed $user): array
+    {
+        foreach (app(Sunrice::class)->navigationItems() as $item) {
+            $can = $item['can'];
+            $allowed = match (true) {
+                $can === null => true,
+                is_string($can) => $user->can($can),
+                default => (bool) $can($user),
+            };
+            if (! $allowed) {
+                continue;
+            }
+            $link = ['label' => $item['label'], 'href' => $item['href'], 'icon' => $item['icon']];
+            $index = array_search($item['group'], array_column($groups, 'label'), true);
+            if ($index === false) {
+                $manage = array_search('Manage', array_column($groups, 'label'), true);
+                array_splice($groups, $manage === false ? count($groups) : $manage, 0, [['label' => $item['group'], 'items' => [$link]]]);
+            } else {
+                $groups[$index]['items'][] = $link;
+            }
+        }
 
         return $groups;
+    }
+
+    protected static function isExternal(string $href): bool
+    {
+        return str_starts_with($href, '/') || preg_match('#^[a-z][a-z0-9+.-]*:#i', $href) === 1;
     }
 }
