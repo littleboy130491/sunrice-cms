@@ -19,10 +19,10 @@ it('links an entry to its list, listing page, terms, collection and blueprint', 
     get("/cms/entries/{$entry->id}")->assertInertia(fn (Assert $page) => $page->where('related', function ($links) {
         $labels = collect($links)->pluck('label')->all();
 
-        return in_array('All Articles', $labels, true) && in_array('Edit listing page', $labels, true)
-            && in_array('View listing page', $labels, true) && in_array('Tags', $labels, true)
+        return in_array('All Articles', $labels, true) && in_array('Edit archive/listing page', $labels, true)
+            && in_array('View archive/listing page', $labels, true) && in_array('Tags', $labels, true)
             && in_array('Collection settings', $labels, true) && in_array('Blueprint: Articles', $labels, true)
-            && collect($links)->firstWhere('label', 'View listing page')['href'] === '/blog';
+            && collect($links)->firstWhere('label', 'View archive/listing page')['href'] === '/blog';
     }));
 });
 

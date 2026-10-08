@@ -51,7 +51,7 @@ export default function EntriesIndex({ collection, columns, rows, meta, can, vis
                 <div className="flex gap-2">
                     {can.listing && (
                         <Button variant="outline" asChild>
-                            <Link href={adminUrl(`collections/${collection.handle}/listing`, adminPath)}>Listing page</Link>
+                            <Link href={adminUrl(`collections/${collection.handle}/listing`, adminPath)}>Archive/listing page</Link>
                         </Button>
                     )}
                     {can.create && (

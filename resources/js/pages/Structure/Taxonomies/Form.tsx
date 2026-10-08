@@ -59,10 +59,9 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
     };
 
     return (
-        <div className="max-w-2xl space-y-6">
+        <form onSubmit={submit} className="flex max-w-2xl flex-col gap-6">
             <h1 className="sunrice-page-title">{taxonomy ? `Edit ${taxonomy.title}` : 'New taxonomy'}</h1>
-            <CollapsibleCard title="Taxonomy settings" storageKey="taxonomy:settings" hasErrors={Object.keys(errors).length > 0}>
-                <form onSubmit={submit} className="flex flex-col gap-4">
+            <CollapsibleCard title="Basics" storageKey="taxonomy:settings" hasErrors={Object.keys(errors).length > 0} contentClassName="flex flex-col gap-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="title">Title</Label>
@@ -120,12 +119,14 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
                         {collections.length === 0 && <p className="text-sm text-muted-foreground">No collections yet.</p>}
                         <InputError message={errors.collection_ids ?? Object.entries(errors).find(([k]) => k.startsWith('collection_ids.'))?.[1]} />
                     </div>
+            </CollapsibleCard>
+            <CollapsibleCard title="Term pages" storageKey="taxonomy:term-pages" hasErrors={['settings.route', 'settings.per_page', 'settings.template'].some((k) => errors[k])} contentClassName="flex flex-col gap-4">
                     <label className="flex items-center gap-2 text-sm">
                         <Checkbox
                             checked={!!form.data.settings.has_archive}
                             onCheckedChange={(c) => form.setData('settings', { ...form.data.settings, has_archive: !!c })}
                         />
-                        Term archive pages (a page per term listing its entries)
+                        Term archive/listing pages (a page per term listing its entries)
                     </label>
                     {form.data.settings.has_archive && (
                         <div className="grid gap-2">
@@ -165,26 +166,26 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
                             <InputError message={errors['settings.template']} />
                         </div>
                     )}
-                    {form.data.settings.has_archive && (
-                        <div className="grid gap-2 rounded-lg border border-border/80 p-4">
-                            <p className="text-sm font-medium">SEO defaults for term pages</p>
-                            <p className="-mt-1 text-xs text-muted-foreground">Each term can set its own SEO in its editor; these fill in what a term leaves empty.</p>
-                            <FieldRenderer
-                                fields={SEO_DEFAULT_FIELDS}
-                                values={form.data.settings.seo as Record<string, Json>}
-                                pathPrefix="settings.seo"
-                                errors={errors}
-                                onChange={(seo) => form.setData('settings', { ...form.data.settings, seo: seo as SeoDefaults })}
-                            />
-                        </div>
-                    )}
-                    <div className="flex gap-2">
-                        <Button type="submit" disabled={form.processing}>Save</Button>
-                        <Button type="button" variant="outline" onClick={() => router.get(adminUrl('structure/taxonomies', adminPath))}>Cancel</Button>
-                    </div>
-                </form>
             </CollapsibleCard>
-        </div>
+            <CollapsibleCard
+                title="SEO defaults"
+                description="For this taxonomy's term archive/listing pages. Each term can set its own SEO in its editor; these fill in what a term leaves empty."
+                storageKey="taxonomy:seo"
+                hasErrors={Object.keys(errors).some((k) => k.startsWith('settings.seo'))}
+            >
+                <FieldRenderer
+                    fields={SEO_DEFAULT_FIELDS}
+                    values={form.data.settings.seo as Record<string, Json>}
+                    pathPrefix="settings.seo"
+                    errors={errors}
+                    onChange={(seo) => form.setData('settings', { ...form.data.settings, seo: seo as SeoDefaults })}
+                />
+            </CollapsibleCard>
+            <div className="flex gap-2">
+                <Button type="submit" disabled={form.processing}>Save</Button>
+                <Button type="button" variant="outline" onClick={() => router.get(adminUrl('structure/taxonomies', adminPath))}>Cancel</Button>
+            </div>
+        </form>
     );
 }
 

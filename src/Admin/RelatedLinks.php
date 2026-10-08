@@ -37,9 +37,9 @@ class RelatedLinks
         }
         if ($collection->setting('has_archive')) {
             if (Gate::allows("sunrice.entries.{$collection->id}.edit") || Gate::allows("sunrice.entries.{$collection->id}.translate")) {
-                $add('Listing page', 'Edit listing page', route('sunrice.admin.listing.edit', $collection));
+                $add('Archive/listing page', 'Edit archive/listing page', route('sunrice.admin.listing.edit', $collection));
             }
-            $add('Listing page', 'View listing page', app(UrlGenerator::class)->archive($collection, Locales::main()), true);
+            $add('Archive/listing page', 'View archive/listing page', app(UrlGenerator::class)->archive($collection, Locales::main()), true);
         }
 
         foreach ($collection->taxonomies as $taxonomy) {

@@ -164,7 +164,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             </CollapsibleCard>
             <CollapsibleCard title="Order" storageKey="collection:order" hasErrors={Object.keys(errors).length > 0} contentClassName="flex flex-col gap-3">
                 <p className="text-sm text-muted-foreground">
-                    How entries are listed on the site (listing page, <code>&lt;x-sunrice::entries&gt;</code> without <code>order-by</code>) and in the admin.
+                    How entries are listed on the site (archive/listing page, <code>&lt;x-sunrice::entries&gt;</code> without <code>order-by</code>) and in the admin.
                 </p>
                 <div className="flex flex-wrap gap-3">
                     <Select value={settings.sort} onValueChange={(v) => setSetting('sort', v)}>
@@ -241,11 +241,11 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
 
                 <label className="flex items-center gap-3 text-sm">
                     <Checkbox checked={settings.has_archive} onCheckedChange={(c) => setSetting('has_archive', !!c)} />
-                    Has a listing page (archive)
+                    Has an archive/listing page
                 </label>
                 {settings.has_archive && (
                     <div className="grid gap-2 pl-7">
-                        <Label>Listing blueprint</Label>
+                        <Label>Archive/listing blueprint</Label>
                         <Select value={String(settings.archive_blueprint_id || 'none')} onValueChange={(v) => setSetting('archive_blueprint_id', v === 'none' ? '' : Number(v))}>
                             <SelectTrigger className="w-full sm:w-80"><SelectValue /></SelectTrigger>
                             <SelectContent>
@@ -254,18 +254,18 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
                             </SelectContent>
                         </Select>
                         <p className="text-xs text-muted-foreground">
-                            Extra fields for the listing page, such as a hero image or description. Edit them, with the heading and intro,
-                            from the collection's entries list (Listing page).
+                            Extra fields for the archive/listing page, such as a hero image or description. Edit them, with the heading and intro,
+                            from the collection's entries list (Archive/listing page).
                         </p>
                         <InputError message={errors['settings.archive_blueprint_id']} />
-                        <Label htmlFor="archive_route">Listing URL</Label>
+                        <Label htmlFor="archive_route">Archive/listing URL</Label>
                         <Input id="archive_route" className="font-mono text-sm" value={settings.archive_route} placeholder={`/${handle}`} onChange={(e) => setSetting('archive_route', e.target.value)} />
                         <InputError message={errors['settings.archive_route']} />
                         <Label htmlFor="per_page">Entries per page</Label>
                         <Input id="per_page" type="number" min={1} max={100} className="w-32" value={settings.per_page} placeholder="12"
                             onChange={(e) => setSetting('per_page', e.target.value === '' ? '' : Number(e.target.value))} />
                         <InputError message={errors['settings.per_page']} />
-                        <Label htmlFor="archive_template">Listing template</Label>
+                        <Label htmlFor="archive_template">Archive/listing template</Label>
                         <Input id="archive_template" className="font-mono text-sm" value={settings.archive_template} placeholder={`e.g. ${handle}.listing`}
                             onChange={(e) => setSetting('archive_template', e.target.value)} />
                         <TemplateHelp example={`${handle}.listing`} defaults={[`sunrice.${handle}.index`, 'sunrice.index']} />
@@ -275,7 +275,7 @@ export default function CollectionsForm({ collection, blueprints, taxonomies }: 
             </CollapsibleCard>
             <CollapsibleCard
                 title="SEO defaults"
-                description="For this collection's entries and listing page. Each entry (and the listing page) can set its own SEO; these fill in what they leave empty."
+                description="For this collection's entries and archive/listing page. Each entry (and the archive/listing page) can set its own SEO; these fill in what they leave empty."
                 storageKey="collection:seo"
                 hasErrors={Object.keys(errors).some((k) => k.startsWith('settings.seo'))}
             >

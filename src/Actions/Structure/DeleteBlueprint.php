@@ -28,7 +28,7 @@ class DeleteBlueprint
         if ($collections + $entries + $taxonomies + $globals + $listings > 0) {
             throw new DomainException(
                 "Blueprint \"{$blueprint->handle}\" is still in use: "
-                ."{$collections} collection(s), {$entries} entr(y/ies), {$taxonomies} taxonom(y/ies), {$globals} global(s), {$listings} listing page(s)."
+                ."{$collections} collection(s), {$entries} entr(y/ies), {$taxonomies} taxonom(y/ies), {$globals} global(s), {$listings} archive/listing page(s)."
             );
         }
 
