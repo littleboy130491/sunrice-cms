@@ -3,9 +3,12 @@
 declare(strict_types=1);
 
 use Inertia\Testing\AssertableInertia as Assert;
+use Sunrice\Actions\Structure\SaveCollection;
+use Sunrice\Actions\Taxonomies\SaveTaxonomy;
 use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Asset;
 use Sunrice\Models\Blueprint;
+use Sunrice\Models\Taxonomy;
 use Sunrice\Support\SeoFields;
 
 use function Pest\Laravel\get;
@@ -56,4 +59,14 @@ it('saves the choices from Settings → SEO', function () {
 
     expect($this->collection->fresh()->setting('seo'))->toMatchArray(['description_field' => 'body', 'image_field' => 'none'])
         ->and($this->collection->fresh()->setting('seo'))->not->toHaveKey('title_field');
+});
+
+it('keeps the field choices when a collection or taxonomy is saved again', function () {
+    $this->collection->update(['settings' => ['seo' => ['description' => 'News', 'title_field' => 'excerpt']] + $this->collection->settings]);
+    app(SaveCollection::class)->handle(['handle' => 'articles', 'title' => 'Articles', 'settings' => ['seo' => ['description' => 'News 2', 'title_field' => 'excerpt']]], $this->collection);
+    expect($this->collection->fresh()->setting('seo'))->toEqual(['description' => 'News 2', 'title_field' => 'excerpt']);
+
+    $tags = Taxonomy::factory()->create(['handle' => 'tags', 'settings' => ['seo' => ['image_field' => 'none']]]);
+    app(SaveTaxonomy::class)->handle(['handle' => 'tags', 'title' => 'Tags', 'settings' => ['seo' => ['image_field' => 'none', 'noindex' => true]]], $tags);
+    expect($tags->fresh()->setting('seo'))->toEqual(['image_field' => 'none', 'noindex' => true]);
 });

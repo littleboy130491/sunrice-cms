@@ -57,12 +57,13 @@ email of the user it acts as.
 | Area | Tools |
 | --- | --- |
 | Site | `get_site_info` (start here), `update_site_settings`, `read_docs` |
-| Entries | `list_entries`, `get_entry`, `create_entry`, `update_entry` (drafts; `publish: true` puts changes live; `locale` writes a translation), `manage_entry` (unpublish, trash, restore, delete, duplicate, set_homepage) |
-| Structure | `save_collection`, `get_blueprint` (also lists field types and their options), `save_blueprint` (blueprints and fieldsets), `save_taxonomy`, `delete_structure` |
+| Entries | `list_entries`, `get_entry`, `create_entry`, `update_entry` (drafts; `publish: true` puts changes live; `locale` writes a translation), `manage_entry` (unpublish, trash, restore, delete, duplicate, set_homepage), `entry_revisions` (list, show and restore published versions) |
+| Structure | `save_collection` (also turns on a listing page and picks its blueprint), `get_listing` / `save_listing` (a listing page's heading, intro, fields and SEO per language), `get_blueprint` (also lists field types and their options), `save_blueprint` (blueprints and fieldsets), `save_taxonomy`, `delete_structure` |
 | Terms | `list_terms`, `save_term` (create, update, trash, restore) |
-| Globals and menus | `get_global`, `save_global`, `get_menu`, `save_menu` |
-| Media | `list_assets` (e.g. images missing alt text), `save_asset` (upload from a URL or base64, edit title/alt/caption) |
-| Forms | `get_form` (with submissions), `save_form` |
+| Order | `reorder`: the manual order of entries, terms or menu items |
+| Globals and menus | `get_global`, `save_global` (values, and the set's title, blueprint and languages), `get_menu`, `save_menu` |
+| Media | `list_assets` (e.g. images missing alt text), `save_asset` (upload from a URL or base64, edit title/alt/caption), `manage_asset` (folders, move, trash, restore, delete) |
+| Forms | `get_form` (with submissions), `save_form`, `delete_submissions` |
 | SEO | `seo_audit`: meta titles and descriptions (length, duplicates, missing), share images, noindex, thin content, missing translations, images without alt |
 | Languages | `translate_entry` (machine translation with the configured service; the agent can also translate and save with `update_entry`) |
 | Templates | `get_template_guide`, `read_template`, `write_template`, `render_page` |

@@ -48,3 +48,62 @@ even when the site has no `lang/` validation file for its language.
   flashes `sunrice_form_success.{handle}` and shows `success_message`.
 - `sunrice.forms.prune_after_days` + the daily `model:prune` schedule
   delete old submissions and their uploaded files.
+
+## Submitting without a page reload
+
+Post the form with JavaScript and ask for JSON (`Accept: application/json`);
+the same address then answers with JSON instead of a redirect. Send the
+whole form as `FormData`, so the CSRF token, the honeypot fields, the
+page's language (`_locale`) and any files go along:
+
+```blade
+<x-sunrice::form handle="contact" data-ajax>
+    <input name="data[name]" required>
+    <input name="data[email]" type="email" required>
+    <p data-error="email"></p>
+</x-sunrice::form>
+
+<script>
+document.querySelectorAll('form[data-ajax]').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        form.querySelectorAll('[data-error]').forEach((el) => (el.textContent = ''));
+
+        const response = await fetch(form.action, {
+            method: 'POST',
+            headers: { Accept: 'application/json' },
+            body: new FormData(form),
+        });
+        const result = await response.json().catch(() => ({}));
+
+        if (response.ok) {
+            if (result.redirect_url) return (window.location = result.redirect_url);
+            const done = Object.assign(document.createElement('div'), { className: 'sunrice-form-success', role: 'status', textContent: result.message });
+            form.replaceWith(done);
+        } else if (response.status === 422) {
+            for (const [field, messages] of Object.entries(result.errors)) {
+                const el = form.querySelector(`[data-error="${field.replace(/^data\./, '')}"]`);
+                if (el) el.textContent = messages[0];
+            }
+        } else {
+            alert('Something went wrong. Please try again.'); // 429: too many tries
+        }
+    });
+});
+</script>
+```
+
+| Outcome | Status | Body |
+| --- | --- | --- |
+| Sent | `200` | `{"success": true, "message": "Thank you!", "redirect_url": null}` |
+| Invalid | `422` | `{"errors": {"data.email": ["The email field must be a valid email address."]}}` |
+| Too many tries | `429` | the rate limiter's response |
+
+- `message` is the form's `success_message`, or the default thank-you
+  text in the page's language.
+- `redirect_url` is the form's redirect setting, or `null`; the script
+  decides whether to follow it.
+- Error keys are the input names in dot form (`data.email` for
+  `data[email]`); the messages are in the page's language.
+- A post without `Accept: application/json` still redirects as before,
+  so the form keeps working when JavaScript is off.
