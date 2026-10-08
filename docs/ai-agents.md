@@ -69,6 +69,31 @@ email of the user it acts as.
 | Templates | `get_template_guide`, `read_template`, `write_template`, `render_page` |
 | Commands | `run_command` (only the commands in `sunrice.mcp.commands`) |
 
+## Translating content
+
+The agent can translate everything stored per language in the database.
+It is told which tool does what:
+
+| Content | How the agent translates it |
+| --- | --- |
+| Entries | `translate_entry` (machine translation, when an API key is set; saved as drafts), or it writes the translation itself with `update_entry` and `locale` |
+| Listing pages | `save_listing` with `locale` (heading, intro, fields, SEO) |
+| Terms | `save_term` with `translations: {locale: {name, slug, data, seo}}` |
+| Globals | `save_global` with `locale` (only sets marked translatable) |
+| Menu labels | `save_menu` item `labels: {locale: text}` |
+| Collection and taxonomy names | `save_collection` / `save_taxonomy` `settings.titles: {locale: name}` |
+| Everything at once | `run_command sunrice:translate` (needs the command permission; see [Machine translation](translation.md)) |
+
+`get_entry` shows each language and which are missing, and `seo_audit`
+lists entries without a translation. Form labels and asset alt text are
+stored in one language only, so there is nothing per language to
+translate there.
+
+Ask the agent in plain words, for example *"Translate all published
+articles into English, keep them as drafts and list what you did"*, or
+*"Translate the main menu, the footer global and the Categories terms into
+English."*
+
 ## Templates
 
 `get_template_guide` gives the agent everything it needs to design pages:

@@ -34,7 +34,7 @@ After upgrades: `php artisan sunrice:publish-assets && php artisan migrate && ph
 | Modeling content | [docs/content-modeling.md](docs/content-modeling.md), [docs/custom-fields.md](docs/custom-fields.md) |
 | Frontend | [docs/templates.md](docs/templates.md), [docs/blade-components.md](docs/blade-components.md), [docs/helpers.md](docs/helpers.md) |
 | Locales | [docs/multilingual.md](docs/multilingual.md), [docs/translation.md](docs/translation.md) |
-| Admin extras | [docs/resources.md](docs/resources.md), [docs/permissions.md](docs/permissions.md), [docs/forms.md](docs/forms.md), [docs/assets.md](docs/assets.md) |
+| Admin extras | [docs/extending.md](docs/extending.md), [docs/resources.md](docs/resources.md), [docs/permissions.md](docs/permissions.md), [docs/forms.md](docs/forms.md), [docs/assets.md](docs/assets.md) |
 | Ops | [docs/mail.md](docs/mail.md), [docs/caching.md](docs/caching.md), [docs/upgrading.md](docs/upgrading.md) |
 
 The same guides are readable inside the admin under **Manage → Docs**

@@ -42,8 +42,51 @@ field handles it expects.
   `@foreach ($entries as $entry)` a listing's `$entry` is its last card.
 - The language switcher shows the names set under Settings → Languages
   and links each language's version of the entry, term page or listing.
+  See [Language switcher](#language-switcher) to restyle or move it.
 - Collection and taxonomy titles can be set per language in their forms;
   templates use `$collection->titleIn($locale)` / `$taxonomy->titleIn($locale)`.
+
+### Language switcher
+
+The starter templates put the switcher in the header. After
+`php artisan vendor:publish --tag=sunrice-templates`, it lives in your app:
+
+| What | Where |
+| --- | --- |
+| Markup (links, order, what each one shows) | `resources/views/sunrice/partials/header.blade.php`, the `<nav class="lang-switch">` block |
+| Styles | `resources/views/sunrice/layouts/app.blade.php`, the `.lang-switch` rules in its `<style>` (or move them to your own CSS) |
+| Language names shown | Settings → Languages in the admin (`Locales::name($code)`) |
+
+The block is plain Blade, so you can turn it into a dropdown, show flags
+or short codes, or move it to the footer. All it needs is
+`sunrice_locale_urls()`, which returns this page's address in each
+language:
+
+```blade
+@php
+    $page = $sunricePage ?? null;
+    // ['id' => '/tentang', 'en' => '/en/about']
+    $languages = sunrice_locale_urls($page?->entry ?? $page?->term, $page?->term ? $page->collection : null);
+@endphp
+
+@if (count($languages) > 1)
+    <select onchange="location = this.value" aria-label="{{ __('sunrice::frontend.languages') }}">
+        @foreach ($languages as $code => $href)
+            <option value="{{ $href }}" @selected($code === $locale)>{{ strtoupper($code) }} · {{ \Sunrice\Support\Locales::name($code) }}</option>
+        @endforeach
+    </select>
+@endif
+```
+
+- `$locale` is the current page's language.
+- Every language gets a link. A page that isn't translated yet still
+  opens in that language's URL, showing the main language's content (see
+  [whole-entity fallback](multilingual.md#whole-entity-fallback)).
+- Keep `hreflang` and `lang` on the links when you rewrite them: they tell
+  search engines and screen readers which language each one is.
+
+If you didn't publish the starter templates, your own layout is the
+place: add the snippet above wherever the switcher should go.
 
 ### Archive/listing pages
 

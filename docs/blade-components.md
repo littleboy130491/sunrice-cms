@@ -5,6 +5,11 @@
 Render published entries of a collection inside a slot — the slot
 receives the component (`$component->entries`).
 
+The component only fetches the entries; it prints no markup of its own
+(its view is just `{{ $slot }}`). You write the HTML between the tags, so
+every list can look different. To reuse one design, put the loop in a
+partial, e.g. `@include('sunrice.partials.card', ['entry' => $entry])`.
+
 ```blade
 <x-sunrice::entries collection="articles" :paginate="true" :per-page="10">
     @foreach ($component->entries as $entry)
