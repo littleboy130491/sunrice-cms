@@ -16,6 +16,7 @@ use Inertia\Response;
 use Sunrice\Actions\Support\Reorder;
 use Sunrice\Actions\Taxonomies\SaveTerm;
 use Sunrice\Actions\Taxonomies\TrashTerm;
+use Sunrice\Admin\AdminUrls;
 use Sunrice\Admin\RelatedLinks;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Frontend\UrlGenerator;
@@ -128,6 +129,8 @@ class TermsController extends Controller
 
         return Inertia::render('Taxonomies/Terms', [
             'taxonomy' => $taxonomy->only('id', 'handle', 'title', 'hierarchical', 'blueprint_id') + ['template' => $taxonomy->setting('template')],
+            // The ⋮ menu: collections using it, settings, blueprint.
+            'related' => RelatedLinks::forTermList($taxonomy->loadMissing(['collections', 'blueprint'])),
             'columns' => $columns,
             'rows' => $paginator,
             'meta' => ['search' => $search, 'filters' => $filters, 'sort' => $sort],
@@ -192,11 +195,27 @@ class TermsController extends Controller
         return $this->editor($taxonomy, null);
     }
 
-    public function edit(Term $term): Response
+    public function edit(Taxonomy $taxonomy, Term $term): Response|RedirectResponse
     {
         $this->authorize('update', $term);
+        // A term opened under another taxonomy's address: go to its own.
+        if ($term->taxonomy_id !== $taxonomy->id) {
+            return redirect()->to(AdminUrls::term($term));
+        }
 
         return $this->editor($term->taxonomy, $term);
+    }
+
+    /** The editor's older address (/terms/{id}/edit). */
+    public function legacyEdit(Term $term): RedirectResponse
+    {
+        return redirect()->to(AdminUrls::term($term), 301);
+    }
+
+    /** The terms list's older address (/taxonomies/{handle}). */
+    public function legacyIndex(Taxonomy $taxonomy): RedirectResponse
+    {
+        return redirect()->route('sunrice.admin.terms.index', [$taxonomy, ...request()->query()], 301);
     }
 
     /** The term editor page (create and edit). */
@@ -241,7 +260,6 @@ class TermsController extends Controller
             'locales' => Locales::available(),
             'mainLocale' => $main,
             'blueprint' => $taxonomy->blueprint?->schema()->toAdminTabs(),
-            'related' => RelatedLinks::forTerm($taxonomy->loadMissing(['collections', 'blueprint']), $term),
             'can' => [
                 'edit' => $term === null || $user->can('update', $term),
                 'delete' => $term !== null && $user->can('delete', $term),
@@ -255,7 +273,7 @@ class TermsController extends Controller
 
         $term = $save->handle($taxonomy, $request->all());
 
-        return redirect()->route('sunrice.admin.terms.edit', $term)->with('success', 'Term created.');
+        return redirect()->to(AdminUrls::term($term))->with('success', 'Term created.');
     }
 
     public function update(Request $request, Term $term, SaveTerm $save): RedirectResponse

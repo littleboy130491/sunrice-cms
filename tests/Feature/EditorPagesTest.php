@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Inertia\Testing\AssertableInertia as Assert;
 use Spatie\Permission\Models\Role;
+use Sunrice\Admin\AdminUrls;
 use Sunrice\Models\Asset;
 use Sunrice\Models\AssetFolder;
 use Sunrice\Models\Menu;
@@ -34,7 +35,7 @@ it('creates and edits terms on their own pages', function () {
         ->assertRedirect();
     $term = Term::query()->latest('id')->firstOrFail();
 
-    get("/cms/terms/{$term->id}/edit")->assertOk()->assertInertia(fn (Assert $page) => $page
+    get(AdminUrls::term($term))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('Taxonomies/TermEdit')
         ->where('term.id', $term->id)
         ->where('term.parent_id', $parent->id)
@@ -42,7 +43,7 @@ it('creates and edits terms on their own pages', function () {
         // A term can't be its own parent.
         ->where('parents', fn ($parents) => collect($parents)->pluck('value')->doesntContain((string) $term->id)));
 
-    delete("/cms/terms/{$term->id}")->assertRedirect('/cms/taxonomies/topics');
+    delete("/cms/terms/{$term->id}")->assertRedirect('/cms/taxonomies/topics/terms');
 });
 
 it('creates and edits users on their own pages', function () {
@@ -101,4 +102,21 @@ it('creates and renames asset folders on their own page', function () {
     get("/cms/asset-folders/{$folder->id}/edit")->assertOk()->assertInertia(fn (Assert $page) => $page->where('folder.name', 'Logos'));
     put("/cms/asset-folders/{$folder->id}", ['name' => 'Brand'])->assertRedirect("/cms/assets?folder={$folder->id}");
     delete("/cms/asset-folders/{$folder->id}")->assertRedirect('/cms/assets');
+});
+
+it('nests the editor addresses and sends the older ones there', function () {
+    $collection = createCollection('pages');
+    $entry = createEntry($collection, 'About');
+    $topics = Taxonomy::factory()->create(['handle' => 'topics']);
+    $term = Term::factory()->create(['taxonomy_id' => $topics->id]);
+
+    get("/cms/entries/{$entry->id}")->assertRedirect("/cms/collections/pages/entries/{$entry->id}");
+    get("/cms/collections/pages/entries/{$entry->id}")->assertOk();
+    get("/cms/terms/{$term->id}/edit")->assertRedirect("/cms/taxonomies/topics/terms/{$term->id}");
+    get("/cms/taxonomies/topics/terms/{$term->id}")->assertOk();
+    get('/cms/taxonomies/topics?search=x')->assertRedirect('/cms/taxonomies/topics/terms?search=x');
+
+    // Under the wrong collection: sent to the right one.
+    createCollection('posts');
+    get("/cms/collections/posts/entries/{$entry->id}")->assertRedirect("/cms/collections/pages/entries/{$entry->id}");
 });

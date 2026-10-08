@@ -4,6 +4,7 @@ import { Copy, KeyRound, LoaderCircle, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -41,6 +42,9 @@ export default function AiAccess({ tokens, endpoint, enabled, newToken, canWrite
     const { adminPath } = usePage<SharedProps>().props;
     const form = useForm({ name: '' });
     const token = newToken ?? 'YOUR_TOKEN';
+    // A new token is shown once: in a popup where the user is, not only at the top of the page.
+    const [showToken, setShowToken] = React.useState(Boolean(newToken));
+    React.useEffect(() => setShowToken(Boolean(newToken)), [newToken]);
 
     const create = (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,6 +58,28 @@ export default function AiAccess({ tokens, endpoint, enabled, newToken, canWrite
 
     return (
         <div className="flex max-w-4xl flex-col gap-6">
+            <Dialog open={showToken} onOpenChange={setShowToken}>
+                <DialogContent className="sm:max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2"><KeyRound className="size-4" /> Your new token</DialogTitle>
+                        <DialogDescription>Copy it now: for safety it is never shown again.</DialogDescription>
+                    </DialogHeader>
+                    {newToken && (
+                        <div className="grid gap-4">
+                            <div className="flex gap-2">
+                                <Input readOnly value={newToken} className="font-mono text-sm" autoFocus onFocus={(e) => e.target.select()} aria-label="New token" />
+                                <Button type="button" onClick={() => copy(newToken)}><Copy /> Copy</Button>
+                            </div>
+                            <Snippet label="Claude Code" code={`claude mcp add --transport http sunrice ${endpoint} --header "Authorization: Bearer ${newToken}"`} />
+                            <p className="text-xs text-muted-foreground">The connection snippets on this page include it too, until you leave the page.</p>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button type="button" onClick={() => setShowToken(false)}>I&apos;ve copied it</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             <div>
                 <h1 className="sunrice-page-title">AI access</h1>
                 <p className="mt-1 text-sm text-muted-foreground">

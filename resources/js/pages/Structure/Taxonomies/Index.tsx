@@ -31,7 +31,7 @@ export default function TaxonomiesIndex({ taxonomies }: { taxonomies: Row[] }) {
                                 ) : <span className="font-medium">{t.title}</span>}</TableCell>
                             <TableCell className="max-md:hidden"><code className="text-xs">{t.handle}</code></TableCell>
                             <TableCell className="max-md:hidden">{t.hierarchical && <Badge variant="secondary">hierarchical</Badge>}</TableCell>
-                            <TableCell><Link href={adminUrl(`taxonomies/${t.handle}`, adminPath)} className="hover:underline">{t.terms_count}</Link></TableCell>
+                            <TableCell><Link href={adminUrl(`taxonomies/${t.handle}/terms`, adminPath)} className="hover:underline">{t.terms_count}</Link></TableCell>
                             <TableCell>
                                 {can('sunrice.taxonomies.delete') && (
                                     <Button

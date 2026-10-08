@@ -74,7 +74,9 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::post('collections/{collection:handle}/entries', [Admin\EntriesController::class, 'store'])->name('entries.store');
     Route::post('collections/{collection:handle}/entries/reorder', [Admin\EntriesController::class, 'reorder'])->name('entries.reorder');
     Route::post('collections/{collection:handle}/entries/bulk', [Admin\EntriesController::class, 'bulk'])->name('entries.bulk');
-    Route::get('entries/{entry}', [Admin\EntriesController::class, 'edit'])->name('entries.edit');
+    Route::get('collections/{collection:handle}/entries/{entry}', [Admin\EntriesController::class, 'edit'])->whereNumber('entry')->withoutScopedBindings()->name('entries.edit');
+    // Older address of the entry editor: sent to the one above.
+    Route::get('entries/{entry}', [Admin\EntriesController::class, 'legacyEdit'])->withTrashed()->name('entries.legacy-edit');
     Route::put('entries/{entry}', [Admin\EntriesController::class, 'update'])->name('entries.update');
     Route::delete('entries/{entry}', [Admin\EntriesController::class, 'destroy'])->name('entries.destroy');
     Route::post('entries/{entry}/publish', [Admin\EntriesController::class, 'publish'])->name('entries.publish');
@@ -90,10 +92,14 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::post('entry-translations/{translation}/undo-restore', [Admin\EntriesController::class, 'undoRestore'])->name('revisions.undo-restore');
 
     // Taxonomy terms (T8.4)
-    Route::get('taxonomies/{taxonomy:handle}', [Admin\TermsController::class, 'index'])->name('terms.index');
+    Route::get('taxonomies/{taxonomy:handle}/terms', [Admin\TermsController::class, 'index'])->name('terms.index');
+    // Older address of the terms list: sent to the one above.
+    Route::get('taxonomies/{taxonomy:handle}', [Admin\TermsController::class, 'legacyIndex'])->name('terms.legacy-index');
     Route::get('taxonomies/{taxonomy:handle}/terms/create', [Admin\TermsController::class, 'create'])->name('terms.create');
     Route::post('taxonomies/{taxonomy:handle}/terms', [Admin\TermsController::class, 'store'])->name('terms.store');
-    Route::get('terms/{term}/edit', [Admin\TermsController::class, 'edit'])->name('terms.edit');
+    Route::get('taxonomies/{taxonomy:handle}/terms/{term}', [Admin\TermsController::class, 'edit'])->whereNumber('term')->withoutScopedBindings()->name('terms.edit');
+    // Older address of the term editor: sent to the one above.
+    Route::get('terms/{term}/edit', [Admin\TermsController::class, 'legacyEdit'])->name('terms.legacy-edit');
     Route::put('terms/{term}', [Admin\TermsController::class, 'update'])->name('terms.update');
     Route::delete('terms/{term}', [Admin\TermsController::class, 'destroy'])->name('terms.destroy');
     Route::post('taxonomies/{taxonomy:handle}/terms/reorder', [Admin\TermsController::class, 'reorder'])->name('terms.reorder');

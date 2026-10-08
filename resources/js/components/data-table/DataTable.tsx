@@ -199,6 +199,12 @@ export function DataTable<T extends { id: number | string }>({
         return String(value);
     };
 
+    /** Full text of a plain cell, for the tooltip of a cut-off value. */
+    const cellTitle = (row: T, column: ColumnDef): string | undefined => {
+        const value = (row as Record<string, unknown>)[column.key];
+        return typeof value === 'string' || typeof value === 'number' ? String(value) : undefined;
+    };
+
     const allSelected = orderedData.length > 0 && orderedData.every((r) => selection[String(r.id)]);
 
     return (
@@ -336,6 +342,8 @@ export function DataTable<T extends { id: number | string }>({
                                             </TableCell>
                                             {visibleColumns.map((c) => (
                                                 <TableCell key={c.key}>
+                                                    {/* Long values are cut with "…" so no column grows too wide; hover shows all. */}
+                                                    <div className="max-w-80 truncate" title={cellTitle(row, c)}>
                                                     {rowHref?.(row) ? (
                                                         <Link href={rowHref(row) as string} className="font-medium underline-offset-4 hover:underline">
                                                             {cellValue(row, c)}
@@ -347,6 +355,7 @@ export function DataTable<T extends { id: number | string }>({
                                                     ) : (
                                                         cellValue(row, c)
                                                     )}
+                                                    </div>
                                                 </TableCell>
                                             ))}
                                         </>

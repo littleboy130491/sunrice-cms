@@ -321,7 +321,7 @@ function FieldRow({
             </div>
             {open && (
                 <div className="grid gap-3 border-t p-3">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3 items-start">
                         <div className="grid gap-1">
                             <Label className="text-xs">Handle</Label>
                             <Input value={field.handle} onChange={(e) => onUpdate({ handle: slugify(e.target.value) })} disabled={field.type === 'fieldset'} />

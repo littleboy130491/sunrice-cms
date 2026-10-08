@@ -72,7 +72,7 @@ export default function Dashboard({ collections, recentEdits, recentSubmissions 
                             {recentEdits.map((e) => (
                                 <li key={e.id}>
                                     <Link
-                                        href={adminUrl(`entries/${e.id}`, adminPath)}
+                                        href={adminUrl(e.collection_handle ? `collections/${e.collection_handle}/entries/${e.id}` : `entries/${e.id}`, adminPath)}
                                         className="flex items-center justify-between gap-3 rounded-lg px-2 py-3.5 text-sm transition-colors hover:bg-accent"
                                     >
                                         <div className="min-w-0">

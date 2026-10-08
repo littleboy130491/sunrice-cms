@@ -19,7 +19,6 @@ import FieldRenderer from '@/fields/FieldRenderer';
 import TermsField from '@/fields/TermsField';
 import { TemplateHelp } from '@/components/app/template-help';
 import { KeptEditsNotice, VersionConflict, useEditLock } from '@/components/app/edit-lock';
-import { RelatedMenu, type RelatedLink } from '@/components/app/related-menu';
 import { TranslationModeProvider } from '@/fields/translation-mode';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
@@ -60,7 +59,6 @@ interface Props {
     /** Hierarchical collections: entries this one can go under (tree order). */
     parentOptions?: { id: number; title: string; depth: number }[] | null;
     /** Pages to jump to from the ⋮ menu. */
-    related?: RelatedLink[];
     taxonomies: { id: number; handle: string; title: string; single?: boolean }[];
     locales: string[];
     mainLocale?: string;
@@ -88,7 +86,7 @@ function flatFields(tabs: AdminTab[] | null): AdminField[] {
     return (tabs ?? []).flatMap((t) => t.fields ?? []);
 }
 
-export default function EntryEdit({ collection, entry, blueprint, blueprints, parentOptions, related, taxonomies, locales, mainLocale = locales[0], can: allowed }: Props) {
+export default function EntryEdit({ collection, entry, blueprint, blueprints, parentOptions, taxonomies, locales, mainLocale = locales[0], can: allowed }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
     const isNew = entry === null;
@@ -322,7 +320,6 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                         </div>
                     </div>
                 </div>
-                {isNew && <RelatedMenu links={related} />}
                 {!isNew && (
                     <div className="flex items-center gap-2">
                         {current.url && (current.is_live || allowed?.view_drafts) && (
@@ -381,7 +378,6 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                             </DropdownMenuContent>
                         </DropdownMenu>
                         )}
-                        <RelatedMenu links={related} />
                     </div>
                 )}
             </div>
@@ -419,7 +415,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                         <CollapsibleCard key={tab.handle} title={tab.label} storageKey={`entry:${collection.handle}:${tab.handle}`} hasErrors={Object.keys(form.errors).length > 0} contentClassName="flex flex-col gap-6">
                             <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-6 disabled:opacity-80">
                                 {index === 0 && (
-                                    <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="grid gap-4 sm:grid-cols-2 items-start">
                                         <div className="grid gap-2">
                                             <Label htmlFor="entry-title">Title</Label>
                                             <Input id="entry-title" value={form.data.title} onChange={(e) => form.setData('title', e.target.value)} required />

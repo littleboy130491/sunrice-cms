@@ -31,7 +31,7 @@ it('saves the listing blueprint from the collection form', function () {
     expect($this->news->fresh()->setting('archive_blueprint_id'))->toBe($this->listingBlueprint->id);
 
     expect(fn () => app(DeleteBlueprint::class)->handle($this->listingBlueprint))
-        ->toThrow(DomainException::class, '1 listing page(s)');
+        ->toThrow(DomainException::class, '1 archive/listing page(s)');
 });
 
 it('edits listing content per language, sharing non-translatable fields', function () {
@@ -45,7 +45,7 @@ it('edits listing content per language, sharing non-translatable fields', functi
     put('/cms/collections/news/listing', [
         'locale' => 'id', 'title' => 'Berita', 'intro' => 'Kabar terbaru',
         'data' => ['description' => '<p>Deskripsi</p>', 'columns' => 3],
-    ])->assertSessionHas('success', 'Listing page saved.');
+    ])->assertSessionHas('success', 'Archive/listing page saved.');
 
     // English: its own description; the column count is shared and can't differ.
     put('/cms/collections/news/listing', [

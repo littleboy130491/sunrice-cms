@@ -26,7 +26,7 @@ interface Props {
     items: Item[];
 }
 
-const TYPE_LABELS: Record<ItemType, string> = { url: 'URL', entry: 'Entry', collection: 'Collection archive', term: 'Term page' };
+const TYPE_LABELS: Record<ItemType, string> = { url: 'URL', entry: 'Entry', collection: 'Collection archive/listing page', term: 'Term page' };
 
 export default function MenuEdit({ menu, items }: Props) {
     const { adminPath, locales } = usePage<SharedProps>().props;

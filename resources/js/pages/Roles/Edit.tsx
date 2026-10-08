@@ -72,7 +72,7 @@ export default function RoleEdit({ role, permissionGroups }: { role: { id: numbe
                     {[...new Set(permissionErrors)].map((m) => <p key={m}>{m}</p>)}
                 </div>
             )}
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 items-start">
                 {permissionGroups.map((g) => (
                     <CollapsibleCard key={g.group} title={g.group} storageKey={`role:${g.group}`} titleClassName="text-sm" contentClassName="flex flex-col gap-2" hasErrors={permissionErrors.length > 0}
                         headerAction={editable && (

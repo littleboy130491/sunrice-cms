@@ -45,10 +45,10 @@ field handles it expects.
 - Collection and taxonomy titles can be set per language in their forms;
   templates use `$collection->titleIn($locale)` / `$taxonomy->titleIn($locale)`.
 
-### Listing pages
+### Archive/listing pages
 
-A collection's listing page (archive) has its own content, edited from
-the collection's entries list with the **Listing page** button, one tab
+A collection's archive/listing page has its own content, edited from
+the collection's entries list with the **Archive/listing page** button, one tab
 per language:
 
 - a heading and intro, read with `$collection->archiveText($locale)`

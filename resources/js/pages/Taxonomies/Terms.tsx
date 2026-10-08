@@ -3,6 +3,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { ExternalLink, Plus } from 'lucide-react';
 import { DataTable, type FilterDef } from '@/components/data-table/DataTable';
 import { Button } from '@/components/ui/button';
+import { RelatedMenu, type RelatedLink } from '@/components/app/related-menu';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
 import type { AdminTab, ColumnDef, Paginated, SharedProps } from '@/types';
@@ -20,6 +21,7 @@ interface Row {
 }
 
 interface Props {
+    related?: RelatedLink[];
     taxonomy: { id: number; handle: string; title: string; hierarchical: boolean; template?: string | null };
     columns: ColumnDef[];
     rows: Paginated<Row>;
@@ -31,7 +33,7 @@ interface Props {
     blueprint: AdminTab[] | null;
 }
 
-export default function TermsPage({ taxonomy, columns, rows, meta, parents, reorderable, locales, mainLocale }: Props) {
+export default function TermsPage({ taxonomy, columns, rows, meta, parents, reorderable, locales, mainLocale, related }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
     const main = mainLocale ?? locales[0];
@@ -51,9 +53,12 @@ export default function TermsPage({ taxonomy, columns, rows, meta, parents, reor
         <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
                 <h1 className="sunrice-page-title">{taxonomy.title} — terms</h1>
-                {can(`sunrice.terms.${taxonomy.id}.create`) && (
-                    <Button asChild><Link href={adminUrl(`taxonomies/${taxonomy.handle}/terms/create`, adminPath)}><Plus className="mr-1 h-4 w-4" /> New term</Link></Button>
-                )}
+                <div className="flex gap-2">
+                    {can(`sunrice.terms.${taxonomy.id}.create`) && (
+                        <Button asChild><Link href={adminUrl(`taxonomies/${taxonomy.handle}/terms/create`, adminPath)}><Plus className="mr-1 h-4 w-4" /> New term</Link></Button>
+                    )}
+                    <RelatedMenu links={related} />
+                </div>
             </div>
 
             {reorderable && <p className="text-sm text-muted-foreground">Drag terms to set their order. A term's parent is set in its editor.</p>}
@@ -68,7 +73,7 @@ export default function TermsPage({ taxonomy, columns, rows, meta, parents, reor
                 reorderUrl={adminUrl(`taxonomies/${taxonomy.handle}/terms/reorder`, adminPath)}
                 bulkUrl={canDelete ? adminUrl(`taxonomies/${taxonomy.handle}/terms/bulk`, adminPath) : undefined}
                 bulkActions={canDelete ? [{ key: 'delete', label: 'Delete', variant: 'destructive', confirm: 'Delete the selected terms? Their child terms are deleted too, and they are removed from every entry.' }] : []}
-                rowHref={canEditTerms ? (row) => adminUrl(`terms/${row.id}/edit`, adminPath) : undefined}
+                rowHref={canEditTerms ? (row) => adminUrl(`taxonomies/${taxonomy.handle}/terms/${row.id}`, adminPath) : undefined}
                 renderCell={(row, column) => {
                     if (column.key === 'title') {
                         return (

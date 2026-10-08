@@ -3,7 +3,6 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { toast } from 'sonner';
 import { ArrowLeft, ExternalLink, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RelatedMenu, type RelatedLink } from '@/components/app/related-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -46,7 +45,6 @@ interface Props {
     blueprint: AdminTab[] | null;
     can: { edit: boolean; delete: boolean };
     /** Pages to jump to from the ⋮ menu. */
-    related?: RelatedLink[];
 }
 
 interface TermForm {
@@ -65,7 +63,7 @@ const initialForm = (term: Props['term'], locales: string[]): TermForm => ({
 });
 
 /** Create or edit a term: content and SEO per language, parent and template. */
-export default function TermEdit({ taxonomy, term, parents, locales, mainLocale, blueprint, can: allowed, related }: Props) {
+export default function TermEdit({ taxonomy, term, parents, locales, mainLocale, blueprint, can: allowed }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
     const isNew = term === null;
@@ -83,7 +81,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
         setSaved(JSON.stringify(next));
     }, [term, locales]);
 
-    const listUrl = adminUrl(`taxonomies/${taxonomy.handle}`, adminPath);
+    const listUrl = adminUrl(`taxonomies/${taxonomy.handle}/terms`, adminPath);
     // Only one person edits a term at a time (all its languages together).
     const lock = useEditLock({
         type: 'term',
@@ -176,7 +174,6 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                     {!readOnly && (
                         <Button type="submit" disabled={processing}>{processing ? 'Saving…' : isNew ? 'Create term' : 'Save'}</Button>
                     )}
-                    <RelatedMenu links={related} />
                 </div>
             </div>
 
@@ -212,7 +209,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                 <div className="flex min-w-0 flex-col gap-6">
                     <CollapsibleCard title="Content" storageKey="term:content" hasErrors={localeHasError(locale)}>
                         <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-5">
-                        <div className="grid gap-5 sm:grid-cols-2">
+                        <div className="grid gap-5 sm:grid-cols-2 items-start">
                             <div className="grid gap-2">
                                 <Label htmlFor="term-title">Title</Label>
                                 <Input

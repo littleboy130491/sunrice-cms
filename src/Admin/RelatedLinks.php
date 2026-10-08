@@ -14,14 +14,34 @@ use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
 
 /**
- * "Go to" links for the entry and term editors' ⋮ menu: the pages an
- * editor tends to need next (list, settings, blueprint, listing page…),
- * only those the signed-in user may open.
+ * "Go to" links for the ⋮ menu of the entries and terms lists: the pages
+ * an editor tends to need next (archive/listing page, terms, settings,
+ * blueprint…), only those the signed-in user may open.
  *
  * @phpstan-type Link array{label: string, href: string, external?: bool, group: string}
  */
 class RelatedLinks
 {
+    /**
+     * For the entries list: everything but the list itself.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function forList(Collection $collection): array
+    {
+        return array_values(array_filter(static::forEntry($collection, null), fn (array $l) => $l['href'] !== route('sunrice.admin.entries.index', $collection)));
+    }
+
+    /**
+     * For the terms list: everything but the list itself.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function forTermList(Taxonomy $taxonomy): array
+    {
+        return array_values(array_filter(static::forTerm($taxonomy, null), fn (array $l) => $l['href'] !== route('sunrice.admin.terms.index', $taxonomy)));
+    }
+
     /** @return array<int, array<string, mixed>> */
     public static function forEntry(Collection $collection, ?Entry $entry): array
     {
@@ -33,13 +53,13 @@ class RelatedLinks
         $add($collection->title, "All {$collection->title}", route('sunrice.admin.entries.index', $collection));
         if ($entry?->parent !== null) {
             $parent = $entry->parent->mainTranslation();
-            $add($collection->title, 'Parent: '.($parent === null ? '#'.$entry->parent->id : $parent->title), route('sunrice.admin.entries.edit', $entry->parent));
+            $add($collection->title, 'Parent: '.($parent === null ? '#'.$entry->parent->id : $parent->title), AdminUrls::entry($entry->parent));
         }
         if ($collection->setting('has_archive')) {
             if (Gate::allows("sunrice.entries.{$collection->id}.edit") || Gate::allows("sunrice.entries.{$collection->id}.translate")) {
-                $add('Listing page', 'Edit listing page', route('sunrice.admin.listing.edit', $collection));
+                $add('Archive/listing page', 'Edit archive/listing page', route('sunrice.admin.listing.edit', $collection));
             }
-            $add('Listing page', 'View listing page', app(UrlGenerator::class)->archive($collection, Locales::main()), true);
+            $add('Archive/listing page', 'View archive/listing page', app(UrlGenerator::class)->archive($collection, Locales::main()), true);
         }
 
         foreach ($collection->taxonomies as $taxonomy) {
@@ -71,7 +91,7 @@ class RelatedLinks
         if ($term?->parent_id !== null && ($parent = Term::query()->with('translations')->find($term->parent_id)) !== null) {
             $translation = $parent->translations->firstWhere('locale', Locales::main());
             $name = $translation === null ? '#'.$parent->id : $translation->name;
-            $add($taxonomy->title, "Parent: {$name}", route('sunrice.admin.terms.edit', $parent));
+            $add($taxonomy->title, "Parent: {$name}", AdminUrls::term($parent));
         }
 
         foreach ($taxonomy->collections as $collection) {

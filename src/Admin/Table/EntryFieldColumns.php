@@ -87,15 +87,24 @@ class EntryFieldColumns
         }
     }
 
-    /** @return array<int, Column> */
-    public function columns(): array
+    /**
+     * @param  array<int, string>  $taken  labels of the table's own columns:
+     *                                     a field with the same name is marked "(field)"
+     * @return array<int, Column>
+     */
+    public function columns(array $taken = []): array
     {
+        $taken = array_map('mb_strtolower', $taken);
+
         return array_map(
-            fn (string $handle, array $field) => new Column(
-                self::PREFIX.$handle,
-                (string) (($field['label'] ?? null) ?: Str::headline($handle)),
-                sortable: isset($this->sortCasts[$handle]),
-            ),
+            function (string $handle, array $field) use ($taken) {
+                $label = (string) (($field['label'] ?? null) ?: Str::headline($handle));
+                if (in_array(mb_strtolower($label), $taken, true)) {
+                    $label .= ' (field)';
+                }
+
+                return new Column(self::PREFIX.$handle, $label, sortable: isset($this->sortCasts[$handle]));
+            },
             array_keys($this->fields),
             $this->fields,
         );

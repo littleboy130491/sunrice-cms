@@ -31,7 +31,7 @@ class BlueprintsController extends Controller
         $listings = [];
         foreach (Collection::query()->get(['id', 'title', 'settings']) as $collection) {
             if ($id = $collection->setting('archive_blueprint_id')) {
-                $listings[(int) $id][] = ['type' => 'Listing page', 'title' => $collection->title];
+                $listings[(int) $id][] = ['type' => 'Archive/listing page', 'title' => $collection->title];
             }
         }
 

@@ -36,7 +36,7 @@ export default function BlueprintForm({ blueprint, fieldTypes, fieldsets }: Prop
     return (
         <form onSubmit={submit} className="flex max-w-3xl flex-col gap-6">
             <h1 className="sunrice-page-title">{blueprint ? `Edit ${blueprint.title}` : 'New blueprint'}</h1>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 items-start">
                 <div className="grid gap-2">
                     <Label htmlFor="title">Title</Label>
                     <Input id="title" value={title} onChange={(e) => {

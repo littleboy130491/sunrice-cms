@@ -35,8 +35,16 @@ class SitemapBuilder
         }
 
         Collection::query()->get()->each(function (Collection $collection) use ($sitemap, $urls): void {
+            // Hidden from search engines in the collection's SEO defaults.
+            if (static::hidden((array) $collection->setting('seo', []))) {
+                return;
+            }
             if ($collection->setting('has_archive')) {
+                $listing = Collection::archiveByLocale($collection->archive_data);
                 foreach (Locales::available() as $locale) {
+                    if (static::hidden((array) ($listing[$locale]['seo'] ?? []))) {
+                        continue;
+                    }
                     $sitemap->add(Url::create(url($urls->archive($collection, $locale))));
                 }
             }
@@ -54,8 +62,8 @@ class SitemapBuilder
                         if (! Locales::isMain($locale) && ! $resolved?->is_ready) {
                             continue; // fallback URL — excluded from sitemap
                         }
-                        if ((bool) ($resolved->seo['noindex'] ?? false)) {
-                            continue; // hidden from search engines
+                        if (static::hidden((array) ($resolved->seo ?? []))) {
+                            continue; // hidden from search engines, or canonical elsewhere
                         }
                         $sitemap->add(
                             Url::create(url($urls->entry($entry, $locale)))
@@ -66,7 +74,7 @@ class SitemapBuilder
         });
 
         Taxonomy::query()->get()->each(function (Taxonomy $taxonomy) use ($sitemap, $urls): void {
-            if (! $taxonomy->setting('has_archive')) {
+            if (! $taxonomy->setting('has_archive') || static::hidden((array) $taxonomy->setting('seo', []))) {
                 return;
             }
             $routes = $taxonomy->termRoutes();
@@ -75,6 +83,9 @@ class SitemapBuilder
                 foreach (Locales::available() as $locale) {
                     $resolved = $term->translation($locale);
                     if (! Locales::isMain($locale) && $resolved === null) {
+                        continue;
+                    }
+                    if (static::hidden((array) ($resolved->seo ?? []))) {
                         continue;
                     }
                     foreach ($routes as $route) {
@@ -88,5 +99,16 @@ class SitemapBuilder
         });
 
         return $sitemap->render();
+    }
+
+    /**
+     * A page kept out of the sitemap: noindex, or a canonical URL that
+     * points somewhere else.
+     *
+     * @param  array<string, mixed>  $seo
+     */
+    protected static function hidden(array $seo): bool
+    {
+        return (bool) ($seo['noindex'] ?? false) || ! empty($seo['canonical']);
     }
 }

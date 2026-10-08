@@ -65,7 +65,7 @@ class ListingController extends Controller
 
         $save->handle($collection, $request->only(['locale', 'title', 'intro', 'data', 'seo']));
 
-        return back()->with('success', 'Listing page saved.');
+        return back()->with('success', 'Archive/listing page saved.');
     }
 
     /** @return array{edit: bool, translate: bool} */

@@ -3,12 +3,14 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type FilterDef } from '@/components/data-table/DataTable';
+import { RelatedMenu, type RelatedLink } from '@/components/app/related-menu';
 import { adminUrl } from '@/lib/route';
 import type { ColumnDef, Paginated, SharedProps } from '@/types';
 
 interface Row { id: number; title: string; status: string; author: string; created_at: string | null; updated_at: string | null; [field: `field.${string}`]: string | null }
 
 interface Props {
+    related?: RelatedLink[];
     collection: { id: number; handle: string; title: string };
     columns: ColumnDef[];
     rows: Paginated<Row>;
@@ -23,7 +25,7 @@ interface Props {
     authors?: { value: string; label: string }[];
 }
 
-export default function EntriesIndex({ collection, columns, rows, meta, can, visibleColumns, columnsKey = 'entries', reorderPaused, authors = [] }: Props) {
+export default function EntriesIndex({ collection, columns, rows, meta, can, visibleColumns, columnsKey = 'entries', reorderPaused, authors = [], related }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
 
     const filters: FilterDef[] = [
@@ -51,7 +53,7 @@ export default function EntriesIndex({ collection, columns, rows, meta, can, vis
                 <div className="flex gap-2">
                     {can.listing && (
                         <Button variant="outline" asChild>
-                            <Link href={adminUrl(`collections/${collection.handle}/listing`, adminPath)}>Listing page</Link>
+                            <Link href={adminUrl(`collections/${collection.handle}/listing`, adminPath)}>Archive/listing page</Link>
                         </Button>
                     )}
                     {can.create && (
@@ -61,6 +63,7 @@ export default function EntriesIndex({ collection, columns, rows, meta, can, vis
                             </Link>
                         </Button>
                     )}
+                    <RelatedMenu links={related} />
                 </div>
             </div>
             {reorderPaused && (
@@ -87,7 +90,7 @@ export default function EntriesIndex({ collection, columns, rows, meta, can, vis
                     { key: 'delete', label: 'Delete forever', variant: 'destructive', confirm: 'Permanently delete? This cannot be undone.' },
                 ]}
                 // Trashed entries can't be opened: restore them first (bulk action).
-                rowHref={(row) => (row.status === 'trashed' ? null : adminUrl(`entries/${row.id}`, adminPath))}
+                rowHref={(row) => (row.status === 'trashed' ? null : adminUrl(`collections/${collection.handle}/entries/${row.id}`, adminPath))}
                 renderCell={(row, column) => {
                     if (column.key === 'status') {
                         return <Badge className="capitalize" variant={row.status === 'published' ? 'success' : row.status === 'trashed' ? 'destructive' : 'secondary'}>{row.status}</Badge>;

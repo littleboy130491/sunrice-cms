@@ -74,7 +74,7 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="sunrice-page-title">{collection.title}: listing page</h1>
+                        <h1 className="sunrice-page-title">{collection.title}: archive/listing page</h1>
                         <p className="text-sm text-muted-foreground">The page that lists this collection's entries.</p>
                     </div>
                 </div>
@@ -87,7 +87,7 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
 
             {!collection.has_archive && (
                 <p className="rounded-md border border-amber-500/50 p-3 text-sm">
-                    This collection has no listing page yet. Turn on “Has a listing page” in its settings to publish this content.
+                    This collection has no archive/listing page yet. Turn on “Has an archive/listing page” in its settings to publish this content.
                 </p>
             )}
 
@@ -135,11 +135,11 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
                     </CollapsibleCard>
                 ) : (
                     <p className="text-sm text-muted-foreground">
-                        Want more on this page, such as a hero image? Choose a listing blueprint in the collection's settings.
+                        Want more on this page, such as a hero image? Choose an archive/listing blueprint in the collection's settings.
                     </p>
                 )}
 
-                <CollapsibleCard title="SEO" description="How this listing page appears in search results and social shares." storageKey="listing:seo" defaultOpen={false}>
+                <CollapsibleCard title="SEO" description="How this archive/listing page appears in search results and social shares." storageKey="listing:seo" defaultOpen={false}>
                     <fieldset disabled={!editable} className="min-w-0">
                         <FieldRenderer fields={SEO_FIELDS} values={(form.seo ?? {}) as Record<string, Json>} pathPrefix="seo" errors={errors} onChange={(seo) => setForm({ ...form, seo })} />
                     </fieldset>
@@ -147,7 +147,7 @@ export default function ListingEdit({ collection, fields, values, mainLocale, ca
             </div>
 
             {editable && (
-                <div><Button type="submit" disabled={processing}>{processing ? 'Saving…' : 'Save listing page'}</Button></div>
+                <div><Button type="submit" disabled={processing}>{processing ? 'Saving…' : 'Save archive/listing page'}</Button></div>
             )}
         </form>
     );

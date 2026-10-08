@@ -144,7 +144,7 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                     <p className="text-xs text-muted-foreground">Used as the meta description of pages that don't set their own.</p>
                     <InputError message={errors.description} />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 items-start">
                     <div className="grid gap-2">
                         <Label>Timezone</Label>
                         <Select value={form.data.timezone} onValueChange={(v) => form.setData('timezone', v)}>
@@ -265,7 +265,7 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                 storageKey="settings:branding"
                 contentClassName="flex flex-col gap-4"
             >
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 items-start">
                     <div className="grid gap-2">
                         <Label htmlFor="brand-name">Panel name</Label>
                         <Input id="brand-name" maxLength={60} value={form.data.branding.name} onChange={(e) => form.setData('branding', { ...form.data.branding, name: e.target.value })} />
@@ -309,7 +309,7 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                     <p className="text-xs text-muted-foreground">A square image works best (SVG or PNG). Also used as the browser tab icon.</p>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 items-start">
                     <div className="grid gap-2">
                         <Label htmlFor="brand-font">Font</Label>
                         <Select value={form.data.branding.font} onValueChange={(v) => form.setData('branding', { ...form.data.branding, font: v })}>

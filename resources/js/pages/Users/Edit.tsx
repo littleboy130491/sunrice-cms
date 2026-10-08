@@ -80,7 +80,7 @@ export default function UserEdit({ user, roles, others = [] }: Props) {
             </div>
 
             <CollapsibleCard title="Account" storageKey="user:account" contentClassName="flex flex-col gap-4">
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-2 items-start">
                     <div className="grid gap-2">
                         <Label htmlFor="user-name">Name</Label>
                         <Input id="user-name" value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} autoFocus={isNew} />

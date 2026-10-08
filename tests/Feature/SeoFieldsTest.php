@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\View;
 use Inertia\Testing\AssertableInertia as Assert;
 use Sunrice\Actions\Structure\SaveCollection;
 use Sunrice\Actions\Taxonomies\SaveTaxonomy;
@@ -69,4 +71,23 @@ it('keeps the field choices when a collection or taxonomy is saved again', funct
     $tags = Taxonomy::factory()->create(['handle' => 'tags', 'settings' => ['seo' => ['image_field' => 'none']]]);
     app(SaveTaxonomy::class)->handle(['handle' => 'tags', 'title' => 'Tags', 'settings' => ['seo' => ['image_field' => 'none', 'noindex' => true]]], $tags);
     expect($tags->fresh()->setting('seo'))->toEqual(['image_field' => 'none', 'noindex' => true]);
+});
+
+it('keeps HTML out of the meta tags whatever the source', function () {
+    $views = sys_get_temp_dir().'/sunrice-seo-'.uniqid();
+    File::ensureDirectoryExists($views.'/custom');
+    // A template passing a rich-text field straight to the component.
+    File::put($views.'/custom/job.blade.php', '<head><x-sunrice::seo :description="$entry->get(\'body\')" /></head>');
+    View::addLocation($views);
+
+    $entry = createEntry($this->collection, 'Job', ['body' => '<ul><li><p>Minimal D3 &amp; S1</p></li><li><p>8–10 tahun</p></li></ul>']);
+    $entry->update(['template' => 'custom.job']);
+    $entry->translations()->first()->update(['seo' => ['title' => 'Head of <b>Service</b>']]);
+
+    get('/articles/'.$entry->translations()->first()->slug)->assertOk()
+        ->assertSee('<meta name="description" content="Minimal D3 &amp; S1 8–10 tahun">', false)
+        ->assertSee('<title>Head of Service</title>', false)
+        ->assertDontSee('&lt;ul&gt;', false);
+
+    File::deleteDirectory($views);
 });

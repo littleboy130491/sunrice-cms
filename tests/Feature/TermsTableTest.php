@@ -27,7 +27,7 @@ it('lists terms in tree order with their depth', function () {
     topic('Guides', order: 1);
     topic('Local', $news);
 
-    get('/cms/taxonomies/topics')->assertInertia(fn (Assert $page) => $page
+    get('/cms/taxonomies/topics/terms')->assertInertia(fn (Assert $page) => $page
         ->where('rows.data.0.title', 'News')
         ->where('rows.data.1.title', 'Local')
         ->where('rows.data.1.depth', 1)
@@ -41,12 +41,12 @@ it('searches, filters by parent and sorts', function () {
     topic('Guides', order: 1);
     topic('Local', $news);
 
-    get('/cms/taxonomies/topics?search=gui')->assertInertia(fn (Assert $page) => $page
+    get('/cms/taxonomies/topics/terms?search=gui')->assertInertia(fn (Assert $page) => $page
         ->has('rows.data', 1)->where('rows.data.0.title', 'Guides')->where('reorderable', false));
-    get("/cms/taxonomies/topics?filters[parent]={$news->id}")->assertInertia(fn (Assert $page) => $page
+    get("/cms/taxonomies/topics/terms?filters[parent]={$news->id}")->assertInertia(fn (Assert $page) => $page
         ->has('rows.data', 1)->where('rows.data.0.title', 'Local'));
-    get('/cms/taxonomies/topics?filters[parent]=root')->assertInertia(fn (Assert $page) => $page->has('rows.data', 2));
-    get('/cms/taxonomies/topics?sort=-title')->assertInertia(fn (Assert $page) => $page->where('rows.data.0.title', 'News'));
+    get('/cms/taxonomies/topics/terms?filters[parent]=root')->assertInertia(fn (Assert $page) => $page->has('rows.data', 2));
+    get('/cms/taxonomies/topics/terms?sort=-title')->assertInertia(fn (Assert $page) => $page->where('rows.data.0.title', 'News'));
 });
 
 it('keeps the full order when one page is reordered', function () {

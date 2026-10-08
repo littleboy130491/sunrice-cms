@@ -48,7 +48,7 @@ interface FormState {
     new_tab: boolean;
 }
 
-const TYPE_LABELS: Record<ItemType, string> = { url: 'URL', entry: 'Entry', collection: 'Collection archive', term: 'Term page' };
+const TYPE_LABELS: Record<ItemType, string> = { url: 'URL', entry: 'Entry', collection: 'Collection archive/listing page', term: 'Term page' };
 
 const initialForm = (item: Item | null, defaultTaxonomy: string): FormState => ({
     type: item?.type ?? 'entry',
@@ -182,7 +182,7 @@ export default function MenuItemEdit({ menu, item, parent, collections, taxonomi
                             </SelectContent>
                         </Select>
                         {selectedCollection && !selectedCollection.has_archive && (
-                            <p className="text-xs text-amber-600">This collection has no listing page, so the item stays hidden until you enable one.</p>
+                            <p className="text-xs text-amber-600">This collection has no archive/listing page, so the item stays hidden until you enable one.</p>
                         )}
                         <InputError message={errors.target_id} />
                     </div>

@@ -447,7 +447,7 @@ it('lists everything a blueprint is used by', function () {
     get('/cms/structure/blueprints')->assertInertia(fn (Assert $page) => $page
         ->where('blueprints.0.used_by', [
             ['type' => 'Taxonomy', 'title' => 'Topics'],
-            ['type' => 'Listing page', 'title' => 'News'],
+            ['type' => 'Archive/listing page', 'title' => 'News'],
         ]));
 });
 
