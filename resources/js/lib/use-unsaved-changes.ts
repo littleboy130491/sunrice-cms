@@ -17,11 +17,25 @@ export function useUnsavedChanges(dirty: boolean, onSave?: () => void): void {
             e.preventDefault();
             e.returnValue = '';
         };
-        // Only page changes (GET visits) leave the form; saves and publishes are posts.
+        // Only page changes (GET visits) leave the form; saves and publishes
+        // are posts. Prefetches (hovering a sidebar link) and partial
+        // reloads of this page don't leave it either, and a visit already
+        // confirmed isn't asked about again.
+        let confirmed = false;
         const removeBefore = router.on('before', (event) => {
-            if (dirtyRef.current && event.detail.visit.method === 'get' && !window.confirm('You have unsaved changes. Leave without saving?')) {
+            const visit = event.detail.visit;
+            if (!dirtyRef.current || confirmed || visit.method !== 'get' || visit.prefetch || visit.only.length > 0) {
+                return;
+            }
+            if (window.confirm('You have unsaved changes. Leave without saving?')) {
+                confirmed = true;
+            } else {
                 event.preventDefault();
             }
+        });
+        // A confirmed visit that didn't leave (cancelled, failed): ask again next time.
+        const removeFinish = router.on('finish', () => {
+            confirmed = false;
         });
         const keydown = (e: KeyboardEvent) => {
             if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's' && saveRef.current) {
@@ -34,6 +48,7 @@ export function useUnsavedChanges(dirty: boolean, onSave?: () => void): void {
 
         return () => {
             removeBefore();
+            removeFinish();
             window.removeEventListener('beforeunload', beforeUnload);
             window.removeEventListener('keydown', keydown);
         };
