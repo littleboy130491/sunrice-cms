@@ -114,12 +114,25 @@ it('answers AJAX submissions with JSON', function () {
 
     post("/sunrice/forms/{$form->handle}", $payload, ['Accept' => 'application/json'])
         ->assertOk()
-        ->assertJson(['success' => true]);
+        ->assertExactJson(['success' => true, 'message' => 'Terima kasih!', 'redirect_url' => null]);
     expect(FormSubmission::query()->count())->toBe(1);
+
+    // In the page's language (the main language, Indonesian, by default).
+    post("/sunrice/forms/{$form->handle}", $payload + ['_locale' => 'en'], ['Accept' => 'application/json'])
+        ->assertJsonPath('message', 'Thank you!');
 
     post("/sunrice/forms/{$form->handle}", ['data' => ['name' => 'x']], ['Accept' => 'application/json'])
         ->assertStatus(422)
-        ->assertJsonStructure(['errors']);
+        ->assertJsonStructure(['errors' => ['data.email']]);
+});
+
+it('sends the form\'s own success message and redirect to AJAX submissions', function () {
+    config()->set('honeypot.enabled', false);
+    $form = makeForm(settings: ['success_message' => 'We will reply within a day.', 'redirect_url' => '/thanks']);
+
+    post("/sunrice/forms/{$form->handle}", ['data' => ['name' => 'Ada', 'email' => 'a@b.com']], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertExactJson(['success' => true, 'message' => 'We will reply within a day.', 'redirect_url' => '/thanks']);
 });
 
 it('rejects filled honeypot fields', function () {

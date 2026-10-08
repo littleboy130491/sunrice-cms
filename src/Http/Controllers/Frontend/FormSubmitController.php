@@ -22,8 +22,9 @@ use Sunrice\Support\Locales;
  * records it. Both outcomes return to the form (#sunrice-form-{handle}).
  *
  * AJAX submissions (`Accept: application/json`) get JSON instead:
- * `{errors: {...}}` with 422 on validation failure, `{success: true}`
- * on success (`redirect_url` included when the form configures one).
+ * `{errors: {...}}` with 422 on validation failure, `{success: true,
+ * message, redirect_url}` on success (redirect_url is null unless the
+ * form configures one).
  */
 class FormSubmitController extends Controller
 {
@@ -65,7 +66,14 @@ class FormSubmitController extends Controller
         $redirect = is_string($redirect) && $redirect !== '' ? $redirect : null;
 
         if ($request->expectsJson()) {
-            return response()->json(['success' => true, 'redirect_url' => $redirect]);
+            // The same text the form component shows after a normal submit.
+            $message = $form->setting('success_message');
+
+            return response()->json([
+                'success' => true,
+                'message' => is_string($message) && $message !== '' ? $message : __('sunrice::frontend.thank_you'),
+                'redirect_url' => $redirect,
+            ]);
         }
 
         if ($redirect !== null) {
