@@ -112,7 +112,7 @@ export default function GlobalForm({ globalSet, blueprint, values, versions, blu
 
             {isNew ? (
                 <CollapsibleCard title="Details" storageKey="global:details" hasErrors={Object.keys(errors).length > 0} contentClassName="flex flex-col gap-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 items-start">
                         <div className="grid gap-2">
                             <Label>Title</Label>
                             <Input value={meta.title} onChange={(e) => setMeta({

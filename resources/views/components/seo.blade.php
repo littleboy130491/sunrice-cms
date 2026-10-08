@@ -5,14 +5,24 @@
 @if($robots)
 <meta name="robots" content="{{ $robots }}">
 @endif
+@if($canonical)
 <link rel="canonical" href="{{ $canonical }}">
-<meta property="og:type" content="website">
+@endif
+<meta property="og:type" content="{{ $ogType }}">
 <meta property="og:site_name" content="{{ $siteName }}">
 <meta property="og:title" content="{{ $title }}">
 @if($description)
 <meta property="og:description" content="{{ $description }}">
 @endif
+@if($canonical)
 <meta property="og:url" content="{{ $canonical }}">
+@endif
+@if($publishedTime)
+<meta property="article:published_time" content="{{ $publishedTime }}">
+@endif
+@if($modifiedTime)
+<meta property="article:modified_time" content="{{ $modifiedTime }}">
+@endif
 <meta property="og:locale" content="{{ str_replace('-', '_', $locale) }}">
 @foreach(array_keys($alternates) as $alternateLocale)
 @if($alternateLocale !== 'x-default' && $alternateLocale !== $locale)

@@ -415,7 +415,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                         <CollapsibleCard key={tab.handle} title={tab.label} storageKey={`entry:${collection.handle}:${tab.handle}`} hasErrors={Object.keys(form.errors).length > 0} contentClassName="flex flex-col gap-6">
                             <fieldset disabled={!canEdit} className="flex min-w-0 flex-col gap-6 disabled:opacity-80">
                                 {index === 0 && (
-                                    <div className="grid gap-4 sm:grid-cols-2">
+                                    <div className="grid gap-4 sm:grid-cols-2 items-start">
                                         <div className="grid gap-2">
                                             <Label htmlFor="entry-title">Title</Label>
                                             <Input id="entry-title" value={form.data.title} onChange={(e) => form.setData('title', e.target.value)} required />

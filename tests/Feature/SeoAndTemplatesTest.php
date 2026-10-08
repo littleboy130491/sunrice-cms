@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\View;
+use Sunrice\Events\ContentChanged;
 use Sunrice\Frontend\RouteMatcher;
 use Sunrice\Models\Taxonomy;
 use Sunrice\Models\Term;
@@ -111,4 +113,51 @@ it('describes the current page from a bare <x-sunrice::seo /> in any layout', fu
         ->assertSee('<title>News</title>', false)
         ->assertSee('<meta name="description" content="News stories.">', false);
     get('/news')->assertOk()->assertSee('<title>All the news</title>', false);
+});
+
+it('keeps error pages out of search results', function () {
+    request()->attributes->set('sunrice.error_status', 404);
+    $html = Blade::render('<x-sunrice::seo />');
+
+    expect($html)->toContain('<meta name="robots" content="noindex, follow">')
+        ->not->toContain('rel="canonical"')->not->toContain('hreflang')->not->toContain('og:url');
+});
+
+it('points a term page without a translation at the main-language page', function () {
+    get('/en/topics/news')->assertOk()
+        ->assertSee('<link rel="canonical" href="'.url('/topics/news').'">', false)
+        ->assertDontSee('rel="alternate" hreflang', false);
+});
+
+it('drops language links when the canonical points elsewhere', function () {
+    $entry = createEntry($this->pages, 'About');
+    $entry->translations()->first()->update(['seo' => ['canonical' => '/somewhere-else']]);
+
+    get('/pages/about')->assertOk()
+        ->assertSee('<link rel="canonical" href="'.url('/somewhere-else').'">', false)
+        ->assertDontSee('rel="alternate" hreflang', false);
+});
+
+it('marks entries as articles with their dates', function () {
+    $entry = createEntry($this->pages, 'About');
+
+    get('/pages/about')->assertSee('<meta property="og:type" content="article">', false)
+        ->assertSee('<meta property="article:published_time" content="'.$entry->published_at->toIso8601String().'">', false);
+});
+
+it('keeps noindex collections, taxonomies and terms out of the sitemap', function () {
+    createEntry($this->pages, 'About');
+    $news = createCollection('news', ['route' => '/news/{slug}', 'seo' => ['noindex' => true]]);
+    createEntry($news, 'Hidden story');
+    $this->term->translations()->first()->update(['seo' => ['noindex' => true]]);
+    $other = Term::factory()->create(['taxonomy_id' => $this->topics->id]);
+    $other->translations()->first()->update(['name' => 'Guides', 'slug' => 'guides']);
+
+    expect(get('/sitemap.xml')->assertOk()->getContent())
+        ->toContain('/pages/about')->toContain('/topics/guides')
+        ->not->toContain('hidden-story')->not->toContain('/topics/news');
+
+    $this->topics->update(['settings' => array_merge($this->topics->settings, ['seo' => ['noindex' => true]])]);
+    ContentChanged::dispatch('taxonomy_saved');
+    expect(get('/sitemap.xml')->getContent())->not->toContain('/topics/');
 });

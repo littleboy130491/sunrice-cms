@@ -257,6 +257,16 @@ class SunriceServiceProvider extends PackageServiceProvider
     protected function registerExceptionRendering(): void
     {
         $this->callAfterResolving(Handler::class, function ($handler): void {
+            // Error pages on the site (404…) render through the site's own
+            // views: mark the request so <x-sunrice::seo> keeps them out of
+            // search engines (noindex, no canonical or hreflang).
+            $handler->renderable(function (\Throwable $e, $request) {
+                if ($e instanceof HttpExceptionInterface && $e->getStatusCode() >= 400) {
+                    $request->attributes->set('sunrice.error_status', $e->getStatusCode());
+                }
+
+                return null;
+            });
             $handler->renderable(function (\Throwable $e, $request) {
                 $path = config('sunrice.admin.path', 'cms');
                 if (! $request->is($path) && ! $request->is($path.'/*')) {

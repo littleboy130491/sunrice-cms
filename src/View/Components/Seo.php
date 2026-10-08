@@ -10,6 +10,7 @@ use Sunrice\Frontend\UrlGenerator;
 use Sunrice\Models\Asset;
 use Sunrice\Models\Collection as ContentCollection;
 use Sunrice\Models\Entry;
+use Sunrice\Models\Setting;
 use Sunrice\Models\Term;
 use Sunrice\Support\Locales;
 use Sunrice\Support\SeoFields;
@@ -33,7 +34,15 @@ class Seo extends Component
 
     public ?string $description;
 
-    public string $canonical;
+    /** Null on error pages (404…): they have no address of their own to point at. */
+    public ?string $canonical;
+
+    /** og:type: "article" for entries (except the homepage), else "website". */
+    public string $ogType = 'website';
+
+    public ?string $publishedTime = null;
+
+    public ?string $modifiedTime = null;
 
     public ?string $image;
 
@@ -120,6 +129,22 @@ class Seo extends Component
         $this->canonical = $this->canonical($seo);
         $this->alternates = $this->alternates();
         $this->robots = $this->robots($seo, $noindex);
+        // A custom canonical sends search engines elsewhere: language
+        // links from this page would contradict it.
+        if (! empty($seo['canonical'])) {
+            $this->alternates = [];
+        }
+        // Error pages (404…) stay out of search results and claim no URL.
+        if (request()->attributes->has('sunrice.error_status')) {
+            $this->robots = 'noindex, follow';
+            $this->canonical = null;
+            $this->alternates = [];
+        }
+        if ($entry !== null && (int) Setting::get('homepage_entry_id', 0) !== (int) $entry->id) {
+            $this->ogType = 'article';
+            $this->publishedTime = $entry->published_at?->toIso8601String();
+            $this->modifiedTime = $entry->updated_at?->toIso8601String();
+        }
         $this->siteName = (string) config('app.name');
         $this->twitterSite = config('sunrice.seo.twitter_site') ?: null;
     }
@@ -235,6 +260,12 @@ class Seo extends Component
             return url((string) $seo['canonical']);
         }
 
+        // A term shown in a language it has no translation for repeats the
+        // main-language page: point there.
+        if ($this->term !== null && $this->termIsFallback()) {
+            return url($urls->term($this->term, Locales::main(), $this->collection));
+        }
+
         if ($this->entry !== null) {
             return url($urls->entry($this->entry, $this->locale));
         }
@@ -249,11 +280,17 @@ class Seo extends Component
         return url()->current().($page === [] ? '' : '?'.http_build_query($page));
     }
 
+    protected function termIsFallback(): bool
+    {
+        return $this->entry === null && $this->term !== null
+            && ! Locales::isMain($this->locale) && $this->term->translation($this->locale) === null;
+    }
+
     /** @return array<string, string> */
     protected function alternates(): array
     {
         if ($this->entry === null) {
-            return $this->pageAlternates();
+            return $this->termIsFallback() ? [] : $this->pageAlternates();
         }
 
         // No hreflang on fallback pages.

@@ -62,7 +62,7 @@ export default function TaxonomyForm({ taxonomy, blueprints, collections }: Prop
         <form onSubmit={submit} className="flex max-w-2xl flex-col gap-6">
             <h1 className="sunrice-page-title">{taxonomy ? `Edit ${taxonomy.title}` : 'New taxonomy'}</h1>
             <CollapsibleCard title="Basics" storageKey="taxonomy:settings" hasErrors={Object.keys(errors).length > 0} contentClassName="flex flex-col gap-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-4 items-start">
                         <div className="grid gap-2">
                             <Label htmlFor="title">Title</Label>
                             <Input id="title" value={form.data.title} onChange={(e) => {

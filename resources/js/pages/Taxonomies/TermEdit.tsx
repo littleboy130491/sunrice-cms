@@ -209,7 +209,7 @@ export default function TermEdit({ taxonomy, term, parents, locales, mainLocale,
                 <div className="flex min-w-0 flex-col gap-6">
                     <CollapsibleCard title="Content" storageKey="term:content" hasErrors={localeHasError(locale)}>
                         <fieldset disabled={readOnly} className="flex min-w-0 flex-col gap-5">
-                        <div className="grid gap-5 sm:grid-cols-2">
+                        <div className="grid gap-5 sm:grid-cols-2 items-start">
                             <div className="grid gap-2">
                                 <Label htmlFor="term-title">Title</Label>
                                 <Input
