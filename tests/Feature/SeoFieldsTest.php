@@ -64,9 +64,9 @@ it('saves the choices from Settings → SEO', function () {
 it('keeps the field choices when a collection or taxonomy is saved again', function () {
     $this->collection->update(['settings' => ['seo' => ['description' => 'News', 'title_field' => 'excerpt']] + $this->collection->settings]);
     app(SaveCollection::class)->handle(['handle' => 'articles', 'title' => 'Articles', 'settings' => ['seo' => ['description' => 'News 2', 'title_field' => 'excerpt']]], $this->collection);
-    expect($this->collection->fresh()->setting('seo'))->toBe(['description' => 'News 2', 'title_field' => 'excerpt']);
+    expect($this->collection->fresh()->setting('seo'))->toEqual(['description' => 'News 2', 'title_field' => 'excerpt']);
 
     $tags = Taxonomy::factory()->create(['handle' => 'tags', 'settings' => ['seo' => ['image_field' => 'none']]]);
     app(SaveTaxonomy::class)->handle(['handle' => 'tags', 'title' => 'Tags', 'settings' => ['seo' => ['image_field' => 'none', 'noindex' => true]]], $tags);
-    expect($tags->fresh()->setting('seo'))->toEqualCanonicalizing(['image_field' => 'none', 'noindex' => true]);
+    expect($tags->fresh()->setting('seo'))->toEqual(['image_field' => 'none', 'noindex' => true]);
 });

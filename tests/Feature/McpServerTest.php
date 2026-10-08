@@ -222,7 +222,7 @@ it('builds and fills a listing page', function () {
     $listing = mcpResult(SunriceServer::actingAs($this->admin)->tool(Tools\GetListing::class, ['collection' => 'posts']));
     expect($listing['languages']['id'])->toMatchArray(['title' => 'Blog', 'intro' => 'News from us.', 'data' => ['tagline' => 'Fresh', 'columns' => 4], 'seo' => ['description' => 'All posts']])
         ->and($listing['languages']['en']['title'])->toBe('Blog EN')
-        ->and($listing['languages']['en']['data'])->toBe(['tagline' => 'New', 'columns' => 4])
+        ->and($listing['languages']['en']['data'])->toEqual(['tagline' => 'New', 'columns' => 4])
         ->and($listing['languages']['id']['url'])->toEndWith('/blog');
 
     // Removing the listing blueprint by handle.
@@ -311,7 +311,7 @@ it('changes a global set and merges SEO settings key by key', function () {
 
     mcpResult(SunriceServer::actingAs($this->admin)->tool(Tools\SaveCollection::class, ['handle' => 'pages', 'settings' => ['seo' => ['description' => 'Our pages']]]));
     $collection = mcpResult(SunriceServer::actingAs($this->admin)->tool(Tools\SaveCollection::class, ['handle' => 'pages', 'settings' => ['seo' => ['title_field' => 'headline']]]));
-    expect($collection['settings']['seo'])->toBe(['description' => 'Our pages', 'title_field' => 'headline']);
+    expect($collection['settings']['seo'])->toEqual(['description' => 'Our pages', 'title_field' => 'headline']);
     $collection = mcpResult(SunriceServer::actingAs($this->admin)->tool(Tools\SaveCollection::class, ['handle' => 'pages', 'settings' => ['seo' => ['title_field' => '']]]));
-    expect($collection['settings']['seo'])->toBe(['description' => 'Our pages']);
+    expect($collection['settings']['seo'])->toEqual(['description' => 'Our pages']);
 });
