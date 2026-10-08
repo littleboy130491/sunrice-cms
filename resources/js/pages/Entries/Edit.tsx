@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { toast } from 'sonner';
 import { useForm, usePage, router, Link } from '@inertiajs/react';
 import { ArrowLeft, CheckCircle2, Copy, ExternalLink, EyeOff, History, Languages, LoaderCircle, MoreHorizontal, Send, Trash2, Undo2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,8 @@ import { useBreadcrumbs } from '@/components/app/breadcrumbs';
 import FieldRenderer from '@/fields/FieldRenderer';
 import TermsField from '@/fields/TermsField';
 import { TemplateHelp } from '@/components/app/template-help';
+import { KeptEditsNotice, VersionConflict, useEditLock } from '@/components/app/edit-lock';
+import { RelatedMenu, type RelatedLink } from '@/components/app/related-menu';
 import { TranslationModeProvider } from '@/fields/translation-mode';
 import { adminUrl } from '@/lib/route';
 import { useCan } from '@/lib/can';
@@ -37,6 +40,8 @@ interface TranslationState {
     can_undo_restore?: boolean;
     draft_title: string;
     draft_slug: string;
+    /** Fingerprint of the loaded draft: a save is refused if it changed meanwhile. */
+    version?: string;
     /** Public address of this translation; null when the collection has no single pages. */
     url?: string | null;
     /** Whether the public can see it (published and, for other languages, Ready). */
@@ -54,6 +59,8 @@ interface Props {
     blueprints: { id: number; title: string }[];
     /** Hierarchical collections: entries this one can go under (tree order). */
     parentOptions?: { id: number; title: string; depth: number }[] | null;
+    /** Pages to jump to from the ⋮ menu. */
+    related?: RelatedLink[];
     taxonomies: { id: number; handle: string; title: string; single?: boolean }[];
     locales: string[];
     mainLocale?: string;
@@ -81,7 +88,7 @@ function flatFields(tabs: AdminTab[] | null): AdminField[] {
     return (tabs ?? []).flatMap((t) => t.fields ?? []);
 }
 
-export default function EntryEdit({ collection, entry, blueprint, blueprints, parentOptions, taxonomies, locales, mainLocale = locales[0], can: allowed }: Props) {
+export default function EntryEdit({ collection, entry, blueprint, blueprints, parentOptions, related, taxonomies, locales, mainLocale = locales[0], can: allowed }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const can = useCan();
     const isNew = entry === null;
@@ -89,8 +96,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
     const [locale, setLocale] = React.useState(mainLocale);
     const perms = allowed ?? { update: true, translate: true, publish: true, delete: true, create: true };
     // Translate-only users edit other languages; the main language is read-only for them.
-    const canEdit = isNew || (locale === mainLocale ? perms.update : perms.translate);
-    const hasMenuActions = perms.update || perms.publish || perms.create || perms.delete;
+    const mayEdit = isNew || (locale === mainLocale ? perms.update : perms.translate);
     const existing = entry?.translations ?? {};
 
     // Working data for each locale is the draft (data.draft) if present
@@ -137,6 +143,36 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
         template: entry?.template ?? '',
         parent_id: entry?.parent_id ?? null,
     });
+
+    // Only one person edits a language at a time (WordPress-style lock).
+    const lock = useEditLock({
+        type: 'entry',
+        id: entry?.id,
+        locale,
+        enabled: !isNew && mayEdit,
+        getUnsaved: () => (form.isDirty ? { title: form.data.title, slug: form.data.slug, data: form.data.data, seo: form.data.seo } : null),
+        leaveTo: adminUrl(`collections/${collection.handle}/entries`, adminPath),
+    });
+    const canEdit = mayEdit && !lock.readOnly;
+    // While someone else holds the lock, nothing here changes the entry.
+    const acts = lock.readOnly ? { ...perms, update: false, publish: false, translate: false, delete: false } : perms;
+    const hasMenuActions = acts.update || acts.publish || acts.create || acts.delete;
+    const loadKept = async (id: number) => {
+        const c = await lock.loadKept(id).catch(() => null);
+        if (!c) return toast.error('Could not load those changes.');
+        form.setData((d) => ({ ...d, title: String(c.title ?? d.title), slug: String(c.slug ?? d.slug), data: c.data ?? d.data, seo: c.seo ?? d.seo }));
+        toast.success('Loaded. Review them, then save.');
+    };
+
+    // Sent with every save, so saving over someone else's newer changes is refused.
+    const versionRef = React.useRef<string | undefined>(undefined);
+    versionRef.current = existing[locale]?.version;
+    const overwriteRef = React.useRef(false);
+    const withVersion = <T extends object>(d: T) => ({ ...d, version: versionRef.current ?? '', overwrite: overwriteRef.current });
+    const overwrite = () => {
+        overwriteRef.current = true;
+        formRef.current?.requestSubmit();
+    };
 
     // Picked terms per taxonomy. The picker only knows ids, so each
     // taxonomy keeps the ids it picked; the form posts them all together.
@@ -193,7 +229,12 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
             });
             return;
         }
-        form.put(adminUrl(`entries/${entry.id}`, adminPath), { preserveScroll: true, onSuccess: () => form.setDefaults() });
+        form.transform(withVersion);
+        form.put(adminUrl(`entries/${entry.id}`, adminPath), {
+            preserveScroll: true,
+            onSuccess: () => form.setDefaults(),
+            onFinish: () => { overwriteRef.current = false; },
+        });
     };
 
     // Publish date for the main language: empty = now, a future time schedules it.
@@ -206,6 +247,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
         const go = () => router.post(adminUrl(`entries/${entry.id}/publish`, adminPath), { locale, published_at: publishedAt }, { preserveScroll: true });
         // Publishing takes the saved draft, so save unsaved edits first.
         if (form.isDirty && canEdit) {
+            form.transform(withVersion);
             form.put(adminUrl(`entries/${entry.id}`, adminPath), { preserveScroll: true, onSuccess: () => { form.setDefaults(); go(); } });
         } else {
             go();
@@ -239,7 +281,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
 
     const markReady = () => {
         if (!entry) return;
-        form.transform((data) => ({ ...data, is_ready: !current.is_ready }));
+        form.transform((data) => withVersion({ ...data, is_ready: !current.is_ready }));
         form.put(adminUrl(`entries/${entry.id}`, adminPath), {
             preserveScroll: true,
             onFinish: () => form.transform((data) => data),
@@ -280,6 +322,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                         </div>
                     </div>
                 </div>
+                {isNew && <RelatedMenu links={related} />}
                 {!isNew && (
                     <div className="flex items-center gap-2">
                         {current.url && (current.is_live || allowed?.view_drafts) && (
@@ -294,7 +337,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                                 </a>
                             </Button>
                         )}
-                        {perms.publish && (
+                        {acts.publish && (
                             <Button type="button" onClick={() => publish()}>
                                 <Send /> Publish
                             </Button>
@@ -307,27 +350,27 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
-                                {perms.update && (
+                                {acts.update && (
                                     <DropdownMenuItem onSelect={markReady}>
                                         <CheckCircle2 /> {current.is_ready ? 'Unmark ready' : 'Mark ready'}
                                     </DropdownMenuItem>
                                 )}
-                                {perms.update && locale !== mainLocale && current.is_ready && (
+                                {acts.update && locale !== mainLocale && current.is_ready && (
                                     <DropdownMenuItem onSelect={returnToDraft}>
                                         <Undo2 /> Return to draft
                                     </DropdownMenuItem>
                                 )}
-                                {perms.publish && entry?.status === 'published' && (
+                                {acts.publish && entry?.status === 'published' && (
                                     <DropdownMenuItem onSelect={unpublish}>
                                         <EyeOff /> Unpublish
                                     </DropdownMenuItem>
                                 )}
-                                {perms.create && (
+                                {acts.create && (
                                     <DropdownMenuItem onSelect={duplicate}>
                                         <Copy /> Duplicate
                                     </DropdownMenuItem>
                                 )}
-                                {perms.delete && (
+                                {acts.delete && (
                                     <>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem variant="destructive" onSelect={trash}>
@@ -338,6 +381,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                             </DropdownMenuContent>
                         </DropdownMenu>
                         )}
+                        <RelatedMenu links={related} />
                     </div>
                 )}
             </div>
@@ -356,9 +400,14 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                 </Tabs>
             )}
 
+            {lock.dialogs}
+            <VersionConflict message={(form.errors as Record<string, string>).version} onOverwrite={overwrite} />
+            {canEdit && <KeptEditsNotice kept={lock.kept} onLoad={loadKept} onDiscard={lock.discardKept} />}
             {!canEdit && (
                 <p className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                    {locale === mainLocale && perms.translate
+                    {lock.readOnly
+                        ? `${lock.viewingBy ?? 'Someone else'} is editing this ${locale.toUpperCase()} version. You're viewing it read-only.`
+                        : locale === mainLocale && acts.translate
                         ? 'You can translate this entry. Switch to another language to edit it.'
                         : 'You can view this version but not edit it.'}
                 </p>
@@ -451,7 +500,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
                                     )}
                                 </dl>
                             )}
-                            {entry && perms.publish && locale === mainLocale && (
+                            {entry && acts.publish && locale === mainLocale && (
                                 <div className="grid gap-2">
                                     <Label htmlFor="publish-at">Publish date</Label>
                                     <Input id="publish-at" type="datetime-local" value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />
@@ -515,7 +564,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
 
                     {taxonomies.length > 0 && (
                         <CollapsibleCard title="Taxonomies" titleClassName="text-sm" storageKey="entry:taxonomies" contentClassName="flex flex-col gap-4">
-                            <fieldset disabled={!perms.update} className="flex flex-col gap-4 disabled:opacity-60">
+                            <fieldset disabled={!acts.update} className="flex flex-col gap-4 disabled:opacity-60">
                                 {taxonomies.map((tax) => (
                                     <div key={tax.id} className="grid gap-2">
                                         <Label>{tax.title}{tax.single && <span className="ml-1 font-normal text-muted-foreground">(one)</span>}</Label>
@@ -534,7 +583,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
 
                     {parentOptions && (
                         <CollapsibleCard title="Parent" titleClassName="text-sm" storageKey="entry:parent" contentClassName="flex flex-col gap-2">
-                            <fieldset disabled={!perms.update} className="grid gap-2 disabled:opacity-60">
+                            <fieldset disabled={!acts.update} className="grid gap-2 disabled:opacity-60">
                                 <Label htmlFor="entry-parent" className="sr-only">Parent</Label>
                                 <Select value={form.data.parent_id ? String(form.data.parent_id) : 'none'} onValueChange={(v) => form.setData('parent_id', v === 'none' ? null : Number(v))}>
                                     <SelectTrigger id="entry-parent" className="w-full"><SelectValue /></SelectTrigger>
@@ -557,7 +606,7 @@ export default function EntryEdit({ collection, entry, blueprint, blueprints, pa
 
                     {collection.settings?.has_single !== false && (
                         <CollapsibleCard title="Template" titleClassName="text-sm" storageKey="entry:template" defaultOpen={false} contentClassName="flex flex-col gap-2">
-                            <fieldset disabled={!perms.update} className="grid gap-2 disabled:opacity-60">
+                            <fieldset disabled={!acts.update} className="grid gap-2 disabled:opacity-60">
                                 <Label htmlFor="entry-template" className="sr-only">Template</Label>
                                 <Input
                                     id="entry-template"

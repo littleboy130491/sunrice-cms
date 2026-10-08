@@ -17,6 +17,7 @@ use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
 use Sunrice\Models\EntryTranslation;
 use Sunrice\Support\Locales;
+use Sunrice\Support\SeoFields;
 
 #[IsReadOnly]
 #[Description('Check published entries for SEO problems: missing or badly sized meta titles (aim 30-60 characters) and descriptions (70-160), duplicates, no social image, noindex, thin content, missing or unready translations, and images without alt text. Returns issues per entry with what to fix; fix them with update_entry (seo: {title, description, image}) and save_asset (alt).')]
@@ -79,7 +80,14 @@ class SeoAudit extends SunriceTool
                     $issues[] = "Meta title is short ({$length} characters); 30-60 works best.";
                 }
 
-                $description = trim((string) ($seo['description'] ?? ''));
+                // A field chosen in Settings → SEO (or picked automatically) fills an empty one.
+                $fields = SeoFields::resolve($entry->activeBlueprint(), $collectionSeo);
+                $data = $entry->dataFor($t);
+                $description = trim((string) ($seo['description'] ?? ''))
+                    ?: (string) ($fields['description'] === null ? '' : SeoFields::plainText($data[$fields['description']] ?? null));
+                if (empty($seo['image']) && $fields['image'] !== null && ! empty($data[$fields['image']])) {
+                    $seo['image'] = $data[$fields['image']];
+                }
                 if ($description === '') {
                     $issues[] = ($collectionSeo['description'] ?? '') !== '' || $siteDescription !== ''
                         ? 'No own meta description (a generic collection/site one is used); write one for this page.'

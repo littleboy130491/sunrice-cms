@@ -12,12 +12,16 @@ use Illuminate\Support\Facades\Notification;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Actions\Settings\SaveSiteSettings;
+use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Asset;
+use Sunrice\Models\Collection;
 use Sunrice\Models\Entry;
 use Sunrice\Models\EntryTranslation;
 use Sunrice\Models\Setting;
+use Sunrice\Models\Taxonomy;
 use Sunrice\Notifications\TestMail;
 use Sunrice\Support\Branding;
+use Sunrice\Support\SeoFields;
 use Sunrice\Support\SiteSettings;
 use Throwable;
 
@@ -56,6 +60,77 @@ class SettingsController extends Controller
         $save->handle($request->all());
 
         return back()->with('success', 'Settings saved.');
+    }
+
+    /**
+     * Settings → SEO: which fields fill each collection's and taxonomy's
+     * meta title, description and share image when a page leaves them empty.
+     */
+    public function seo(): Response
+    {
+        Gate::authorize('sunrice.settings.edit');
+
+        $row = function (Collection|Taxonomy $model, string $kind): array {
+            $settings = (array) $model->setting('seo', []);
+            $blueprint = $model->blueprint;
+
+            return [
+                'kind' => $kind,
+                'id' => $model->id,
+                'title' => $model->title,
+                'blueprint' => $blueprint?->title,
+                'fields' => SeoFields::candidates($blueprint),
+                'chosen' => array_map(fn (string $role) => $settings[$role.'_field'] ?? '', array_combine(SeoFields::ROLES, SeoFields::ROLES)),
+                // What applies now (the choice, or the automatic pick).
+                'resolved' => SeoFields::resolve($blueprint, $settings),
+                'defaults' => ['description' => $settings['description'] ?? null],
+            ];
+        };
+
+        return Inertia::render('Settings/Seo', [
+            'collections' => Collection::query()->with('blueprint')->orderBy('title')->get()
+                ->filter(fn (Collection $c) => $c->hasSinglePages())
+                ->map(fn (Collection $c) => $row($c, 'collection'))->values(),
+            'taxonomies' => Taxonomy::query()->with('blueprint')->orderBy('title')->get()
+                ->filter(fn (Taxonomy $t) => (bool) $t->setting('has_archive'))
+                ->map(fn (Taxonomy $t) => $row($t, 'taxonomy'))->values(),
+        ]);
+    }
+
+    public function updateSeo(Request $request): RedirectResponse
+    {
+        Gate::authorize('sunrice.settings.edit');
+
+        $validated = $request->validate([
+            'items' => ['required', 'array'],
+            'items.*.kind' => ['required', 'in:collection,taxonomy'],
+            'items.*.id' => ['required', 'integer'],
+            'items.*.chosen' => ['array'],
+            'items.*.chosen.*' => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]*$/'],
+        ]);
+
+        foreach ($validated['items'] as $item) {
+            $model = $item['kind'] === 'collection' ? Collection::query()->find($item['id']) : Taxonomy::query()->find($item['id']);
+            if ($model === null) {
+                continue;
+            }
+            $seo = (array) $model->setting('seo', []);
+            foreach (SeoFields::ROLES as $role) {
+                $value = $item['chosen'][$role] ?? '';
+                if ($value === '') {
+                    unset($seo[$role.'_field']);
+                } else {
+                    $seo[$role.'_field'] = $value;
+                }
+            }
+            $settings = (array) $model->settings;
+            $settings['seo'] = $seo;
+            $model->settings = $settings;
+            $model->save();
+        }
+        ContentChanged::dispatch('seo_fields_saved');
+
+        return back()->with('success', 'SEO fields saved.');
     }
 
     /** Send a test email right away, so SMTP problems show up here. */

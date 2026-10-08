@@ -271,6 +271,7 @@ class PageController extends Controller
     protected function renderDraft(Entry $entry, string $locale): Response
     {
         PreviewController::applyDraft($entry, $locale);
+        request()->attributes->set('sunrice.draft', true);
 
         $response = $this->render(new TemplateContext(
             pageType: 'entry',
@@ -299,13 +300,13 @@ class PageController extends Controller
     protected function draftReason(Entry $entry, string $locale): string
     {
         if ($entry->status === 'published' && $entry->published_at?->isFuture()) {
-            return 'This entry is scheduled for '.$entry->published_at->toDayDateTimeString().' and isn\'t visible to the public yet.';
+            return __('sunrice::frontend.draft_scheduled', ['date' => $entry->published_at->locale($locale)->isoFormat('LLLL')]);
         }
         if ($entry->status !== 'published') {
-            return 'This entry is a draft and isn\'t visible to the public.';
+            return __('sunrice::frontend.draft_unpublished');
         }
 
-        return 'This translation isn\'t marked Ready, so the public sees the '.Locales::name(Locales::main()).' version.';
+        return __('sunrice::frontend.draft_not_ready', ['language' => Locales::name(Locales::main())]);
     }
 
     /** @param array<string, mixed> $viewData */
@@ -314,6 +315,7 @@ class PageController extends Controller
         $view = app(TemplateResolver::class)->resolve($context);
         // For components in any layout (<x-sunrice::seo />) to find the page.
         request()->attributes->set('sunrice.page', $context);
+        request()->attributes->set('sunrice.template', $view);
 
         return response()->view($view, $viewData + [
             'locale' => $context->locale,

@@ -6,7 +6,7 @@
     <x-sunrice::seo />
     <x-sunrice::code position="head" />
 </head>
-<body>
+<body @bodyClass>
     <x-sunrice::code position="body_start" />
     <h1>{{ isset($collection) ? $collection->titleIn($locale ?? null) : 'Archive' }}</h1>
     <ul>

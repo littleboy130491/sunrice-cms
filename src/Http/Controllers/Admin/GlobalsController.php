@@ -13,6 +13,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Actions\Globals\SaveGlobalValues;
 use Sunrice\Events\ContentChanged;
+use Sunrice\Locks\Versions;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\GlobalSet;
 use Sunrice\Support\Locales;
@@ -84,6 +85,7 @@ class GlobalsController extends Controller
         } elseif (! Locales::isAvailable($validated['locale'] ?? '')) {
             return back()->with('error', 'Unknown language. Reload the page and try again.');
         }
+        Versions::ensureUnchanged($request->input('version'), Versions::global($globalSet->values()->where('locale', $validated['locale'])->first()), $request->boolean('overwrite'));
 
         app(SaveGlobalValues::class)->handle($globalSet, $validated);
         ContentChanged::dispatch('global_saved');
@@ -123,6 +125,7 @@ class GlobalsController extends Controller
             'globalSet' => $set?->only('id', 'handle', 'title', 'group', 'blueprint_id', 'translatable'),
             'blueprint' => $set?->blueprint?->schema()->toAdminTabs(),
             'values' => $set?->values->keyBy(fn ($v) => $v->locale ?? '_shared')->map->data,
+            'versions' => $set?->values->keyBy(fn ($v) => $v->locale ?? '_shared')->map(fn ($v) => Versions::global($v)),
             'blueprints' => Blueprint::query()->orderBy('title')->get(['id', 'title', 'handle']),
             'locales' => Locales::available(),
             'mainLocale' => Locales::main(),

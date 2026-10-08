@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Translation\Translator;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Spatie\LaravelPackageTools\Package;
@@ -44,6 +45,7 @@ use Sunrice\Policies\RolePolicy;
 use Sunrice\Policies\TaxonomyPolicy;
 use Sunrice\Policies\TermPolicy;
 use Sunrice\Policies\UserPolicy;
+use Sunrice\Support\CoreTranslations;
 use Sunrice\Support\SiteSettings;
 use Sunrice\View\Components\Entries;
 use Sunrice\View\Components\Form as FormComponent;
@@ -160,6 +162,7 @@ class SunriceServiceProvider extends PackageServiceProvider
         $this->registerContentCache();
         $this->registerRateLimiters();
         $this->registerMcpServer();
+        $this->callAfterResolving('translator', fn (Translator $translator) => CoreTranslations::register($translator));
 
         // Site settings saved in the admin override the config defaults.
         $this->app->booted(fn () => SiteSettings::apply());
@@ -216,6 +219,8 @@ class SunriceServiceProvider extends PackageServiceProvider
 
     protected function registerBladeComponents(): void
     {
+        // <body @bodyClass> or <body @bodyClass('dark wide')>
+        Blade::directive('bodyClass', fn (string $extra) => '<?php echo \'class="\'.e(sunrice_body_class('.($extra === '' ? '[]' : $extra).')).\'"\'; ?>');
         Blade::component(Entries::class, 'sunrice::entries');
         Blade::component(Seo::class, 'sunrice::seo');
         Blade::component(SiteCode::class, 'sunrice::code');

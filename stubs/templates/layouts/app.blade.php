@@ -65,7 +65,7 @@
     @stack('head')
     <x-sunrice::code position="head" />
 </head>
-<body>
+<body @bodyClass>
     <x-sunrice::code position="body_start" />
     @include('sunrice.partials.header')
 

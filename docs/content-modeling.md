@@ -52,6 +52,61 @@ switch in the editor; templates read keyed items with `->byKey('key')`.
 - Slugs are unique per `(collection, locale)` including trashed rows;
   rename + publish leaves a `301` redirect on the old slug.
 
+## Two people editing the same thing
+
+Editors take turns, like WordPress. Whoever opens an entry language, a
+term or a global set first holds it; the open page renews the hold every
+15 seconds, and it lapses 2 minutes after the page closes.
+
+- Someone else who opens it sees who is editing and since when, and can
+  **Go back**, **View only** (everything is read-only), or **Take over**
+  (after confirming).
+- On a take over, the first editor is told within a few seconds and sent
+  back to the list. Their unsaved changes are not lost: they're kept
+  aside, and the editor page shows them with **Load into the form** or
+  **Discard**. Nothing is written into the draft until someone saves.
+- Each language of an entry (and of a translatable global set) is held
+  separately, so translators can work side by side.
+- The same person in two tabs is never locked out by themselves.
+- Saves also check the version: if what you opened was saved by someone
+  else since (say, from a tab that never held the lock), the save is
+  refused and you choose **Reload** or **Overwrite with mine**.
+
+Holds live in the cache store (`sunrice.cache.store`), so every server
+must share it.
+
+## Which URL wins
+
+Every collection's entry URL (`route`) and listing URL (`archive_route`),
+and every taxonomy's term URL, is a pattern. For each request Sunrice tries
+them in this order and stops at the **first pattern that matches**:
+
+1. **Fixed URLs** (no `{slug}`): collection listing pages such as `/blog`
+   or `/products`.
+2. **Patterns with `{slug}`**, the most specific first: the one with more
+   fixed characters wins, so `/blog/category/{slug}` comes before
+   `/blog/{slug}`, which comes before `/{slug}`.
+3. On a tie (same fixed text), collections before taxonomies, then in the
+   order they were created.
+
+The first match is final: when no entry or term has that slug, the page
+is a 404 (or a [redirect](#entries) from an old slug). Sunrice doesn't try
+the next pattern.
+
+What that means in practice:
+
+| Set up | Visiting | Shows |
+| --- | --- | --- |
+| Pages at `/{slug}` with a page whose slug is `blog`, and Articles' listing at `/blog` | `/blog` | The Articles listing. The page can't be reached: rename its slug. |
+| Pages at `/{slug}` and Articles at `/blog/{slug}` | `/blog/hello` | The article. `/hello` is a page. |
+| Pages at `/{slug}` and a taxonomy's terms at `/{slug}` | `/news` | Only pages are looked up (collections first); give the terms a prefix such as `/topic/{slug}`. |
+| Two collections at the same pattern | — | Not allowed: saving the second collection is refused. |
+
+Slugs only have to be unique within a collection and language, so give
+listing pages and root-level pages different names, and keep root-level
+patterns (`/` or `/{slug}`) to one collection. Fixed URLs in your own
+Laravel routes (`routes/web.php`) win over all of these.
+
 ## Parent pages
 
 Turn on **Hierarchical** for a collection (Structure → Collections →

@@ -21,6 +21,9 @@ class Sunrice
     /** @var array<int, callable> */
     protected array $templateHooks = [];
 
+    /** @var array<int, callable> */
+    protected array $bodyClassHooks = [];
+
     /** @var array<string, class-string> */
     protected array $resources = [];
 
@@ -148,6 +151,24 @@ class Sunrice
     public function templateHooks(): array
     {
         return $this->templateHooks;
+    }
+
+    /**
+     * Change the page's body classes. Hooks run in registration order;
+     * each receives (array $classes, ?TemplateContext $page) and returns
+     * the classes to use.
+     */
+    public function bodyClassUsing(callable $hook): void
+    {
+        $this->bodyClassHooks[] = $hook;
+    }
+
+    /**
+     * @return array<int, callable>
+     */
+    public function bodyClassHooks(): array
+    {
+        return $this->bodyClassHooks;
     }
 
     /**

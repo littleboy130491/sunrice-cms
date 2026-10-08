@@ -12,6 +12,7 @@ import AssetPicker, { PickedAsset } from '@/components/AssetPicker';
 import EntryPicker, { PickedEntry } from '@/components/EntryPicker';
 import { InputError } from '@/components/app/input-error';
 import { useBreadcrumbs } from '@/components/app/breadcrumbs';
+import { SettingsTabs } from '@/components/app/settings-tabs';
 import { adminUrl } from '@/lib/route';
 import { usePage } from '@inertiajs/react';
 import type { SharedProps } from '@/types';
@@ -129,6 +130,7 @@ export default function SettingsEdit({ settings, homepage, shareImage, timezones
                     {form.processing && <LoaderCircle className="animate-spin" />} Save settings
                 </Button>
             </div>
+            <SettingsTabs current="general" />
 
             <CollapsibleCard title="General" storageKey="settings:general" hasErrors={Object.keys(errors).length > 0} contentClassName="flex flex-col gap-4">
                 <div className="grid gap-2">
