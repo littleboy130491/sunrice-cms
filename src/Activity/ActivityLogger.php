@@ -329,7 +329,7 @@ class ActivityLogger
     {
         $label = match (true) {
             $model instanceof Entry => $this->entryTitle($model),
-            $model instanceof Term => $model->mainTranslation()?->name ?? $model->translations()->value('name'),
+            $model instanceof Term => $model->mainTranslation()->name ?? $model->translations()->value('name'),
             $model instanceof Setting => match ((string) $model->key) {
                 'site' => 'Site settings',
                 'homepage_entry_id' => 'Homepage',
@@ -353,7 +353,7 @@ class ActivityLogger
 
     protected function entryTitle(Entry $entry): ?string
     {
-        return $entry->mainTranslation()?->title ?? $entry->translations()->value('title');
+        return $entry->mainTranslation()->title ?? $entry->translations()->value('title');
     }
 
     protected function menuItemLabel(MenuItem $item): string

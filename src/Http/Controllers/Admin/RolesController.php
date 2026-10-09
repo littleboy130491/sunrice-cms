@@ -57,6 +57,7 @@ class RolesController extends Controller
             'permissions.*' => ['string', Rule::in($known)],
         ], [], ['permissions.*' => 'permission']);
 
+        /** @var Role $role */
         $role = Role::create(['name' => $validated['name'], 'guard_name' => $guard]);
         foreach ($validated['permissions'] ?? [] as $name) {
             Permission::findOrCreate($name, $guard);
