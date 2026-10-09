@@ -12,6 +12,7 @@ Every Sunrice command, what it does and its options. Run
 | `sunrice:sync-permissions` | Creates missing permissions and removes stale ones. Run after adding collections, taxonomies, forms or resources. |
 | `sunrice:seed-roles` | Creates the default roles (Administrator, Editor, Author, Translator), or adds new permissions to them. |
 | `sunrice:mcp-token {email}` | Creates an access token for AI agents acting as that user (shown once). `--name=`, `--list`, `--revoke=ID`. See [AI agents](ai-agents.md). |
+| `sunrice:prune-activity` | Deletes [activity log](activity-log.md) entries older than 180 days (`sunrice.activity.prune_days`); `--days=30` for another age. |
 | `sunrice:two-factor {on\|off}` | Turns two-factor (emailed code) login on or off; no argument shows the current state. The way back in if mail breaks while it's on. See [Mail](mail.md#two-factor-login). |
 | `sunrice:upgrade-translations` | One-time conversion of entry translations to the shared-layout format. `--dry-run` reports only. |
 

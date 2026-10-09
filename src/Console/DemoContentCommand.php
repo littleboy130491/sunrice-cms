@@ -8,6 +8,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Sunrice\Actions\Structure\PurgeDeleted;
+use Sunrice\Activity\ActivityLogger;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
@@ -34,7 +35,13 @@ class DemoContentCommand extends Command
 
     protected const TOPICS = 10;
 
-    public function handle(PurgeDeleted $purge): int
+    public function handle(PurgeDeleted $purge, ActivityLogger $activity): int
+    {
+        // Thousands of fake articles would bury real activity in the log.
+        return $activity->withoutLogging(fn () => $this->fill($purge));
+    }
+
+    protected function fill(PurgeDeleted $purge): int
     {
         $handle = Str::slug((string) $this->option('collection'), '_');
         if ($handle === '') {

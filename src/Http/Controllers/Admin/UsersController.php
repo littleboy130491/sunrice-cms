@@ -18,6 +18,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
 use Sunrice\Actions\Users\DeleteUser;
+use Sunrice\Activity\ActivityLogger;
 use Sunrice\Models\Asset;
 use Sunrice\Models\Entry;
 
@@ -109,6 +110,7 @@ class UsersController extends Controller
         $model = config('sunrice.auth.user_model');
         $user = $model::create(Arr::except($validated, 'roles'));
         $user->syncRoles($validated['roles'] ?? []);
+        app(ActivityLogger::class)->record('updated', $user, ['changes' => ['roles']]);
 
         return redirect()->route('sunrice.admin.users.index')->with('success', "User {$user->email} created.");
     }
@@ -141,7 +143,11 @@ class UsersController extends Controller
         $user->update(Arr::except($validated, 'roles'));
 
         if (isset($validated['roles'])) {
+            $before = $user->roles->pluck('name')->sort()->values()->all();
             $user->syncRoles($validated['roles']);
+            if ($user->refresh()->roles->pluck('name')->sort()->values()->all() !== $before) {
+                app(ActivityLogger::class)->record('updated', $user, ['changes' => ['roles']]);
+            }
         }
 
         return back()->with('success', 'User saved.');

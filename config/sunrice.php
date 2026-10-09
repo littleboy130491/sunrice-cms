@@ -299,6 +299,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Activity log
+    |--------------------------------------------------------------------------
+    |
+    | enabled:    Record who created, changed or deleted what (Manage → Activity log).
+    | prune_days: What `sunrice:prune-activity` and the admin's Prune button
+    |             delete by default: entries older than this many days.
+    |
+    */
+    'activity' => [
+        'enabled' => (bool) env('SUNRICE_ACTIVITY_LOG', true),
+        'prune_days' => 180,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Super admin role
     |--------------------------------------------------------------------------
     |

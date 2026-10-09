@@ -13,8 +13,10 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Sunrice\Activity\ActivityLogger;
 use Sunrice\Admin\Export\CsvExporter;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Admin\Table\TableQuery;
@@ -125,6 +127,7 @@ class ResourceController extends Controller
         $model = $class::model()::make($this->fillableData($class, $validated));
         $model->save();
         $this->syncRelations($model, $class, $input);
+        $this->log('created', $model, $class);
 
         return redirect()->route('sunrice.admin.resources.index', $resource)->with('success', $class::singularLabel().' created.');
     }
@@ -167,8 +170,20 @@ class ResourceController extends Controller
         } catch (ActionFailed $e) {
             return back()->with('error', $e->getMessage());
         }
+        $this->log($definition->getLabel(), $model, $class);
 
         return back()->with('success', $message ?? "{$definition->getLabel()}: done.");
+    }
+
+    /**
+     * Note a change in the activity log, as "{resource label}".
+     *
+     * @param  class-string<resource>  $class
+     * @param  array<string, mixed>  $properties
+     */
+    protected function log(string $action, Model $model, string $class, array $properties = []): void
+    {
+        app(ActivityLogger::class)->record(Str::limit(Str::lower($action), 30, ''), $model, $properties, Str::lower($class::singularLabel()));
     }
 
     /** Whether the signed-in user may see and run an action on a record. */
@@ -191,6 +206,10 @@ class ResourceController extends Controller
         $model->fill($this->fillableData($class, $validated));
         $model->save();
         $this->syncRelations($model, $class, $input);
+        $changes = array_values(array_diff(array_keys($model->getChanges()), ActivityLogger::IGNORED));
+        if ($changes !== []) {
+            $this->log('updated', $model, $class, ['changes' => $changes]);
+        }
 
         return back()->with('success', 'Saved.');
     }
@@ -202,6 +221,7 @@ class ResourceController extends Controller
         $this->checkAbility($request, $resource, 'delete', $model);
 
         $model->delete();
+        $this->log('deleted', $model, $class);
 
         return redirect()->route('sunrice.admin.resources.index', $resource)->with('success', $class::singularLabel().' deleted.');
     }
@@ -224,6 +244,7 @@ class ResourceController extends Controller
         $count = 0;
         foreach ($models as $model) {
             $model->delete();
+            $this->log('deleted', $model, $class);
             $count++;
         }
 
@@ -260,6 +281,7 @@ class ResourceController extends Controller
             }
             try {
                 $definition->run($model);
+                $this->log($definition->getLabel(), $model, $class);
                 $done++;
             } catch (ActionFailed $e) {
                 $failures[] = $e->getMessage();
