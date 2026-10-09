@@ -32,6 +32,8 @@ so nobody loses access.
 | `sunrice.docs.view` | Read these developer docs in the admin (Manage → Docs). Only Administrator has it by default. |
 | `sunrice.ai-access` | Connect AI agents through MCP with an access token (Manage → AI access). The agent can do what the user can. See [AI agents](ai-agents.md). |
 | `sunrice.run-commands` | Let AI agents run the maintenance commands listed in `sunrice.mcp.commands`. |
+| `sunrice.activity.view` | See the [activity log](activity-log.md) (Manage → Activity log). |
+| `sunrice.activity.prune` | Delete old activity log entries from the admin. |
 
 Super admins are protected: only another super admin can edit or delete a
 super-admin user, give or remove the super-admin role, or change that role.

@@ -95,6 +95,9 @@ class Navigation
                 $admin[] = ['label' => $label, 'href' => $href, 'icon' => $icon];
             }
         }
+        if ($user->can('sunrice.activity.view')) {
+            $admin[] = ['label' => 'Activity log', 'href' => 'activity', 'icon' => 'history'];
+        }
         if ($user->can('sunrice.settings.edit')) {
             $admin[] = ['label' => 'Settings', 'href' => 'settings', 'icon' => 'settings'];
         }

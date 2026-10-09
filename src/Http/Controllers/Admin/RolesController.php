@@ -13,6 +13,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Sunrice\Activity\ActivityLogger;
 use Sunrice\Permissions\PermissionRegistry;
 
 class RolesController extends Controller
@@ -56,11 +57,13 @@ class RolesController extends Controller
             'permissions.*' => ['string', Rule::in($known)],
         ], [], ['permissions.*' => 'permission']);
 
+        /** @var Role $role */
         $role = Role::create(['name' => $validated['name'], 'guard_name' => $guard]);
         foreach ($validated['permissions'] ?? [] as $name) {
             Permission::findOrCreate($name, $guard);
         }
         $role->syncPermissions($validated['permissions'] ?? []);
+        app(ActivityLogger::class)->record('updated', $role, ['changes' => ['permissions']]);
 
         return redirect()->route('sunrice.admin.roles.edit', $role)->with('success', "Role \"{$role->name}\" created.");
     }
@@ -111,7 +114,11 @@ class RolesController extends Controller
                 array_intersect($role->permissions->pluck('name')->all(), $known),
                 app(PermissionRegistry::class)->visibleNames(),
             ));
+            $before = $role->permissions->pluck('name')->sort()->values()->all();
             $role->syncPermissions(array_values(array_unique([...$validated['permissions'], ...$hidden])));
+            if ($role->refresh()->permissions->pluck('name')->sort()->values()->all() !== $before) {
+                app(ActivityLogger::class)->record('updated', $role, ['changes' => ['permissions']]);
+            }
         }
 
         return back()->with('success', 'Role saved.');

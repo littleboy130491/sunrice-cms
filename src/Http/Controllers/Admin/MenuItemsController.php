@@ -13,6 +13,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Sunrice\Actions\Menus\SaveMenuItem;
+use Sunrice\Activity\ActivityLogger;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Menu;
 use Sunrice\Models\MenuItem;
@@ -114,6 +115,7 @@ class MenuItemsController extends Controller
         }
 
         ContentChanged::dispatch('menu_saved');
+        app(ActivityLogger::class)->record('reordered', $menu);
 
         return back();
     }

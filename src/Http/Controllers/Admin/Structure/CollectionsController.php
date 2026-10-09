@@ -13,6 +13,7 @@ use Inertia\Response;
 use Sunrice\Actions\Structure\DeleteCollection;
 use Sunrice\Actions\Structure\SaveCollection;
 use Sunrice\Actions\Support\Reorder;
+use Sunrice\Activity\ActivityLogger;
 use Sunrice\Models\Blueprint;
 use Sunrice\Models\Collection;
 use Sunrice\Models\Taxonomy;
@@ -100,6 +101,7 @@ class CollectionsController extends Controller
 
         $validated = $request->validate(['items' => ['required', 'array'], 'items.*' => ['integer']]);
         $reorder->handle(Collection::class, $validated['items']);
+        app(ActivityLogger::class)->record('reordered', 'Collections', type: 'collection');
 
         return back();
     }

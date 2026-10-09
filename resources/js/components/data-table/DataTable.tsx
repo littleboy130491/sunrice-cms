@@ -156,6 +156,7 @@ export function DataTable<T extends { id: number | string }>({
     };
 
     const selectedIds = Object.keys(selection).filter((k) => selection[k]);
+    const selectable = bulkActions.length > 0;
 
     const runBulk = (action: BulkAction) => {
         if (!bulkUrl || selectedIds.length === 0) return;
@@ -291,7 +292,8 @@ export function DataTable<T extends { id: number | string }>({
                         <TableHeader className="bg-muted/60">
                             <TableRow className="hover:bg-transparent">
                                 {reorderable && <TableHead className="w-8" />}
-                                <TableHead className="w-8">
+                                {/* Row selection only serves bulk actions. */}
+                                {selectable && <TableHead className="w-8">
                                     <Checkbox
                                         aria-label="Select all rows"
                                         checked={allSelected}
@@ -303,7 +305,7 @@ export function DataTable<T extends { id: number | string }>({
                                             )
                                         }
                                     />
-                                </TableHead>
+                                </TableHead>}
                                 {visibleColumns.map((c) => (
                                     <TableHead key={c.key}>
                                         {c.sortable ? (
@@ -333,7 +335,7 @@ export function DataTable<T extends { id: number | string }>({
                                 {orderedData.map((row) => {
                                     const cells = (
                                         <>
-                                            <TableCell>
+                                            {selectable && <TableCell>
                                                 <Checkbox
                                                     aria-label="Select row"
                                                     checked={!!selection[String(row.id)]}
@@ -341,7 +343,7 @@ export function DataTable<T extends { id: number | string }>({
                                                         setSelection((s) => ({ ...s, [String(row.id)]: !!checked }))
                                                     }
                                                 />
-                                            </TableCell>
+                                            </TableCell>}
                                             {visibleColumns.map((c) => (
                                                 <TableCell key={c.key}>
                                                     {/* Long values are cut with "…" so no column grows too wide; hover shows all. */}
@@ -373,7 +375,7 @@ export function DataTable<T extends { id: number | string }>({
                                 })}
                                 {orderedData.length === 0 && (
                                     <TableRow>
-                                        <TableCell colSpan={visibleColumns.length + (reorderable ? 2 : 1)} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={visibleColumns.length + (reorderable ? 1 : 0) + (selectable ? 1 : 0)} className="h-24 text-center text-muted-foreground">
                                             No results.
                                         </TableCell>
                                     </TableRow>

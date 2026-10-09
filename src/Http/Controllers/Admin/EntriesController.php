@@ -31,6 +31,7 @@ use Sunrice\Actions\Entries\SyncEntryTerms;
 use Sunrice\Actions\Entries\TrashEntry;
 use Sunrice\Actions\Entries\UnpublishEntry;
 use Sunrice\Actions\Support\Reorder;
+use Sunrice\Activity\ActivityLogger;
 use Sunrice\Admin\AdminUrls;
 use Sunrice\Admin\Export\CsvExporter;
 use Sunrice\Admin\RelatedLinks;
@@ -506,6 +507,7 @@ class EntriesController extends Controller
             $reorder->handle(Entry::class, array_combine(range(1, count($all)), $all));
         }
         ContentChanged::dispatch('entry_saved');
+        app(ActivityLogger::class)->record('reordered', $collection, ['note' => 'entries']);
 
         return back()->with('success', 'Order saved.');
     }

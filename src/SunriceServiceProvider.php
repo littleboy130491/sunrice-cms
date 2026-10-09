@@ -8,6 +8,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Exceptions\Handler;
+use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Http\Request;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Blade;
@@ -23,6 +24,8 @@ use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Spatie\Permission\Models\Role;
 use Spatie\ResponseCache\Middlewares\CacheResponse;
+use Sunrice\Activity\ActivityLogger;
+use Sunrice\Activity\ActivityObserver;
 use Sunrice\Http\Middleware\HandleSunriceInertiaRequests;
 use Sunrice\Models\Asset;
 use Sunrice\Models\Blueprint;
@@ -116,6 +119,7 @@ class SunriceServiceProvider extends PackageServiceProvider
     {
         $this->fillMissingConfig();
         $this->app->singleton(Sunrice::class);
+        $this->app->singleton(ActivityLogger::class);
         // Per request: remembers the globals already hydrated for this request.
         $this->app->scoped(Frontend\GlobalsRepository::class);
         $this->app->singleton(Fields\FieldRegistry::class, function (): Fields\FieldRegistry {
@@ -168,7 +172,13 @@ class SunriceServiceProvider extends PackageServiceProvider
         $this->registerRateLimiters();
         // Settings are read once per request (Setting::get); a queue worker
         // runs many jobs in one process, so start each job fresh.
-        Event::listen(JobProcessing::class, fn () => Once::flush());
+        Event::listen(JobProcessing::class, function (): void {
+            Once::flush();
+            $this->app->make(ActivityLogger::class)->reset();
+        });
+        // Merging lines is per request: start over after each one (long-lived servers, tests).
+        Event::listen(RequestHandled::class, fn () => $this->app->make(ActivityLogger::class)->reset());
+        $this->registerActivityLog();
         $this->registerMcpServer();
         $this->callAfterResolving('translator', fn (Translator $translator) => CoreTranslations::register($translator));
 
@@ -341,6 +351,7 @@ class SunriceServiceProvider extends PackageServiceProvider
             Console\OrphansCommand::class,
             Console\McpTokenCommand::class,
             Console\DemoContentCommand::class,
+            Console\PruneActivityCommand::class,
         ]);
     }
 
@@ -360,6 +371,14 @@ class SunriceServiceProvider extends PackageServiceProvider
             Route::middleware($middleware)
                 ->group(__DIR__.'/../routes/frontend.php');
         });
+    }
+
+    /** Log changes to Sunrice's models, the user model and roles (Activity log). */
+    protected function registerActivityLog(): void
+    {
+        foreach (array_keys($this->app->make(ActivityLogger::class)->observed()) as $model) {
+            $model::observe(ActivityObserver::class);
+        }
     }
 
     protected function registerSchedule(): void

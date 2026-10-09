@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **Activity log** (Manage → Activity log): who created, changed or deleted
+  entries, terms, structure, menus, globals, assets, forms, users, roles,
+  resources and site settings, with what changed. Filter by period, action,
+  type and user; search by name. Permissions `sunrice.activity.view` and
+  `sunrice.activity.prune`. Old entries are deleted with the Prune button
+  or `php artisan sunrice:prune-activity` (default: older than 180 days,
+  `--days=` for another age). Run `php artisan migrate` and
+  `php artisan sunrice:sync-permissions`.
 - **Packages can extend the admin**: `Sunrice::adminRoutes()` adds signed-in
   admin routes for a package's own screens, `window.Sunrice.registerPage()`
   registers their React pages (with Inertia, the admin's UI components,

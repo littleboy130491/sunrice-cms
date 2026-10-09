@@ -1,6 +1,6 @@
 import {
     Blocks, BookOpen, Bot, Briefcase, Calendar, ChartColumn, Circle, ClipboardList, CreditCard, Database, ExternalLink, FileText,
-    Folder, Globe, Home, Image, Inbox, LayoutGrid, LayoutTemplate, Library, Link, ListTree, Mail, MapPin, Megaphone, Newspaper,
+    Folder, Globe, History, Home, Image, Inbox, LayoutGrid, LayoutTemplate, Library, Link, ListTree, Mail, MapPin, Megaphone, Newspaper,
     Package, Settings, ShoppingBag, ShoppingCart, Shield, Star, Tags, Users, Wrench,
     type LucideIcon,
 } from 'lucide-react';
@@ -24,6 +24,7 @@ const icons: Record<string, LucideIcon> = {
     'file-text': FileText,
     folder: Folder,
     globe: Globe,
+    history: History,
     home: Home,
     image: Image,
     inbox: Inbox,

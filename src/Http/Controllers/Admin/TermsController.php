@@ -16,6 +16,7 @@ use Inertia\Response;
 use Sunrice\Actions\Support\Reorder;
 use Sunrice\Actions\Taxonomies\SaveTerm;
 use Sunrice\Actions\Taxonomies\TrashTerm;
+use Sunrice\Activity\ActivityLogger;
 use Sunrice\Admin\AdminUrls;
 use Sunrice\Admin\RelatedLinks;
 use Sunrice\Admin\Table\Column;
@@ -317,6 +318,7 @@ class TermsController extends Controller
             $order[array_search($id, $full, true)] = $posted[$n];
         }
         $reorder->handle(Term::class, array_values($order));
+        app(ActivityLogger::class)->record('reordered', $taxonomy, ['note' => 'terms']);
 
         return back();
     }

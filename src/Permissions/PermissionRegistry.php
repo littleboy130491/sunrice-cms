@@ -135,6 +135,8 @@ class PermissionRegistry
             ['sunrice.docs.view', 'Read the developer docs', 'Admin'],
             ['sunrice.ai-access', 'Connect AI agents (MCP) with an access token', 'Admin'],
             ['sunrice.run-commands', 'Let AI agents run maintenance commands', 'Admin'],
+            ['sunrice.activity.view', 'View the activity log', 'Admin'],
+            ['sunrice.activity.prune', 'Delete old activity log entries', 'Admin'],
         ];
 
         foreach (static::CRUD_AREAS as $area => [$label, $group]) {

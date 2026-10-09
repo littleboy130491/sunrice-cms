@@ -133,6 +133,8 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::delete('globals/{globalSet}', [Admin\GlobalsController::class, 'destroy'])->name('globals.destroy');
 
     // Site settings
+    Route::get('activity', [Admin\ActivityLogController::class, 'index'])->name('activity.index');
+    Route::post('activity/prune', [Admin\ActivityLogController::class, 'prune'])->name('activity.prune');
     Route::get('settings', [Admin\SettingsController::class, 'edit'])->name('settings.edit');
     Route::put('settings', [Admin\SettingsController::class, 'update'])->name('settings.update');
     Route::get('settings/seo', [Admin\SettingsController::class, 'seo'])->name('settings.seo');
