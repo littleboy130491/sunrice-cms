@@ -39,10 +39,10 @@ class TermsController extends Controller
         $all = Term::query()
             ->where('taxonomy_id', $taxonomy->id)
             ->with('translations')
-            ->withCount('entries')
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
+        Term::loadEntryCounts($all);
         $ordered = $this->treeOrder($all);
         $titleOf = fn (?Term $t) => $t === null ? null : ($t->translations->firstWhere('locale', $main)->name ?? $t->translations->first()->name ?? '#'.$t->id);
         $byId = $all->keyBy('id');

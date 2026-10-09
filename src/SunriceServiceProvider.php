@@ -9,11 +9,13 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Exceptions\Handler;
 use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Once;
 use Illuminate\Translation\Translator;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -164,6 +166,9 @@ class SunriceServiceProvider extends PackageServiceProvider
         $this->registerBladeComponents();
         $this->registerContentCache();
         $this->registerRateLimiters();
+        // Settings are read once per request (Setting::get); a queue worker
+        // runs many jobs in one process, so start each job fresh.
+        Event::listen(JobProcessing::class, fn () => Once::flush());
         $this->registerMcpServer();
         $this->callAfterResolving('translator', fn (Translator $translator) => CoreTranslations::register($translator));
 
@@ -339,6 +344,7 @@ class SunriceServiceProvider extends PackageServiceProvider
             Console\TwoFactorCommand::class,
             Console\OrphansCommand::class,
             Console\McpTokenCommand::class,
+            Console\DemoContentCommand::class,
         ]);
     }
 

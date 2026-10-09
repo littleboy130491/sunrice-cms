@@ -554,7 +554,13 @@ class EntryQuery
             }
         }
 
+        // Every entry belongs to this query's collection: share it (and its
+        // blueprint) instead of loading them once per entry.
+        $this->collection?->loadMissing('blueprint');
         $entries->each(function (Entry $entry) use ($ctx): void {
+            if ($this->collection !== null && $entry->collection_id === $this->collection->id && ! $entry->relationLoaded('collection')) {
+                $entry->setRelation('collection', $this->collection);
+            }
             $entry->resolveFor($this->locale);
             $entry->hydrationContext = $ctx;
         });

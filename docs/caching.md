@@ -1,4 +1,4 @@
-# Caching
+# Caching and performance
 
 ## Content version
 
@@ -27,3 +27,48 @@ ids and load those entries by key.
   Requires `spatie/laravel-responsecache` (PHP 8.4+); when enabled the
   `CacheResponse` middleware wraps frontend routes and the whole page
   cache is cleared on every bump.
+
+## Testing with lots of content
+
+Fill a staging site with fake articles, try the pages, then remove them:
+
+```bash
+php artisan sunrice:demo-content 1000          # or 10000
+# open the printed pages, or time them:
+curl -s -o /dev/null -w "%{time_total}s\n" https://staging.example.com/demo
+php artisan sunrice:demo-content --remove
+```
+
+The articles live in their own `demo` collection (pages at `/demo/…`, a
+listing at `/demo`, topics at `/demo_topics/…`), so real content and
+menus are never touched. Measure on the server itself or with a load
+tool (`ab`, `hey`, k6) against staging, not production. To see the
+database queries behind a page, install
+[Laravel Debugbar](https://github.com/barryvdh/laravel-debugbar) on
+staging (`APP_DEBUG=true`), or [Telescope](https://laravel.com/docs/telescope).
+
+For reference, with 10,000 articles (PHP 8.4, no full-page cache,
+default templates):
+
+| Page | Time | Queries |
+| --- | --- | --- |
+| Article | ~10 ms | 16 |
+| Listing (first or last page) | ~10 ms | 5 |
+| Term page | ~23 ms | 13 |
+| Search | ~26 ms | 9 |
+| Admin: dashboard | ~18 ms | 9 |
+| Admin: entries list / search / sort by title | ~20 / ~32 / ~36 ms | 11 |
+| Admin: entry editor | ~12 ms | 12 |
+| Admin: terms list (200 terms) | ~32 ms | 7 |
+| Admin: CSV export of all 10,000 | ~1.3 s | 104 |
+
+Public pages measured on SQLite, admin pages on Postgres. Query counts
+don't grow with the amount of content or the number of cards on a page
+(tests guard this, for public and admin pages). Settings are read once per
+request, listed entries share their collection and blueprint instead of
+loading them one by one, and term entry counts come from one grouped
+query rather than one per term.
+
+On Postgres, right after a big import, pages can be slower until the
+database refreshes its statistics (autovacuum does this within minutes);
+run `ANALYZE;` in `psql` to do it at once.
