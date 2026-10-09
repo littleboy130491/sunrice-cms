@@ -8,6 +8,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\ViewErrorBag;
 use Illuminate\View\Component;
 use Sunrice\Models\Form as FormModel;
+use Sunrice\Support\Captcha;
 use Sunrice\Support\Locales;
 
 /**
@@ -16,7 +17,8 @@ use Sunrice\Support\Locales;
  * component: $component->form (the Form model and its fields),
  * $component->error('handle') and $component->old('handle') give this
  * form's validation message and previous input, so two forms on one
- * page don't show each other's errors.
+ * page don't show each other's errors. When the form requires a captcha,
+ * the component adds the widget above the submit button.
  */
 class Form extends Component
 {
@@ -57,6 +59,29 @@ class Form extends Component
         $errors = session('errors');
 
         return $errors?->first('data.'.$field) ?: null;
+    }
+
+    /**
+     * The captcha widget to show, or null when this form doesn't use one.
+     *
+     * @return array{provider: string, class: string, site_key: string, script: string, field: string}|null
+     */
+    public function captcha(): ?array
+    {
+        return Captcha::requiredFor($this->form) ? Captcha::widget($this->locale) : null;
+    }
+
+    /** The captcha's message after a failed submission of this form. */
+    public function captchaError(): ?string
+    {
+        if (! $this->submitted()) {
+            return null;
+        }
+
+        /** @var ViewErrorBag|null $errors */
+        $errors = session('errors');
+
+        return $errors?->first('_captcha') ?: null;
     }
 
     /** The value this form's field was last submitted with. */

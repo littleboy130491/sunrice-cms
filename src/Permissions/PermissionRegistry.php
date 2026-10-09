@@ -75,6 +75,7 @@ class PermissionRegistry
             $this->forTaxonomies($withDeleted),
             $this->forForms(),
             $this->forResources(),
+            app(Sunrice::class)->permissions(),
         );
     }
 

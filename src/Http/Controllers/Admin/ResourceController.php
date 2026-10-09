@@ -18,6 +18,8 @@ use Inertia\Response;
 use Sunrice\Admin\Export\CsvExporter;
 use Sunrice\Admin\Table\Column;
 use Sunrice\Admin\Table\TableQuery;
+use Sunrice\Resources\Action;
+use Sunrice\Resources\ActionFailed;
 use Sunrice\Resources\Filter;
 use Sunrice\Resources\Resource;
 use Sunrice\Sunrice;
@@ -42,17 +44,27 @@ class ResourceController extends Controller
 
     protected function checkAbility(Request $request, string $key, string $ability, ?Model $record = null): void
     {
+        abort_unless($this->allows($request, $key, $ability, $record), 403);
+    }
+
+    /** The resource permission, plus the model policy's matching ability when it has a policy. */
+    protected function allows(Request $request, string $key, string $ability, ?Model $record = null): bool
+    {
         $user = $request->user();
-        abort_unless($user->can("sunrice.resources.{$key}.{$ability}"), 403);
+        if (! $user->can("sunrice.resources.{$key}.{$ability}")) {
+            return false;
+        }
 
         /** @var class-string<resource> $class */
         $class = $this->resource($key);
         $modelClass = $class::model();
         if (Gate::getPolicyFor($modelClass) !== null) {
             $policyAbility = ['edit' => 'update', 'export' => 'viewAny', 'view' => 'viewAny'][$ability] ?? $ability;
-            $target = $record ?? $modelClass;
-            abort_unless($user->can($policyAbility, $target), 403);
+
+            return $user->can($policyAbility, $record ?? $modelClass);
         }
+
+        return true;
     }
 
     public function index(Request $request, string $resource): Response
@@ -82,6 +94,11 @@ class ResourceController extends Controller
                 'create' => $request->user()->can("sunrice.resources.{$resource}.create"),
                 'delete' => $request->user()->can("sunrice.resources.{$resource}.delete"),
             ],
+            'bulkActions' => array_values(array_map(
+                fn (Action $action) => $action->toArray(),
+                array_filter($class::actions(), fn (Action $action) => $action->isBulk()
+                    && $request->user()->can("sunrice.resources.{$resource}.{$action->getAbility()}")),
+            )),
         ]);
     }
 
@@ -122,7 +139,44 @@ class ResourceController extends Controller
             'resource' => ['key' => $resource, 'label' => $class::label(), 'singularLabel' => $class::singularLabel()],
             'fields' => $this->adminSchema($class, $resource),
             'record' => $this->recordValues($model, $class),
+            'actions' => array_values(array_map(
+                fn (Action $action) => $action->toArray($model),
+                array_filter($class::actions(), fn (Action $action) => $this->mayRun($request, $resource, $action, $model)),
+            )),
         ]);
+    }
+
+    /** POST {admin}/resources/{resource}/{id}/actions/{action}: run a record's action. */
+    public function action(Request $request, string $resource, int $id, string $action): RedirectResponse
+    {
+        $class = $this->resource($resource);
+        $definition = $class::action($action);
+        if ($definition === null || $definition->opensUrl()) {
+            abort(404);
+        }
+        $model = $class::query($class::model()::query())->findOrFail($id);
+        $this->checkAbility($request, $resource, $definition->getAbility(), $model);
+        abort_unless($definition->passesAuthorize($request->user(), $model), 403);
+
+        if (! $definition->isVisibleFor($model)) {
+            return back()->with('error', "\"{$definition->getLabel()}\" isn't available for this ".strtolower($class::singularLabel()).'.');
+        }
+
+        try {
+            $message = $definition->run($model);
+        } catch (ActionFailed $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', $message ?? "{$definition->getLabel()}: done.");
+    }
+
+    /** Whether the signed-in user may see and run an action on a record. */
+    protected function mayRun(Request $request, string $resource, Action $action, Model $model): bool
+    {
+        return $this->allows($request, $resource, $action->getAbility(), $model)
+            && $action->isVisibleFor($model)
+            && $action->passesAuthorize($request->user(), $model);
     }
 
     public function update(Request $request, string $resource, int $id): RedirectResponse
@@ -157,6 +211,11 @@ class ResourceController extends Controller
         $class = $this->resource($resource);
         $ids = (array) $request->input('ids', []);
 
+        $key = (string) $request->input('action', 'delete');
+        if ($key !== 'delete') {
+            return $this->bulkAction($request, $resource, $class, $key, $ids);
+        }
+
         // Check every record first, so a refusal never leaves a half-done delete.
         $models = $class::model()::query()->whereIn('id', $ids)->get();
         foreach ($models as $model) {
@@ -169,6 +228,53 @@ class ResourceController extends Controller
         }
 
         return back()->with('success', "Deleted {$count} ".($count === 1 ? $class::singularLabel() : $class::label()).'.');
+    }
+
+    /**
+     * Run a bulk() action on the selected records: each one is checked
+     * first; records it isn't available for are skipped.
+     *
+     * @param  class-string<resource>  $class
+     * @param  array<mixed>  $ids
+     */
+    protected function bulkAction(Request $request, string $resource, string $class, string $key, array $ids): RedirectResponse
+    {
+        $definition = $class::action($key);
+        if ($definition === null || ! $definition->isBulk()) {
+            abort(404);
+        }
+
+        $models = $class::query($class::model()::query())->whereIn((new ($class::model()))->getKeyName(), $ids)->get();
+        foreach ($models as $model) {
+            $this->checkAbility($request, $resource, $definition->getAbility(), $model);
+        }
+
+        $done = 0;
+        $skipped = 0;
+        $failures = [];
+        foreach ($models as $model) {
+            if (! $definition->isVisibleFor($model) || ! $definition->passesAuthorize($request->user(), $model)) {
+                $skipped++;
+
+                continue;
+            }
+            try {
+                $definition->run($model);
+                $done++;
+            } catch (ActionFailed $e) {
+                $failures[] = $e->getMessage();
+            }
+        }
+
+        $summary = "{$definition->getLabel()}: {$done} ".($done === 1 ? strtolower($class::singularLabel()) : strtolower($class::label())).'.';
+        if ($skipped > 0) {
+            $summary .= " {$skipped} skipped (not available for ".($skipped === 1 ? 'it' : 'them').').';
+        }
+        if ($failures !== []) {
+            return back()->with('error', $summary.' '.count($failures).' failed: '.$failures[0]);
+        }
+
+        return back()->with('success', $summary);
     }
 
     public function export(Request $request, string $resource, CsvExporter $csv): StreamedResponse

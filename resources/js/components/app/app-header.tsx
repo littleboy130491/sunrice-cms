@@ -40,9 +40,12 @@ export function AppHeader() {
                             </React.Fragment>
                         ))
                     ) : match === null ? (
-                        <BreadcrumbItem>
-                            <BreadcrumbPage>Dashboard</BreadcrumbPage>
-                        </BreadcrumbItem>
+                        // Only the admin's home is the dashboard; other unlisted pages set their own trail (useBreadcrumbs).
+                        path === adminUrl('', adminPath) || path === `${adminUrl('', adminPath)}/` ? (
+                            <BreadcrumbItem>
+                                <BreadcrumbPage>Dashboard</BreadcrumbPage>
+                            </BreadcrumbItem>
+                        ) : null
                     ) : (
                         <>
                             <BreadcrumbItem className="hidden md:block">{match.group.label}</BreadcrumbItem>

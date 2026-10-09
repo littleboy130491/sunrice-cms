@@ -14,7 +14,7 @@ use Sunrice\Permissions\SyncPermissions;
 
 /**
  * Creates or updates a form definition: title, handle, fields and
- * settings (notify_emails, success_message, redirect_url).
+ * settings (notify_emails, success_message, redirect_url, captcha).
  */
 class SaveForm
 {
@@ -55,6 +55,7 @@ class SaveForm
             'settings.notify_emails' => ['nullable', 'string', 'max:1000'],
             'settings.success_message' => ['nullable', 'string', 'max:1000'],
             'settings.redirect_url' => ['nullable', 'string', 'max:255'],
+            'settings.captcha' => ['nullable', 'boolean'],
         ], [
             'fields.*.config.mimes.*.regex' => 'Use file extensions such as "pdf" or "jpg".',
             'fields.*.config.mimes.*.not_in' => '":input" files can\'t be accepted: they could run as code.',

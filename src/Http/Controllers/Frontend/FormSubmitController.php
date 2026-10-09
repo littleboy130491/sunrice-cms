@@ -11,11 +11,14 @@ use Illuminate\Routing\Controller;
 use Illuminate\Validation\ValidationException;
 use Sunrice\Actions\Forms\SubmitForm;
 use Sunrice\Models\Form;
+use Sunrice\Support\Captcha;
 use Sunrice\Support\Locales;
 
 /**
  * POST /sunrice/forms/{handle} — public form submissions.
- * Honeypot + rate limit are enforced by route middleware.
+ * Honeypot + rate limit are enforced by route middleware; forms with
+ * "Require captcha" on must also pass the captcha (Support\Captcha),
+ * whose error comes back under `_captcha`.
  *
  * The route has no language prefix, so the form posts the page's
  * language (`_locale`): messages come back in it and the submission
@@ -46,6 +49,10 @@ class FormSubmitController extends Controller
         $back = strtok(url()->previous(), '#').'#sunrice-form-'.$form->handle;
 
         try {
+            if (Captcha::requiredFor($form) && ! Captcha::verify((string) $request->input((string) Captcha::field()), $request->ip())) {
+                throw ValidationException::withMessages(['_captcha' => __('sunrice::frontend.captcha_failed')]);
+            }
+
             $submit->handle($form, $input, [
                 'ip' => $request->ip(),
                 'user_agent' => $request->userAgent(),
@@ -59,7 +66,7 @@ class FormSubmitController extends Controller
 
             return redirect($back)
                 ->withErrors($e->errors())
-                ->withInput($request->except('_token')); // uploaded files are never flashed
+                ->withInput($request->except(array_filter(['_token', Captcha::field()]))); // uploaded files are never flashed
         }
 
         $redirect = $form->setting('redirect_url');

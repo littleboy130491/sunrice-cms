@@ -12,6 +12,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 use Sunrice\Models\Form;
 use Sunrice\Models\FormSubmission;
+use Sunrice\Support\Captcha;
 
 #[IsReadOnly]
 #[Description('Read a form (fields and settings) and its latest submissions (newest first, paged). Uploaded files are listed by path; staff download them in the admin.')]
@@ -32,6 +33,8 @@ class GetForm extends SunriceTool
             'title' => $form->title,
             'fields' => $form->fields,
             'settings' => $form->settings,
+            // Whether captcha keys are set in .env (settings.captcha only works then).
+            'captcha_available' => Captcha::configured(),
             'template_usage' => "<x-sunrice::form handle=\"{$form->handle}\" />",
         ];
         if (Gate::allows('viewSubmissions', $form)) {

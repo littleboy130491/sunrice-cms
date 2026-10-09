@@ -96,6 +96,10 @@ resource. You get a list with search, filters and export, plus create and
 edit forms and permissions, and it appears in the sidebar under
 **Resources**. See [Model resources](resources.md).
 
+For screens of your own (an order with its items, a report), add routes
+with `Sunrice::adminRoutes()` and register their React page with
+`window.Sunrice.registerPage()`. See [Writing a package](packages.md).
+
 ## New field types
 
 Field types defined in your app appear in the blueprint and fieldset

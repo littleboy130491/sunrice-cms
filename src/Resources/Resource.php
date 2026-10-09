@@ -11,8 +11,8 @@ use Sunrice\Admin\Table\Column;
 
 /**
  * Registers an existing Eloquent model for CMS management. A resource
- * defines its navigation, editing fields, table columns, filters and
- * sorting; CRUD runs through the generic ResourceController.
+ * defines its navigation, editing fields, table columns, filters,
+ * sorting and actions; CRUD runs through the generic ResourceController.
  */
 abstract class Resource
 {
@@ -109,6 +109,29 @@ abstract class Resource
     public static function query(Builder $query): Builder
     {
         return $query;
+    }
+
+    /**
+     * Buttons on a record's page, and with bulk() on the list's selection
+     * ("Mark as paid", "Send invoice", "Download PDF").
+     *
+     * @return array<int, Action>
+     */
+    public static function actions(): array
+    {
+        return [];
+    }
+
+    /** One of actions() by key. */
+    public static function action(string $key): ?Action
+    {
+        foreach (static::actions() as $action) {
+            if ($action->key === $key) {
+                return $action;
+            }
+        }
+
+        return null;
     }
 
     /**

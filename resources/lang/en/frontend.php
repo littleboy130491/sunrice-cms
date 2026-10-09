@@ -17,6 +17,7 @@ return [
     'footer_menu' => 'Footer',
     'submit' => 'Submit',
     'thank_you' => 'Thank you!',
+    'captcha_failed' => "Please confirm you're not a robot, then send the form again.",
     'upload_failed' => 'The file could not be uploaded. It may be larger than :size.',
     'upload_type' => 'This file type isn\'t accepted. Please upload: :types.',
     'upload_type_blocked' => 'This file type isn\'t accepted.',

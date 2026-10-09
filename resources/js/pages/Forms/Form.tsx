@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { CollapsibleCard } from '@/components/app/collapsible-card';
 import FieldBuilder from '@/components/field-builder/FieldBuilder';
 import type { BuilderField, FieldTypeDef } from '@/components/field-builder/FieldBuilder';
@@ -17,12 +18,14 @@ interface Props {
         handle: string;
         title: string;
         fields: BuilderField[];
-        settings: Record<string, string>;
+        settings: Record<string, string | boolean | null>;
     } | null;
     fieldTypes: FieldTypeDef[];
+    // Whether captcha keys are set in .env, and the provider's name.
+    captcha: { configured: boolean; provider: string | null };
 }
 
-export default function FormEditor({ form, fieldTypes }: Props) {
+export default function FormEditor({ form, fieldTypes, captcha }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
     const isNew = form === null;
 
@@ -30,9 +33,10 @@ export default function FormEditor({ form, fieldTypes }: Props) {
     const [title, setTitle] = React.useState(form?.title ?? '');
     const [fields, setFields] = React.useState<BuilderField[]>(form?.fields ?? []);
     const [settings, setSettings] = React.useState({
-        notify_emails: form?.settings?.notify_emails ?? '',
-        success_message: form?.settings?.success_message ?? '',
-        redirect_url: form?.settings?.redirect_url ?? '',
+        notify_emails: String(form?.settings?.notify_emails ?? ''),
+        success_message: String(form?.settings?.success_message ?? ''),
+        redirect_url: String(form?.settings?.redirect_url ?? ''),
+        captcha: Boolean(form?.settings?.captcha),
     });
     const [errors, setErrors] = React.useState<Record<string, string>>({});
     const [processing, setProcessing] = React.useState(false);
@@ -106,6 +110,22 @@ export default function FormEditor({ form, fieldTypes }: Props) {
                     <Input value={settings.redirect_url} onChange={(e) => setSettings({ ...settings, redirect_url: e.target.value })} />
                     <InputError message={settingsError('redirect_url')} />
                 </div>
+                <label className="flex items-start gap-3 sm:col-span-2">
+                    <Switch
+                        checked={captcha.configured && settings.captcha}
+                        disabled={!captcha.configured}
+                        onCheckedChange={(v) => setSettings({ ...settings, captcha: v })}
+                    />
+                    <span className="grid gap-0.5 text-sm">
+                        <span className="font-medium">Require captcha{captcha.provider ? ` (${captcha.provider})` : ''}</span>
+                        <span className="text-xs text-muted-foreground">
+                            {captcha.configured
+                                ? 'Visitors confirm they are not a robot before the form is sent.'
+                                : 'Add SUNRICE_CAPTCHA_SITE_KEY and SUNRICE_CAPTCHA_SECRET_KEY to the .env file to turn this on (Cloudflare Turnstile by default).'}
+                        </span>
+                        <InputError message={settingsError('captcha')} />
+                    </span>
+                </label>
             </CollapsibleCard>
             <Button onClick={save} disabled={processing}>{processing ? 'Saving…' : 'Save form'}</Button>
         </div>

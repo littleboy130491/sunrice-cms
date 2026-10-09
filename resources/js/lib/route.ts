@@ -10,7 +10,7 @@ export function useAdminPath(): string {
  * `adminUrl('collections/pages')` → `/cms/collections/pages`.
  */
 export function adminUrl(path = '', adminPath?: string): string {
-    const base = adminPath ?? '/cms';
+    const base = (adminPath ?? 'cms').replace(/^\/+|\/+$/g, '');
     const clean = path.replace(/^\/+/, '');
 
     return `/${base}${clean ? `/${clean}` : ''}`;

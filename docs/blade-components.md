@@ -282,4 +282,6 @@ page's language, so messages come back in it. The slot sees
 `$component->old('email')` (this form's message and previous input; other
 forms on the same page keep theirs), and `$component->success()`. After a
 submission the visitor lands back on the form (`#sunrice-form-{handle}`),
-and messages name fields by their label.
+and messages name fields by their label. When the form requires a captcha
+([Forms → Captcha](forms.md#captcha)), the component adds the widget above
+the submit button and its message (`$component->captchaError()`).
