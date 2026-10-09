@@ -194,6 +194,8 @@ Components receive:
 - `fetchJson(url, init)`: `fetch` with the admin's CSRF token, returning
   JSON. Use it to call your own routes.
 - `toast.success()` / `toast.error()`: admin notifications.
+- More for whole pages (`registerPage`, Inertia, tables, cards): see
+  [Writing a package](packages.md#what-windowsunrice-offers).
 
 The admin's stylesheet only contains the Tailwind classes the admin itself
 uses, so style custom components with inline styles or your own CSS

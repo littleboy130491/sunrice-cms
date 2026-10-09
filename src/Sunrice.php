@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace Sunrice;
 
+use Closure;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
+use InvalidArgumentException;
 use Sunrice\Fields\FieldRegistry;
 use Sunrice\Frontend\GlobalsRepository;
 use Sunrice\Frontend\MenuBuilder;
 use Sunrice\Frontend\MenuNode;
+use Sunrice\Http\Middleware\Authenticate;
+use Sunrice\Http\Middleware\EnsureCanAccessAdmin;
+use Sunrice\Http\Middleware\HandleSunriceInertiaRequests;
 use Sunrice\Query\EntryQuery;
 
 /**
@@ -38,6 +44,9 @@ class Sunrice
 
     /** @var array<int, callable> */
     protected array $navigationHooks = [];
+
+    /** @var array<string, array{name: string, label: string, group: string}> */
+    protected array $permissions = [];
 
     public function version(): string
     {
@@ -112,6 +121,67 @@ class Sunrice
         }
 
         return array_values(array_unique($urls));
+    }
+
+    /**
+     * Middleware of the admin's routes: the web group, any extra
+     * (`sunrice.admin.middleware`) and the Inertia setup; signed-in routes
+     * add the admin guard and the access-admin check.
+     *
+     * @return array<int, mixed>
+     */
+    public function adminMiddleware(bool $authenticated = true): array
+    {
+        return array_merge(
+            ['web'],
+            (array) config('sunrice.admin.middleware', []),
+            [HandleSunriceInertiaRequests::class],
+            $authenticated ? [Authenticate::class, EnsureCanAccessAdmin::class] : [],
+        );
+    }
+
+    /**
+     * Add routes inside the admin, for a package's own screens: they get
+     * the admin's address prefix ({admin}/…), route names
+     * (`sunrice.admin.…`), sign-in and Inertia setup, so a controller can
+     * `Inertia::render()` a page registered with
+     * `window.Sunrice.registerPage()`. Call it from a service provider's
+     * boot(); check permissions in the controller.
+     *
+     *     Sunrice::adminRoutes(function () {
+     *         Route::get('commerce/orders/{order}', [OrderController::class, 'show'])->name('commerce.orders.show');
+     *     });
+     */
+    public function adminRoutes(Closure $routes): void
+    {
+        Route::middleware($this->adminMiddleware())
+            ->prefix(config('sunrice.admin.path', 'cms'))
+            ->name('sunrice.admin.')
+            ->group($routes);
+    }
+
+    /**
+     * Register a permission of your own, so roles can be given it in the
+     * admin (Users → Roles) and `sunrice:sync-permissions` creates it.
+     * Use your own prefix ("commerce.orders.refund"): names starting with
+     * "sunrice." belong to Sunrice.
+     */
+    public function registerPermission(string $name, string $label, string $group = 'Other'): void
+    {
+        if (str_starts_with($name, 'sunrice.')) {
+            throw new InvalidArgumentException("Permission \"{$name}\": use your own prefix; \"sunrice.\" names belong to Sunrice.");
+        }
+        $this->permissions[$name] = ['name' => $name, 'label' => $label, 'group' => $group];
+    }
+
+    /**
+     * Permissions registered with registerPermission().
+     *
+     * @return array<int, array{name: string, label: string, group: string}>
+     */
+    public function permissions(): array
+    {
+        return array_values($this->permissions);
     }
 
     /**

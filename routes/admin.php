@@ -210,6 +210,7 @@ Route::middleware([Middleware\Authenticate::class, Middleware\EnsureCanAccessAdm
     Route::put('resources/{resource}/{id}', [Admin\ResourceController::class, 'update'])->name('resources.update');
     Route::delete('resources/{resource}/{id}', [Admin\ResourceController::class, 'destroy'])->name('resources.destroy');
     Route::post('resources/{resource}/bulk', [Admin\ResourceController::class, 'bulk'])->name('resources.bulk');
+    Route::post('resources/{resource}/{id}/actions/{action}', [Admin\ResourceController::class, 'action'])->whereNumber('id')->name('resources.action');
 
     // Field picker APIs (T7.4)
     Route::get('api/entries', [Admin\Api\EntrySearchController::class, 'index'])->name('api.entries');

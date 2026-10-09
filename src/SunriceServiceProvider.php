@@ -246,11 +246,7 @@ class SunriceServiceProvider extends PackageServiceProvider
 
     protected function registerAdminRoutes(): void
     {
-        Route::middleware(array_merge(
-            ['web'],
-            (array) config('sunrice.admin.middleware', []),
-            [HandleSunriceInertiaRequests::class],
-        ))
+        Route::middleware(app(Sunrice::class)->adminMiddleware(authenticated: false))
             ->prefix(config('sunrice.admin.path', 'cms'))
             ->name('sunrice.admin.')
             ->group(__DIR__.'/../routes/admin.php');

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- **Packages can extend the admin**: `Sunrice::adminRoutes()` adds signed-in
+  admin routes for a package's own screens, `window.Sunrice.registerPage()`
+  registers their React pages (with Inertia, the admin's UI components,
+  `DataTable`, `FieldRenderer`, `adminUrl()` and `useBreadcrumbs()` on
+  `window.Sunrice`, API version 2), and `Sunrice::registerPermission()` adds
+  a package's permissions to the role editor. New guide: Writing a package.
+- **Resource actions**: `Resource::actions()` adds buttons to a record's
+  editor ("Mark as paid", "Download invoice") and, with `bulk()`, to the
+  list's selection, with confirmation, visibility, permissions and
+  messages.
 - **Captcha for forms**: Cloudflare Turnstile, Google reCAPTCHA or hCaptcha.
   Put the keys in `.env` (`SUNRICE_CAPTCHA_PROVIDER`,
   `SUNRICE_CAPTCHA_SITE_KEY`, `SUNRICE_CAPTCHA_SECRET_KEY`) and turn on

@@ -1,7 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DataTable, type FilterDef } from '@/components/data-table/DataTable';
+import { DataTable, type BulkAction, type FilterDef } from '@/components/data-table/DataTable';
 import { adminUrl } from '@/lib/route';
 import type { ColumnDef, Paginated, SharedProps } from '@/types';
 
@@ -13,9 +13,11 @@ interface Props {
     can: { create: boolean; delete?: boolean };
     visibleColumns?: string[];
     filters?: FilterDef[];
+    // The resource's bulk() actions this user may run.
+    bulkActions?: { key: string; label: string; confirm: string | null; destructive: boolean }[];
 }
 
-export default function ResourceIndex({ resource, columns, rows, meta, can, visibleColumns, filters }: Props) {
+export default function ResourceIndex({ resource, columns, rows, meta, can, visibleColumns, filters, bulkActions = [] }: Props) {
     const { adminPath } = usePage<SharedProps>().props;
 
     return (
@@ -39,7 +41,10 @@ export default function ResourceIndex({ resource, columns, rows, meta, can, visi
                 filters={filters}
                 exportUrl={adminUrl(`resources/${resource.key}/export`, adminPath)}
                 bulkUrl={adminUrl(`resources/${resource.key}/bulk`, adminPath)}
-                bulkActions={can.delete ? [{ key: 'delete', label: 'Delete', variant: 'destructive', confirm: 'Delete selected records?' }] : []}
+                bulkActions={[
+                    ...bulkActions.map((a): BulkAction => ({ key: a.key, label: a.label, variant: a.destructive ? 'destructive' : undefined, confirm: a.confirm ?? undefined })),
+                    ...(can.delete ? [{ key: 'delete', label: 'Delete', variant: 'destructive', confirm: 'Delete selected records?' } as BulkAction] : []),
+                ]}
                 rowHref={(row) => adminUrl(`resources/${resource.key}/${row.id}/edit`, adminPath)}
             />
         </div>
