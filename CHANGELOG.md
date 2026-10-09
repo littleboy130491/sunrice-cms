@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Captcha for forms**: Cloudflare Turnstile, Google reCAPTCHA or hCaptcha.
+  Put the keys in `.env` (`SUNRICE_CAPTCHA_PROVIDER`,
+  `SUNRICE_CAPTCHA_SITE_KEY`, `SUNRICE_CAPTCHA_SECRET_KEY`) and turn on
+  "Require captcha" per form. `<x-sunrice::form>` adds the widget, and
+  submissions are checked with the provider before they're saved.
 - **Custom field components without rebuilding the admin**: list scripts in
   `sunrice.admin.scripts` (or `Sunrice::registerAdminScript()`) and register
   React components with `window.Sunrice.registerField(type, Component)`;

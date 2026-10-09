@@ -14,6 +14,7 @@ use Sunrice\Actions\Forms\DeleteForm;
 use Sunrice\Actions\Forms\SaveForm;
 use Sunrice\Fields\FieldRegistry;
 use Sunrice\Models\Form;
+use Sunrice\Support\Captcha;
 
 class FormsController extends Controller
 {
@@ -42,7 +43,7 @@ class FormsController extends Controller
     {
         Gate::authorize('create', Form::class);
 
-        return Inertia::render('Forms/Form', ['form' => null, 'fieldTypes' => $this->fieldTypes()]);
+        return Inertia::render('Forms/Form', ['form' => null, 'fieldTypes' => $this->fieldTypes(), 'captcha' => $this->captcha()]);
     }
 
     public function store(Request $request, SaveForm $save): RedirectResponse
@@ -67,6 +68,7 @@ class FormsController extends Controller
         return Inertia::render('Forms/Form', [
             'form' => $form->only('id', 'handle', 'title', 'fields', 'settings'),
             'fieldTypes' => $this->fieldTypes(),
+            'captcha' => $this->captcha(),
         ]);
     }
 
@@ -93,6 +95,16 @@ class FormsController extends Controller
         }
 
         return $out;
+    }
+
+    /**
+     * Whether captcha keys are set in .env, and for which provider.
+     *
+     * @return array{configured: bool, provider: string|null}
+     */
+    protected function captcha(): array
+    {
+        return ['configured' => Captcha::configured(), 'provider' => Captcha::label()];
     }
 
     public function destroy(Form $form, DeleteForm $delete): RedirectResponse

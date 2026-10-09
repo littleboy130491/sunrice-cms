@@ -269,6 +269,9 @@ return [
     | upload_disk:      Private disk for form file uploads.
     | prune_after_days: Days to keep submissions (null = never prune).
     | rate_limit:       Submission rate limit per IP + form.
+    | captcha:          Cloudflare Turnstile, Google reCAPTCHA (v2 checkbox)
+    |                   or hCaptcha. With both keys set, "Require captcha"
+    |                   can be turned on per form in the admin.
     |
     */
     'forms' => [
@@ -277,6 +280,11 @@ return [
         'upload_max_kb' => 10240,
         'prune_after_days' => null,
         'rate_limit' => ['attempts' => 5, 'per_minutes' => 1],
+        'captcha' => [
+            'provider' => env('SUNRICE_CAPTCHA_PROVIDER', 'turnstile'), // turnstile | recaptcha | hcaptcha
+            'site_key' => env('SUNRICE_CAPTCHA_SITE_KEY'),
+            'secret_key' => env('SUNRICE_CAPTCHA_SECRET_KEY'),
+        ],
     ],
 
     /*

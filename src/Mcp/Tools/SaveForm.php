@@ -11,7 +11,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Sunrice\Actions\Forms\SaveForm as SaveFormAction;
 use Sunrice\Models\Form;
 
-#[Description('Create or update a form (contact, newsletter, application…), found by handle. fields: the complete list [{handle, type: text|textarea|select|toggle|date|number|file, label, required, validation (Laravel rules, e.g. ["email"]), config (select: options [{value,label}]; file: mimes ["pdf"], max_kb)}]. settings: notify_emails (comma separated), success_message, redirect_url. Show it in a template with <x-sunrice::form handle="…" />.')]
+#[Description('Create or update a form (contact, newsletter, application…), found by handle. fields: the complete list [{handle, type: text|textarea|select|toggle|date|number|file, label, required, validation (Laravel rules, e.g. ["email"]), config (select: options [{value,label}]; file: mimes ["pdf"], max_kb)}]. settings: notify_emails (comma separated), success_message, redirect_url, captcha (true to require the captcha; works only when captcha keys are set in .env). Show it in a template with <x-sunrice::form handle="…" />.')]
 class SaveForm extends SunriceTool
 {
     protected string $name = 'save_form';

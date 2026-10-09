@@ -51,6 +51,7 @@ The main language can only be changed before any content exists.
 | `sunrice.forms.upload_max_kb` | `10240` | Size limit (KB) for form file fields that don't set their own `max_kb`. |
 | `sunrice.forms.prune_after_days` | `null` | Days to keep submissions (`null` = keep forever). |
 | `sunrice.forms.rate_limit` | `{attempts: 5, per_minutes: 1}` | Per-IP+form submission limit. |
+| `sunrice.forms.captcha.*` | provider `turnstile`, no keys | Captcha for public forms (`SUNRICE_CAPTCHA_PROVIDER`: `turnstile`, `recaptcha` or `hcaptcha`; `SUNRICE_CAPTCHA_SITE_KEY`, `SUNRICE_CAPTCHA_SECRET_KEY`). With both keys set, each form can turn on "Require captcha". See [Forms](forms.md#captcha). |
 | `sunrice.revisions.keep` | `50` | Revisions kept per entry translation. |
 | `sunrice.super_admin_role` | `Super Admin` | Role that bypasses all permissions. |
 
