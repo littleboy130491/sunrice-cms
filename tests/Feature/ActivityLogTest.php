@@ -56,7 +56,7 @@ it('logs an entry\'s life in the admin as one line per change', function () {
     $update = ActivityLog::query()->where('action', 'updated')->firstOrFail();
     expect($update->user_id)->toBe($this->admin->id)
         ->and($update->user_name)->toBe('Admin')
-        ->and($update->properties['changes'])->toBe(['title (id, draft)', 'data (id, draft)']);
+        ->and($update->properties['changes'])->toBe(['data (id, draft)', 'title (id, draft)']);
     expect(ActivityLog::query()->where('action', 'published')->first()->properties['changes'])
         ->toBe(['published_at', 'title (id)', 'data.body (id)']);
 });

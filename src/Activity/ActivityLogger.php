@@ -388,6 +388,7 @@ class ActivityLogger
                     fn ($value, $field) => ($before[$field] ?? null) != $value,
                     ARRAY_FILTER_USE_BOTH,
                 ));
+                sort($fields); // the same order on every database (MySQL reorders JSON keys)
                 foreach ($fields as $field) {
                     // A setting's value is its fields: "name", not "value.name".
                     $keys[] = $model instanceof Setting ? (string) $field : "{$key}.{$field}";
