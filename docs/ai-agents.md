@@ -56,7 +56,7 @@ email of the user it acts as.
 
 | Area | Tools |
 | --- | --- |
-| Site | `get_site_info` (start here), `update_site_settings`, `read_docs` |
+| Site | `get_site_info` (start here), `update_site_settings`, `read_docs` (needs **Read the developer docs**) |
 | Entries | `list_entries`, `get_entry`, `create_entry`, `update_entry` (drafts; `publish: true` puts changes live; `locale` writes a translation), `manage_entry` (unpublish, trash, restore, delete, duplicate, set_homepage), `entry_revisions` (list, show and restore published versions) |
 | Structure | `save_collection` (also turns on a listing page and picks its blueprint), `get_listing` / `save_listing` (a listing page's heading, intro, fields and SEO per language), `get_blueprint` (also lists field types and their options), `save_blueprint` (blueprints and fieldsets), `save_taxonomy`, `delete_structure` |
 | Terms | `list_terms`, `save_term` (create, update, trash, restore) |
@@ -68,6 +68,7 @@ email of the user it acts as.
 | Languages | `translate_entry` (machine translation with the configured service; the agent can also translate and save with `update_entry`) |
 | Templates | `get_template_guide`, `read_template`, `write_template`, `render_page` |
 | Commands | `run_command` (only the commands in `sunrice.mcp.commands`) |
+| Activity | `get_activity`: the [activity log](activity-log.md), filtered by days, source, action, type, user or text; `mine: true` for what this token changed (needs **View the activity log**) |
 
 ## Translating content
 
@@ -136,7 +137,12 @@ minute per token.
 - Tokens are stored hashed and can be revoked at any time.
 - Everything an agent changes is in the [activity log](activity-log.md)
   with the source **AI agent** and the token's name, so you can filter for
-  what agents did (and under which token).
+  what agents did (and under which token). With **View the activity log**,
+  the agent can read the log itself (`get_activity`) to answer "what changed
+  this week?" or "what did you do?".
+- Tools follow the token user's permissions: `read_docs` needs **Read the
+  developer docs**, like the admin's Docs page. Without it the agent still
+  has its built-in instructions, `get_site_info` and `get_template_guide`.
 - Give agents a user with only the permissions they need, e.g. an Editor
   for content work.
 - Agents are told to ask before deleting or publishing large changes,

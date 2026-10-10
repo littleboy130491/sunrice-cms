@@ -36,6 +36,7 @@ class AuthenticateToken
         Auth::shouldUse(config('sunrice.auth.guard', 'web'));
         // The activity log shows these changes as the AI agent's, by token name.
         app(ActivityLogger::class)->actingVia('ai', $token->name);
+        $request->attributes->set('sunrice.api_token_name', $token->name);
 
         // At most once a minute, not on every call.
         if ($token->last_used_at === null || $token->last_used_at->lt(now()->subMinute())) {
