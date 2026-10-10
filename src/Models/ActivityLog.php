@@ -20,6 +20,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $subject_label
  * @property array<string, mixed>|null $properties
  * @property string|null $ip_address
+ * @property string $source admin, ai or system
+ * @property string|null $via the AI access token's name, for source "ai"
  * @property Carbon|null $created_at
  */
 class ActivityLog extends Model

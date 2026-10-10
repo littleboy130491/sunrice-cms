@@ -13,6 +13,7 @@ interface Row {
     id: number;
     created_at: string | null;
     user: string;
+    source: string;
     action: string;
     activity: string;
     details: string;
@@ -61,7 +62,7 @@ export default function ActivityIndex({ columns, rows, meta, filters, can, prune
                 meta={meta}
                 tableKey="activity"
                 filters={filters}
-                searchPlaceholder="Search by name or user…"
+                searchPlaceholder="Search by name, user or token…"
             />
 
             <Dialog open={pruning} onOpenChange={setPruning}>

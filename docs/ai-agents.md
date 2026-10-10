@@ -134,6 +134,9 @@ minute per token.
 ## Safety
 
 - Tokens are stored hashed and can be revoked at any time.
+- Everything an agent changes is in the [activity log](activity-log.md)
+  with the source **AI agent** and the token's name, so you can filter for
+  what agents did (and under which token).
 - Give agents a user with only the permissions they need, e.g. an Editor
   for content work.
 - Agents are told to ask before deleting or publishing large changes,

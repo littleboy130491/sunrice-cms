@@ -11,6 +11,7 @@ use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Version;
+use Sunrice\Activity\ActivityLogger;
 
 #[Name('Sunrice CMS')]
 #[Version('1.0.0')]
@@ -103,6 +104,7 @@ class SunriceServer extends Server
         if ($user instanceof Authenticatable) {
             $guard->setUser($user);
             Auth::shouldUse(config('sunrice.auth.guard', 'web'));
+            app(ActivityLogger::class)->actingVia('ai', 'local (mcp:start)');
         }
     }
 }

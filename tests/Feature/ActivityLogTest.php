@@ -8,6 +8,7 @@ use Spatie\Permission\Models\Role;
 use Sunrice\Actions\Forms\SaveForm;
 use Sunrice\Activity\ActivityLogger;
 use Sunrice\Models\ActivityLog;
+use Sunrice\Models\ApiToken;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Setting;
 use Sunrice\Permissions\SyncPermissions;
@@ -145,7 +146,7 @@ it('lists and filters the log for users who may see it', function () {
         ->where('rows.data.2.user', 'Admin')
         ->where('can.prune', true)
         ->where('pruneDays', 180)
-        ->where('filters', fn ($filters) => collect($filters)->pluck('key')->all() === ['period', 'action', 'subject_type', 'user']));
+        ->where('filters', fn ($filters) => collect($filters)->pluck('key')->all() === ['period', 'source', 'action', 'subject_type', 'user']));
 
     get('/cms/activity?filters[subject_type]=collection')->assertInertia(fn (Assert $page) => $page
         ->has('rows.data', 1)
@@ -188,4 +189,48 @@ it('prunes old entries from the admin and the command line', function () {
         ->and(ActivityLog::query()->where('subject_label', '10 days')->exists())->toBeTrue();
 
     expect(Artisan::call('sunrice:prune-activity', ['--days' => 'soon']))->toBe(1);
+});
+
+it('marks AI agent changes with their access token, including reordering', function () {
+    $collection = createCollection('pages', ['sortable' => true]);
+    [, $plain] = ApiToken::issue($this->admin->id, 'Claude Desktop');
+    auth()->forgetGuards();
+    ActivityLog::query()->delete();
+    $call = fn (string $tool, array $args) => Pest\Laravel\postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call', 'params' => ['name' => $tool, 'arguments' => $args]], ['Authorization' => "Bearer {$plain}"])->assertOk();
+
+    $call('create_entry', ['collection' => 'pages', 'title' => 'From the agent']);
+    $call('create_entry', ['collection' => 'pages', 'title' => 'Second']);
+    $call('reorder', ['type' => 'entries', 'in' => 'pages', 'ids' => array_reverse(Entry::query()->pluck('id')->all())]);
+
+    $lines = ActivityLog::query()->orderBy('id')->get();
+    expect($lines->map(fn (ActivityLog $l) => [$l->action, $l->subject_label, $l->user_name, $l->source, $l->via])->all())->toBe([
+        ['created', 'From the agent (Pages)', 'Admin', 'ai', 'Claude Desktop'],
+        ['created', 'Second (Pages)', 'Admin', 'ai', 'Claude Desktop'],
+        ['reordered', 'Pages', 'Admin', 'ai', 'Claude Desktop'],
+    ]);
+
+    // The same person in the admin is "admin"; the next request starts fresh.
+    $this->actingAs($this->admin);
+    post('/cms/collections/pages/entries/reorder', ['items' => Entry::query()->pluck('id')->all()]);
+    expect(ActivityLog::query()->latest('id')->first()->source)->toBe('admin');
+
+    get('/cms/activity?filters[source]=ai')->assertInertia(fn (Assert $page) => $page
+        ->has('rows.data', 3)
+        ->where('rows.data.0.source', 'AI agent · Claude Desktop'));
+    get('/cms/activity?search=desktop')->assertInertia(fn (Assert $page) => $page->has('rows.data', 3));
+    get('/cms/activity?filters[source]=admin')->assertInertia(fn (Assert $page) => $page
+        ->has('rows.data', 1)
+        ->where('rows.data.0.source', 'Admin'));
+});
+
+it('lets code mark its changes with a source, and shows System for console work', function () {
+    app(ActivityLogger::class)->withSource('ai', 'Dashboard chat', fn () => createCollection('chat'));
+    auth()->forgetGuards();
+    app(ActivityLogger::class)->reset();
+    createCollection('console');
+
+    expect(ActivityLog::query()->where('subject_type', 'collection')->orderBy('id')->get(['source', 'via', 'user_name'])->toArray())->toBe([
+        ['source' => 'ai', 'via' => 'Dashboard chat', 'user_name' => 'Admin'],
+        ['source' => 'system', 'via' => null, 'user_name' => null],
+    ]);
 });

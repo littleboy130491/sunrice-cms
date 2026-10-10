@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Activity log: a **Source** column and filter (Admin, AI agent, System).
+  Changes made through an AI agent show the access token's name
+  (`AI agent · Claude Desktop`), and reordering through the agent's
+  `reorder` tool is logged too. `ActivityLogger::withSource()` marks changes
+  from your own code. Run `php artisan migrate`.
 - **Activity log** (Manage → Activity log): who created, changed or deleted
   entries, terms, structure, menus, globals, assets, forms, users, roles,
   resources and site settings, with what changed. Filter by period, action,
