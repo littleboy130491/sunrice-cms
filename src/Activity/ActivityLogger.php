@@ -62,6 +62,14 @@ class ActivityLogger
     protected int $paused = 0;
 
     /**
+     * Where changes come from in this request when it isn't the admin or
+     * the console: [source, via], e.g. ['ai', 'Claude'].
+     *
+     * @var array{0: string, 1: string|null}|null
+     */
+    protected ?array $source = null;
+
+    /**
      * The models observed for the log, with their subject type.
      *
      * @return array<class-string<Model>, string>
@@ -118,10 +126,40 @@ class ActivityLogger
         }
     }
 
-    /** Forget this request's lines, so a queue job or a new request starts fresh. */
+    /** Forget this request's lines and source, so a queue job or a new request starts fresh. */
     public function reset(): void
     {
         $this->written = [];
+        $this->source = null;
+    }
+
+    /**
+     * Mark what follows in this request as coming from somewhere other
+     * than the admin, e.g. an AI agent: actingVia('ai', 'Claude').
+     */
+    public function actingVia(string $source, ?string $via = null): void
+    {
+        $this->source = [$source, $via];
+    }
+
+    /**
+     * Run something marked with a source, e.g. an AI chat's tool calls:
+     * withSource('ai', 'Dashboard chat', fn () => ...).
+     *
+     * @template T
+     *
+     * @param  Closure(): T  $callback
+     * @return T
+     */
+    public function withSource(string $source, ?string $via, Closure $callback): mixed
+    {
+        $previous = $this->source;
+        $this->source = [$source, $via];
+        try {
+            return $callback();
+        } finally {
+            $this->source = $previous;
+        }
     }
 
     /**
@@ -231,6 +269,8 @@ class ActivityLogger
                 'subject_label' => Str::limit($label, 250),
                 'properties' => $properties === [] ? null : $properties,
                 'ip_address' => request()->route() === null ? null : request()->ip(),
+                'source' => $this->source !== null ? $this->source[0] : ($actor === null ? 'system' : 'admin'),
+                'via' => $this->source === null ? null : Str::limit((string) $this->source[1], 250, ''),
                 'created_at' => now(),
             ]);
             $this->written[$key] = [$line->id, $action];

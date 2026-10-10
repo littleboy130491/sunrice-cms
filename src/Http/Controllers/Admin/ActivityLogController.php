@@ -20,7 +20,8 @@ use Sunrice\Models\ActivityLog;
 
 /**
  * Manage → Activity log: who created, changed or deleted what, filterable
- * by action, kind of thing, user and period; old entries can be pruned.
+ * by period, source (admin, AI agent, system), action, kind of thing and
+ * user; old entries can be pruned.
  */
 class ActivityLogController extends Controller
 {
@@ -34,9 +35,11 @@ class ActivityLogController extends Controller
         $table = TableQuery::for(ActivityLog::query())
             ->searchUsing(fn (Builder $q, string $term) => $q->where(fn (Builder $q) => $q
                 ->whereLike('subject_label', "%{$term}%")
-                ->orWhereLike('user_name', "%{$term}%")))
+                ->orWhereLike('user_name', "%{$term}%")
+                ->orWhereLike('via', "%{$term}%")))
             ->filter('action', fn (Builder $q, mixed $value) => $q->where('action', $value))
             ->filter('subject_type', fn (Builder $q, mixed $value) => $q->where('subject_type', $value))
+            ->filter('source', fn (Builder $q, mixed $value) => $q->where('source', $value))
             ->filter('user', fn (Builder $q, mixed $value) => $value === 'system' ? $q->whereNull('user_id') : $q->where('user_id', $value))
             ->filter('period', fn (Builder $q, mixed $value) => $q->where('created_at', '>=', now()->subDays(max(1, (int) $value))))
             ->sortable(['created_at'])
@@ -51,6 +54,7 @@ class ActivityLogController extends Controller
             'columns' => [
                 new Column('created_at', 'Date', sortable: true),
                 new Column('user', 'User'),
+                new Column('source', 'Source'),
                 new Column('action', 'Action', type: 'badge'),
                 new Column('activity', 'Activity'),
                 new Column('details', 'Details'),
@@ -61,6 +65,7 @@ class ActivityLogController extends Controller
                     'id' => $line->id,
                     'created_at' => $line->created_at?->format('j M Y, H:i'),
                     'user' => $line->user_name ?? 'System',
+                    'source' => $this->source($line),
                     'action' => $line->action,
                     'activity' => $this->sentence($line),
                     'details' => $this->details($line),
@@ -82,6 +87,17 @@ class ActivityLogController extends Controller
         $logger->record('pruned', 'Activity log', ['days' => $days, 'deleted' => $deleted]);
 
         return back()->with('success', "Deleted {$deleted} ".($deleted === 1 ? 'entry' : 'entries')." older than {$days} days.");
+    }
+
+    /** "Admin", "AI agent · Claude" or "System". */
+    protected function source(ActivityLog $line): string
+    {
+        return match ($line->source) {
+            'ai' => 'AI agent'.($line->via ? ' · '.$line->via : ''),
+            'system' => 'System',
+            'admin' => 'Admin',
+            default => Str::headline($line->source),
+        };
     }
 
     /** "Updated entry “About us (Pages)”". */
@@ -128,6 +144,11 @@ class ActivityLogController extends Controller
 
         return [
             ['key' => 'period', 'label' => 'Period', 'type' => 'select', 'options' => collect(self::PERIODS)->map(fn ($label, $days) => ['value' => (string) $days, 'label' => $label])->values()->all()],
+            ['key' => 'source', 'label' => 'Source', 'type' => 'select', 'options' => [
+                ['value' => 'admin', 'label' => 'Admin'],
+                ['value' => 'ai', 'label' => 'AI agent'],
+                ['value' => 'system', 'label' => 'System'],
+            ]],
             ['key' => 'action', 'label' => 'Action', 'type' => 'select', 'options' => $options('action')],
             ['key' => 'subject_type', 'label' => 'Type', 'type' => 'select', 'options' => $options('subject_type')],
             ['key' => 'user', 'label' => 'User', 'type' => 'select', 'options' => [...$users, ['value' => 'system', 'label' => 'System']]],

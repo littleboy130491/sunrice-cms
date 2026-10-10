@@ -9,6 +9,7 @@ use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
 use Sunrice\Actions\Support\Reorder as ReorderAction;
+use Sunrice\Activity\ActivityLogger;
 use Sunrice\Events\ContentChanged;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Menu;
@@ -39,6 +40,7 @@ class Reorder extends SunriceTool
             $all = Entry::withTrashed()->where('collection_id', $collection->id)->orderBy('sort_order')->orderBy('id')->pluck('id')->all();
             $class = Entry::class;
             $event = 'entry_saved';
+            $subject = $collection;
         } elseif ($args['type'] === 'terms') {
             $taxonomy = $this->taxonomy($args['in']);
             if ($taxonomy === null) {
@@ -48,6 +50,7 @@ class Reorder extends SunriceTool
             $all = Term::withTrashed()->where('taxonomy_id', $taxonomy->id)->orderBy('sort_order')->orderBy('id')->pluck('id')->all();
             $class = Term::class;
             $event = 'term_saved';
+            $subject = $taxonomy;
         } else {
             $menu = $this->findByHandle(Menu::class, $args['in']);
             if ($menu === null) {
@@ -57,6 +60,7 @@ class Reorder extends SunriceTool
             $all = MenuItem::query()->where('menu_id', $menu->id)->orderBy('sort_order')->orderBy('id')->pluck('id')->all();
             $class = MenuItem::class;
             $event = 'menu_saved';
+            $subject = $menu;
         }
 
         $all = array_map('intval', $all);
@@ -73,6 +77,8 @@ class Reorder extends SunriceTool
         }
         app(ReorderAction::class)->handle($class, array_combine(range(1, count($all)), $all));
         ContentChanged::dispatch($event);
+        // The order is written directly, without model events: note it like the admin does.
+        app(ActivityLogger::class)->record('reordered', $subject, ['note' => str_replace('_', ' ', $args['type'])]);
 
         return $this->json(['saved' => true, 'order' => $all]);
     }

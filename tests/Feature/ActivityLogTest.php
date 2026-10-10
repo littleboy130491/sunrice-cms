@@ -4,10 +4,16 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\Artisan;
 use Inertia\Testing\AssertableInertia as Assert;
+use Laravel\Mcp\Server\Testing\TestResponse;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Sunrice\Actions\Forms\SaveForm;
 use Sunrice\Activity\ActivityLogger;
+use Sunrice\Mcp\SunriceServer;
+use Sunrice\Mcp\Tools\GetActivity;
+use Sunrice\Mcp\Tools\ReadDocs;
 use Sunrice\Models\ActivityLog;
+use Sunrice\Models\ApiToken;
 use Sunrice\Models\Entry;
 use Sunrice\Models\Setting;
 use Sunrice\Permissions\SyncPermissions;
@@ -145,7 +151,7 @@ it('lists and filters the log for users who may see it', function () {
         ->where('rows.data.2.user', 'Admin')
         ->where('can.prune', true)
         ->where('pruneDays', 180)
-        ->where('filters', fn ($filters) => collect($filters)->pluck('key')->all() === ['period', 'action', 'subject_type', 'user']));
+        ->where('filters', fn ($filters) => collect($filters)->pluck('key')->all() === ['period', 'source', 'action', 'subject_type', 'user']));
 
     get('/cms/activity?filters[subject_type]=collection')->assertInertia(fn (Assert $page) => $page
         ->has('rows.data', 1)
@@ -188,4 +194,91 @@ it('prunes old entries from the admin and the command line', function () {
         ->and(ActivityLog::query()->where('subject_label', '10 days')->exists())->toBeTrue();
 
     expect(Artisan::call('sunrice:prune-activity', ['--days' => 'soon']))->toBe(1);
+});
+
+it('marks AI agent changes with their access token, including reordering', function () {
+    $collection = createCollection('pages', ['sortable' => true]);
+    [, $plain] = ApiToken::issue($this->admin->id, 'Claude Desktop');
+    auth()->forgetGuards();
+    ActivityLog::query()->delete();
+    $call = fn (string $tool, array $args) => Pest\Laravel\postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call', 'params' => ['name' => $tool, 'arguments' => $args]], ['Authorization' => "Bearer {$plain}"])->assertOk();
+
+    $call('create_entry', ['collection' => 'pages', 'title' => 'From the agent']);
+    $call('create_entry', ['collection' => 'pages', 'title' => 'Second']);
+    $call('reorder', ['type' => 'entries', 'in' => 'pages', 'ids' => array_reverse(Entry::query()->pluck('id')->all())]);
+
+    $lines = ActivityLog::query()->orderBy('id')->get();
+    expect($lines->map(fn (ActivityLog $l) => [$l->action, $l->subject_label, $l->user_name, $l->source, $l->via])->all())->toBe([
+        ['created', 'From the agent (Pages)', 'Admin', 'ai', 'Claude Desktop'],
+        ['created', 'Second (Pages)', 'Admin', 'ai', 'Claude Desktop'],
+        ['reordered', 'Pages', 'Admin', 'ai', 'Claude Desktop'],
+    ]);
+
+    // The same person in the admin is "admin"; the next request starts fresh.
+    $this->actingAs($this->admin);
+    post('/cms/collections/pages/entries/reorder', ['items' => Entry::query()->pluck('id')->all()]);
+    expect(ActivityLog::query()->latest('id')->first()->source)->toBe('admin');
+
+    get('/cms/activity?filters[source]=ai')->assertInertia(fn (Assert $page) => $page
+        ->has('rows.data', 3)
+        ->where('rows.data.0.source', 'AI agent · Claude Desktop'));
+    get('/cms/activity?search=desktop')->assertInertia(fn (Assert $page) => $page->has('rows.data', 3));
+    get('/cms/activity?filters[source]=admin')->assertInertia(fn (Assert $page) => $page
+        ->has('rows.data', 1)
+        ->where('rows.data.0.source', 'Admin'));
+});
+
+it('lets code mark its changes with a source, and shows System for console work', function () {
+    app(ActivityLogger::class)->withSource('ai', 'Dashboard chat', fn () => createCollection('chat'));
+    auth()->forgetGuards();
+    app(ActivityLogger::class)->reset();
+    createCollection('console');
+
+    expect(ActivityLog::query()->where('subject_type', 'collection')->orderBy('id')->get(['source', 'via', 'user_name'])->toArray())->toBe([
+        ['source' => 'ai', 'via' => 'Dashboard chat', 'user_name' => 'Admin'],
+        ['source' => 'system', 'via' => null, 'user_name' => null],
+    ]);
+});
+
+it('lets AI agents read the activity log with get_activity', function () {
+    createCollection('pages', ['sortable' => true]);
+    [, $plain] = ApiToken::issue($this->admin->id, 'Claude Desktop');
+    auth()->forgetGuards();
+    ActivityLog::query()->delete();
+    $call = fn (string $tool, array $args, string $token) => json_decode((string) Pest\Laravel\postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call', 'params' => ['name' => $tool, 'arguments' => (object) $args]], ['Authorization' => "Bearer {$token}"])->json('result.content.0.text'), true);
+
+    $call('create_entry', ['collection' => 'pages', 'title' => 'By the agent'], $plain);
+    $this->actingAs($this->admin);
+    post('/cms/collections/pages/entries', ['title' => 'By hand']);
+    auth()->forgetGuards();
+
+    $all = $call('get_activity', [], $plain);
+    expect($all['count'])->toBe(2)
+        ->and($all['activity'][0])->toMatchArray(['user' => 'Admin', 'source' => 'admin', 'action' => 'created', 'type' => 'entry', 'name' => 'By hand (Pages)'])
+        ->and($all['activity'][1])->toMatchArray(['source' => 'ai', 'via' => 'Claude Desktop', 'name' => 'By the agent (Pages)']);
+
+    expect($call('get_activity', ['mine' => true], $plain)['activity'])->toHaveCount(1)
+        ->and($call('get_activity', ['source' => 'admin', 'since_days' => 1], $plain)['activity'][0]['name'])->toBe('By hand (Pages)')
+        ->and($call('get_activity', ['search' => 'agent'], $plain)['count'])->toBe(1)
+        ->and($call('get_activity', ['user' => 'admin@example.com', 'limit' => 1], $plain)['count'])->toBe(1);
+});
+
+it('keeps get_activity and read_docs behind their permissions', function () {
+    $role = Role::findOrCreate('Agent', 'web');
+    app(SyncPermissions::class)->handle();
+    $role->givePermissionTo(['sunrice.access-admin', 'sunrice.ai-access']);
+    $agent = User::query()->create(['name' => 'Agent', 'email' => 'agent@example.com', 'password' => 'x']);
+    $agent->assignRole($role);
+
+    $text = fn (string $class, array $args = []) => (new ReflectionProperty(TestResponse::class, 'response'))
+        ->getValue(SunriceServer::actingAs($agent)->tool($class, $args))->toArray()['result'];
+
+    expect($text(GetActivity::class)['isError'] ?? false)->toBeTrue()
+        ->and($text(ReadDocs::class)['isError'] ?? false)->toBeTrue();
+
+    $role->givePermissionTo(['sunrice.activity.view', 'sunrice.docs.view']);
+    app(PermissionRegistrar::class)->forgetCachedPermissions();
+    $agent->refresh();
+    expect($text(GetActivity::class)['isError'] ?? false)->toBeFalse()
+        ->and($text(ReadDocs::class, ['page' => 'activity-log'])['content'][0]['text'])->toContain('# Activity log');
 });

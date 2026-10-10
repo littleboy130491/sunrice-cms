@@ -3,12 +3,12 @@
 **Manage → Activity log** shows who created, changed or deleted what in the
 admin, and when:
 
-| Date | User | Action | Activity | Details |
-| --- | --- | --- | --- | --- |
-| 9 Oct 2026, 10:42 | Rina | published | Published entry “About us (Pages)” | title (en), data.body (en) |
-| 9 Oct 2026, 10:40 | Rina | updated | Updated entry “About us (Pages)” | title (en, draft) |
-| 9 Oct 2026, 09:15 | Admin | updated | Updated setting “Site settings” | name, timezone |
-| 8 Oct 2026, 17:02 | System | updated | Updated entry “Launch (News)” | title (id, draft) |
+| Date | User | Source | Action | Activity | Details |
+| --- | --- | --- | --- | --- | --- |
+| 9 Oct 2026, 10:42 | Rina | Admin | published | Published entry “About us (Pages)” | title (en), data.body (en) |
+| 9 Oct 2026, 10:41 | Rina | AI agent · Claude Desktop | updated | Updated entry “About us (Pages)” | title (en, draft) |
+| 9 Oct 2026, 09:15 | Admin | Admin | updated | Updated setting “Site settings” | name, timezone |
+| 8 Oct 2026, 17:02 | System | System | updated | Updated entry “Launch (News)” | title (id, draft) |
 
 ## What's recorded
 
@@ -33,16 +33,22 @@ saved as a draft. Values aren't stored, only which fields changed.
 - Several changes to one thing in one save become one line: saving an entry
   and its translation is one "updated", and creating an entry with its
   first translation is one "created".
-- Changes from the console or the queue (`sunrice:translate`, an import
-  command) show as **System**. AI agents act as the user their token
-  belongs to.
+- **Source** says where a change came from:
+  - **Admin**: someone working in the admin.
+  - **AI agent**: an [AI agent](ai-agents.md), with the name of the access
+    token it used (`AI agent · Claude Desktop`). The user is the token's
+    owner. A local agent started with `php artisan mcp:start` shows as
+    `AI agent · local (mcp:start)`.
+  - **System**: the console or the queue (`sunrice:translate`, an import
+    command).
 - Visitors aren't recorded: a form submission isn't admin activity.
 
 ## Filtering
 
-Filter by **period** (last 24 hours, 7, 30 or 90 days), **action**, **type**
-(entry, term, setting…) and **user** (or System), and search by the name of
-what changed or the user's name.
+Filter by **period** (last 24 hours, 7, 30 or 90 days), **source** (Admin,
+AI agent, System), **action**, **type** (entry, term, setting…) and **user**
+(or System), and search by the name of what changed, the user's name or the
+AI access token's name.
 
 ## Permissions
 
@@ -100,3 +106,12 @@ app(\Sunrice\Activity\ActivityLogger::class)->record('refunded', $order, ['chang
 The arguments are the action, the model (or a text for things without
 one), extra details (`changes`: a list of what changed; `note`: a text) and
 the type shown in the log.
+
+To mark changes with a source, e.g. an AI feature of your own:
+
+```php
+app(\Sunrice\Activity\ActivityLogger::class)->withSource('ai', 'Dashboard chat', function () {
+    // tool calls made for the chat…
+});
+```
+

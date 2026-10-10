@@ -11,13 +11,15 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Tools\Annotations\IsReadOnly;
 
 #[IsReadOnly]
-#[Description('Read Sunrice\'s documentation. Without a page: the list of pages (content modeling, templates, helpers, blade components, multilingual, forms, assets, caching, custom fields, commands…).')]
+#[Description('Read Sunrice\'s documentation (needs the "Read the developer docs" permission). Without a page: the list of pages (content modeling, templates, helpers, blade components, multilingual, forms, assets, caching, custom fields, commands…).')]
 class ReadDocs extends SunriceTool
 {
     protected string $name = 'read_docs';
 
     public function handle(Request $request): Response
     {
+        // The same permission as the admin's Docs page.
+        $this->authorize('sunrice.docs.view');
         $args = $request->validate(['page' => ['nullable', 'string', 'regex:/^[a-z0-9-]+$/']]);
         $dir = dirname(__DIR__, 3).'/docs';
 

@@ -11,6 +11,7 @@ use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
 use Laravel\Mcp\Server\Attributes\Name;
 use Laravel\Mcp\Server\Attributes\Version;
+use Sunrice\Activity\ActivityLogger;
 
 #[Name('Sunrice CMS')]
 #[Version('1.0.0')]
@@ -39,7 +40,9 @@ Translating (get_site_info → languages: main is the source, the other availabl
 - Whole site at once: run_command sunrice:translate (entries, terms, globals, menus and language files; entries become drafts to review).
 - Not translatable per language: form labels and messages, asset alt text and captions.
 
-Ask the user before deleting anything or publishing large changes. Use read_docs for details.
+Everything you change is recorded in the activity log under your user, with source "ai" and your access token's name. get_activity reads the log (if you have the "View the activity log" permission): use it to answer "what changed recently?" or "what did you do?" (mine: true).
+
+Ask the user before deleting anything or publishing large changes. Use read_docs for details (it needs the "Read the developer docs" permission).
 MD)]
 class SunriceServer extends Server
 {
@@ -78,6 +81,7 @@ class SunriceServer extends Server
         Tools\DeleteStructure::class,
         Tools\UpdateSiteSettings::class,
         Tools\SeoAudit::class,
+        Tools\GetActivity::class,
         Tools\GetTemplateGuide::class,
         Tools\ReadTemplate::class,
         Tools\WriteTemplate::class,
@@ -103,6 +107,7 @@ class SunriceServer extends Server
         if ($user instanceof Authenticatable) {
             $guard->setUser($user);
             Auth::shouldUse(config('sunrice.auth.guard', 'web'));
+            app(ActivityLogger::class)->actingVia('ai', 'local (mcp:start)');
         }
     }
 }
